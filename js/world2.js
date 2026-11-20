@@ -76,6 +76,7 @@ function genRegions(c) {
   const gate = add('darkgate', GATE[0] * T + 28, 106 * T + 40); gate.isGate = 1; WORLD.gateProp = gate;
   add('brazier', 189 * T, 99 * T + 20); add('brazier', 189 * T, 113 * T + 10);
 
+  WORLD.npcs.push({ look: 'npc_guard', x: 44 * T, y: 52 * T, name: 'Rowan, chasseur de primes', role: 'saga', saga: 'bourg', dir: 2 });
   // --- DÉSERT : camp d'Arkhan ---
   add('tent', 108 * T, 31 * T); add('tent', 117 * T, 31 * T); add('campfire', 112 * T, 35 * T); add('crate', 109 * T, 38 * T); add('barrel', 116 * T, 38 * T); add('palm', 120 * T, 41 * T); add('palm', 107 * T, 43 * T);
   WORLD.npcs.push({ look: 'npc_guard', x: 113 * T, y: 33 * T, name: 'Nadir, chef caravanier', role: 'saga', saga: 'desert', dir: 2 });

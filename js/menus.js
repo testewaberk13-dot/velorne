@@ -513,6 +513,7 @@ function questList() {
   if (Q.main >= 1) r.push(`<div class="q ${Q.huntDone ? 'done' : ''}"><b>Nettoyer la forêt</b><p>Vaincs 15 monstres (${Math.min(Q.hunt || 0, 15)}/15). Récompense : 120 or, 2 potions, 1 Sceau de lame.</p></div>`);
   if (Q.roi) r.push(`<div class="q ${Q.roi >= 5 ? 'done' : ''}"><b>Le dernier roi</b><p>${['', 'Rapporte 3 sceaux funéraires à Séraphine (' + countItem(G.player, 'sceau_funeraire') + '/3). Squelettes et chauves-souris du cimetière.', 'Pose les sceaux sur le tombeau royal, au cœur du cimetière.', 'Vaincs le Spectre du dernier roi.', 'Retourne voir Séraphine.', 'Terminée. Tu portes la Faux du dernier roi.'][Q.roi]}</p></div>`);
   if (Q.main >= 3) { const F = G.flags, sl = sagaSeals(); r.push(`<div class="q ${sagaDone() ? 'done' : ''}"><b>Le Seigneur démon</b><p>${!Q.saga ? 'Parle à l\'Ancien Théobald.' : sagaDone() ? 'Terminée : Malvorak est vaincu.' : 'Sceaux brisés : ' + sl + '/4. ' + SEAL_KEYS.map(k => (F[SAGA[k].flag] ? '✔ ' : '✘ ') + SAGA[k].region + ' (niv. ' + SAGA[k].lvl + '+)').join(' · ') + (sl >= 4 ? ' — La Citadelle est ouverte !' : '')}</p></div>`); }
+  r.push(typeof sideQuestList === 'function' ? sideQuestList() : '');
   r.push(`<div class="q"><b>Chasseur de trésors</b><p>Coffres ouverts : ${WORLD.chests.filter(c => c.opened && !c.hidden).length}/${WORLD.chests.filter(c => !c.hidden).length}. Caches secrètes : ${WORLD.chests.filter(c => c.opened && c.hidden).length}/${WORLD.chests.filter(c => c.hidden).length} (l'Œil du veilleur les révèle).</p></div>`);
   return r.join('');
 }
