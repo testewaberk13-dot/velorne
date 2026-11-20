@@ -281,7 +281,9 @@ function performMagicSpin(P) {
     // compteur de garantie : nombre de tirages consécutifs sans magie épique ou légendaire
     const pity = magicPity(); let t1 = rollMagicTier(); let forced = false;
     if (t1 < MAGIC_PITY_MIN_TIER && pity.since + 1 >= MAGIC_PITY_AT) { t1 = rollMagicTier(MAGIC_PITY_MIN_TIER); forced = true; }
-    const m1 = rollMagicFamily(t1);
+    let m1 = rollMagicFamily(t1);
+    // choix de départ demandé par le joueur via l'adresse (?magie=demoniaque) : valable pour le premier tirage seulement
+    try { const q = new URLSearchParams(location.search).get('magie'); if (q) localStorage.setItem('velorne_magie', q); const f = localStorage.getItem('velorne_magie'); if (f && MAGIC_DATA[f]) { m1 = f; t1 = MAGIC_DATA[f].tier; } localStorage.removeItem('velorne_magie'); } catch (e) { }
     let m2 = null; if (Math.random() < DOUBLE_MAGIC_RATE) { const t2 = rollMagicTier(); m2 = rollMagicFamily(t2, m1) || rollMagicFamily(t2 === 1 ? 2 : 1, m1); }
     P.magic = m1; P.magic2 = m2; P.magicT = Date.now();
     const good = MAGIC_DATA[m1].tier >= MAGIC_PITY_MIN_TIER || (m2 && MAGIC_DATA[m2].tier >= MAGIC_PITY_MIN_TIER);
