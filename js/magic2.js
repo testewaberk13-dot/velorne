@@ -12,15 +12,17 @@
 const MASTERY_XP = [0, 0, 60, 180, 380, 650, 1000, 1500, 2200, 3200, 4600];
 function magLevel(P, fam) { const x = (P.mastery && P.mastery[fam]) || 0; let l = 1; for (let i = 2; i <= 10; i++) if (x >= MASTERY_XP[i]) l = i; return l; }
 function magXpInfo(P, fam) { const x = Math.floor((P.mastery && P.mastery[fam]) || 0), l = magLevel(P, fam); return { x, l, next: l >= 10 ? null : MASTERY_XP[l + 1], base: MASTERY_XP[l] }; }
-function skillOpen(P, fam, n) { return n <= 3 || magLevel(P, fam) >= n; }
+const SKILL_LVL = { 1: 1, 2: 1, 3: 1, 4: 2, 5: 3, 6: 5, 7: 6, 8: 8, 9: 9, 10: 10 }; // niveau de maîtrise requis pour chaque sort
+function skillOpen(P, fam, n) { return magLevel(P, fam) >= (SKILL_LVL[n] || n); }
 function grimSpell(fam, n) { const g = GRIMOIRE[fam]; return g ? g[n - 1] : null; }
 function magicXp(P, fam, n) {
   if (!fam || !GRIMOIRE[fam]) return;
   P.mastery = P.mastery || {}; const before = magLevel(P, fam); P.mastery[fam] = (P.mastery[fam] || 0) + n;
   const after = magLevel(P, fam);
   if (after > before) {
-    const g = grimSpell(fam, after); const F = MAGIC_DATA[fam];
-    later(() => { toast('Maîtrise ' + F.n + ' niveau ' + after + (g ? ' — nouvelle compétence : ' + g.n + (after === 10 ? ' (ultime)' : '') : ''), F.col); sfx('level'); }, 250);
+    const F = MAGIC_DATA[fam]; const got = []; for (let n = 4; n <= 10; n++) if (SKILL_LVL[n] > before && SKILL_LVL[n] <= after) got.push(n);
+    const g = got.length ? grimSpell(fam, got[got.length - 1]) : null;
+    later(() => { toast('Maîtrise ' + F.n + ' niveau ' + after + (g ? ' — nouvelle compétence : ' + g.n + (got.includes(10) ? ' (ultime)' : '') : ''), F.col); sfx('level'); }, 250);
   }
 }
 function defSel(P, id) { const fam = id === 'm2' ? P.magic2 : P.magic, i = id === 'm2' ? 0 : { s1: 0, s2: 1, s3: 2 }[id]; return fam && GRIMOIRE[fam] ? 'C' + (i + 1) : 'L' + i; }

@@ -100,10 +100,11 @@ const MENU_TABS = [['perso', 'Personnage'], ['sac', 'Inventaire'], ['comp', 'Com
 function tabsHTML(tabs, cur, attr, extra) { return `<div class="ptabs">${tabs.map(([k, n]) => `<button class="${k === cur ? 'on' : ''}" data-${attr}="${k}">${n}</button>`).join('')}${extra || ''}<button class="x" data-close>✕</button></div>`; }
 function openMenu(tab) {
   if (tab) menuTab = tab; sfx('ui'); const P = G.player; G.ui = { kind: 'menu' };
-  let h = tabsHTML(MENU_TABS, menuTab, 'tab', `<span class="gold">${P.gold} or</span>`) + '<div class="pbody">';
+  let h = tabsHTML(MENU_TABS.map(t => t[0] === 'comp' && G.flags.newSkill ? [t[0], t[1] + ' 🔴'] : t), menuTab, 'tab', `<span class="gold">${P.gold} or</span>`) + '<div class="pbody">';
   if (menuTab === 'perso') h += persoHTML(P);
   else if (menuTab === 'sac') h += invHTML(P);
-  else if (menuTab === 'comp') h += skillsHTML(P);
+  else if (menuTab === 'comp') { h += skillsHTML(P); if (G.flags.newSkill) { G.flags.newSkill = 0; if (typeof updateMenuBadge === 'function') updateMenuBadge(); } }
+  else if (menuTab === 'aide') h += guideHTML();
   else if (menuTab === 'collec') h += collectionHTML(P);
   else if (menuTab === 'hist') h += historyHTML(P);
   else if (menuTab === 'quetes') h += `<div class="quests">${questList()}</div>`;
@@ -544,7 +545,7 @@ document.addEventListener('click', e => {
   if (d.act === 'race') { raceSheet(P); return; }
   if (d.style) { changeStyle(P, d.style); openMenu('perso'); return; }
   if (d.eqm) { const [slot, sel] = d.eqm.split(':'); if (equipM(P, slot, sel)) { sfx('ui'); if (IS_TOUCH) setupTouch(); } else toast('Compétence pas encore débloquée', '#ffb36b'); openMenu('comp'); return; }
-  if (d.ultsel) { if (d.ultsel === 'C10' && magLevel(P, P.magic) < 10) toast('Il faut la maîtrise niveau 10', '#ffb36b'); else { P.ultSel = d.ultsel; sfx('ui'); } openMenu('comp'); return; }
+  if (d.ultsel) { if (d.ultsel === 'C10' && !skillOpen(P, P.magic, 10)) toast('Il faut la maîtrise niveau 10', '#ffb36b'); else { P.ultSel = d.ultsel; sfx('ui'); } openMenu('comp'); return; }
   if (d.slot4) { P.slot4 = d.slot4; P.cd.s4 = 0; if (IS_TOUCH) setupTouch(); openMenu('comp'); return; }
   if (d.collec) { collecCat = d.collec; openMenu('collec'); return; }
   if (d.cinfo) { const o = REG[d.cinfo]; const box = $('cinfo'); if (box) box.innerHTML = `<b style="color:${rc(o)}">${o.name}</b> ${badge(o)}<p class="lore">« ${esc(o.lore || '')} »</p><p>${esc(o.description || o.acquisition || '')}</p>`; return; }
@@ -611,6 +612,6 @@ function grimHTML(P) {
   }
   const ult = GR[9]; if (ult) { const ok = info.l >= 10; h += `<div class="sk"><div><b>Ultime</b><div class="row"><button class="${P.ultSel !== 'C10' ? 'on' : ''}" data-ultsel="L">${esc(F.ult)} (base)</button><button class="${P.ultSel === 'C10' ? 'on' : ''}" data-ultsel="C10" ${ok ? '' : 'disabled'}>${esc(ult.n)}${ok ? '' : ' (niveau 10)'}</button></div></div></div>`; }
   h += `<h4>Grimoire du ${F.n}</h4>`;
-  GR.forEach((g, i) => { const n = i + 1, ok = n <= 3 || info.l >= n; h += `<div class="sk">${ok ? `<img src="${grimIcon(fam, g).url}">` : `<img src="${lockIcon().url}">`}<div><b ${ok ? '' : 'style="opacity:.6"'}>${n}. ${esc(g.n)}</b> <small>${esc(g.role)}${g.mp ? ' · ' + g.mp + ' mana · ' + g.cd + ' s' : ''}${ok ? '' : ' · niveau ' + n + ' requis'}</small><p>${ok ? esc(g.d) : 'Compétence verrouillée.'}</p></div></div>`; });
+  GR.forEach((g, i) => { const n = i + 1, ok = skillOpen(P, fam, n); h += `<div class="sk">${ok ? `<img src="${grimIcon(fam, g).url}">` : `<img src="${lockIcon().url}">`}<div><b ${ok ? '' : 'style="opacity:.6"'}>${n}. ${esc(g.n)}</b> <small>${esc(g.role)}${g.mp ? ' · ' + g.mp + ' mana · ' + g.cd + ' s' : ''}${ok ? '' : ' · maîtrise niveau ' + SKILL_LVL[n] + ' requise'}</small><p>${ok ? esc(g.d) : 'Compétence verrouillée.'}</p></div></div>`; });
   return h;
 }
