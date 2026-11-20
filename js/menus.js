@@ -105,6 +105,7 @@ function openMenu(tab) {
   else if (menuTab === 'sac') h += invHTML(P);
   else if (menuTab === 'comp') { h += skillsHTML(P); if (G.flags.newSkill) { G.flags.newSkill = 0; if (typeof updateMenuBadge === 'function') updateMenuBadge(); } }
   else if (menuTab === 'aide') h += guideHTML();
+  else if (menuTab === 'voyage') h += travelHTML();
   else if (menuTab === 'collec') h += collectionHTML(P);
   else if (menuTab === 'hist') h += historyHTML(P);
   else if (menuTab === 'quetes') h += `<div class="quests">${questList()}</div>`;
@@ -537,6 +538,7 @@ document.addEventListener('click', e => {
   const t = e.target.closest('button,[data-sel],[data-eqslot],[data-tostash],[data-fromstash],[data-esel],[data-style],[data-cinfo]'); if (!t) return;
   const d = t.dataset; const P = G.player;
   if (d.close !== undefined) { closePanel(); sfx('ui'); return; }
+  if (d.travel !== undefined) { fastTravel(+d.travel); return; }
   if (d.tab) { openMenu(d.tab); return; }
   if (d.dlg !== undefined && G.dlg) { const f = G.dlg[+d.dlg][1]; f && f(); return; }
   if (d.icat) { INVUI.cat = d.icat; INVUI.sel = null; openMenu('sac'); return; }
