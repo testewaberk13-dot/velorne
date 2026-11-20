@@ -57,3 +57,61 @@ function guideHTML() {
   ${S('Commandes', 'Attaque <b>J</b> · Esquive <b>Espace</b> · Parade <b>L</b> · Potion <b>F</b> · Interagir <b>E</b> · Menu <b>Échap</b> · Éveil <b>G</b> · Aptitude raciale <b>X</b>. Sur mobile, les boutons sont à l\'écran (réglables dans Paramètres).')}
   </div>`;
 }
+
+// ===================== le grand monde : explications, objectif guidé =====================
+Object.assign(TIPS, {
+  reg_desert: ['Désert d\'Arkhan (niv. 6+)', () => `Tu entres dans le <b>désert</b>. Ici vivent chacals, serpents et pillards.<br><br>• Le <b>camp d'Arkhan</b> (oasis, à l'ouest) a un marchand, un forgeron et <b>Nadir</b>, qui t'explique la mission.<br>• Le boss <b>Sultan Zahrak</b> t'attend dans son palais, au centre-est.<br>• Si les monstres sont trop forts, retourne t'entraîner dans la forêt : tu es libre d'aller où tu veux.<br>• Plus loin à l'est : les cimes. Au sud : le cratère.`],
+  reg_neige: ['Cimes de Givrenuit (niv. 14+)', () => `Région <b>enneigée</b>, très dangereuse : loups, ogres des glaces, mages du givre.<br><br>• Le village d'<b>Orélia</b> (ouest) est ton point de repos : marchand et soigneuse.<br>• Le boss <b>Kragh</b> est au nord-est.<br>• Les monstres résistent à la glace : utilise le feu ou la lumière !`],
+  reg_marais: ['Marais de Grisebrume (niv. 10+)', () => `Un <b>marais</b> sombre et empoisonné.<br><br>• Les pilotis de <b>Vasebourg</b> (nord) abritent une guérisseuse, un alchimiste et un marchand.<br>• Le boss <b>Mère Grisebrume</b> est au fond, au sud.<br>• Les monstres sont souvent <b>poison</b> : emporte des potions. La magie de feu leur fait plus mal.`],
+  reg_volcan: ['Cratère de Cendrefeu (niv. 18+)', () => `Un <b>volcan</b> : la lave est infranchissable, reste sur les chemins sombres.<br><br>• La <b>forge de Cendrefeu</b> (ouest) a un maître de forge, un maître runique et un marchand.<br>• Le boss <b>Ignaroth</b> est au sud-est.<br>• À l'est, la <b>porte de la Citadelle</b> reste scellée tant que les 4 sceaux ne sont pas brisés.`],
+  reg_citadelle: ['Citadelle de Malvorak (niv. 22+)', () => `Tu es dans le <b>dernier lieu</b> du jeu. Chevaliers démons, cultistes et gardes d'ossements défendent le Seigneur démon.<br><br>• L'esprit du roi <b>Aldaran</b> te guide à l'entrée.<br>• <b>Malvorak</b> est au centre de la grande salle. Prépare potions et ultime !<br>• Si tu tombes, tu te réveilles au village : rien n'est perdu.`]
+});
+function objectiveTarget() {
+  const Q = G.quests, P = G.player; if (!P || !Q || (typeof introText === 'function' && introText())) return null;
+  const spawn = k => WORLD.spawns.find(s => s.kind === k), npc = r => WORLD.npcs.find(n => n.role === r);
+  let t = null;
+  if (Q.main === 1 && !G.flags.bossDead) { const s = spawn('boss_orc_chief'); if (s) t = { x: s.x, y: s.y, l: 'Grakhul' }; }
+  else if (Q.main === 2) { const n = npc('quest'); if (n) t = { x: n.x, y: n.y, l: 'Théobald' }; }
+  else if (Q.main >= 3 && !Q.saga) { const n = npc('quest'); if (n) t = { x: n.x, y: n.y, l: 'Théobald' }; }
+  else if (Q.main >= 3 && !sagaDone()) {
+    if (sagaSeals() >= 4) { const s = spawn('boss_malvorak'); if (s) t = { x: s.x, y: s.y, l: 'Malvorak' }; }
+    else { let best = null; for (const k of SEAL_KEYS) { if (G.flags[SAGA[k].flag]) continue; const s = spawn(SAGA[k].boss); if (!s) continue; const d = dist(P.x, P.y, s.x, s.y); if (!best || d < best.d) best = { d, x: s.x, y: s.y, l: SAGA[k].region }; } t = best; }
+  }
+  return t;
+}
+const _drawHUD0 = drawHUD;
+drawHUD = function (ctx) {
+  _drawHUD0(ctx);
+  try {
+    const t = objectiveTarget(); if (!t || G.mode !== 'play') return; const P = G.player;
+    const pulse = 0.6 + 0.4 * Math.sin(G.t * 5);
+    // minicarte
+    const mw = 96, mh = 48, mx = W - mw - 5, my = 5, sx = mw / (MW * TILE), sy = mh / (MH * TILE);
+    ctx.strokeStyle = `rgba(255,226,122,${pulse})`; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(mx + t.x * sx, my + t.y * sy, 2.5 + pulse * 1.5, 0, 7); ctx.stroke();
+    // flèche à l'écran si l'objectif est hors champ
+    const ox = t.x - G.cam.x, oy = t.y - G.cam.y; const dtl = Math.round(dist(P.x, P.y, t.x, t.y) / TILE);
+    if (ox < 10 || ox > W - 10 || oy < 10 || oy > H - 10) {
+      const cx = W / 2, cy = H / 2, a = Math.atan2(t.y - P.y, t.x - P.x), r = Math.min(W, H) / 2 - 26;
+      const ax = clamp(cx + Math.cos(a) * 1000, 24, W - 24), ay = clamp(cy + Math.sin(a) * 1000, 40, H - 40);
+      ctx.save(); ctx.translate(ax, ay); ctx.rotate(a); ctx.globalAlpha = 0.55 + 0.35 * pulse; ctx.fillStyle = '#ffe27a'; ctx.strokeStyle = '#3a2a10'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(9, 0); ctx.lineTo(-6, -7); ctx.lineTo(-3, 0); ctx.lineTo(-6, 7); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+      txt(ctx, t.l + ' · ' + dtl + ' cases', clamp(ax, 70, W - 70), clamp(ay + (ay < H / 2 ? 16 : -10), 30, H - 6), '#ffe9a0', 7, 'center');
+    }
+  } catch (e) { }
+};
+// conseils de région + porte scellée
+setInterval(() => {
+  try {
+    if (!G || !G.player || G.mode !== 'play') return;
+    const z = G.zone; if (z && TIPS['reg_' + z.id]) queueTip('reg_' + z.id);
+    const P = G.player; if (!gateOpen() && P.x > 183 * TILE && P.x < 192 * TILE && P.y > 98 * TILE && P.y < 114 * TILE && (!G.gateMsg || G.t - G.gateMsg > 8)) { G.gateMsg = G.t; toast(`La porte de la Citadelle est scellée : brise les 4 sceaux (${sagaSeals()}/4)`, '#ffb3ff'); }
+  } catch (e) { }
+}, 700);
+const _guideHTML0 = guideHTML;
+guideHTML = function () {
+  let h = _guideHTML0(); const S = (t, b) => `<div class="sk"><div><b>${t}</b><div style="margin-top:4px;line-height:1.45">${b}</div></div></div>`;
+  const extra = S('Le grand monde', `Le monde est <b>ouvert</b> : tu peux aller partout, mais les régions éloignées sont plus dangereuses (niveau conseillé affiché à l'arrivée).<br>• Sorties de la forêt : <b>est</b> → Désert (niv. 6+) → Cimes (14+) ; <b>sud</b> → Marais (10+) → Cratère (18+) → Citadelle (22+).<br>• La <b>minicarte</b> (en haut à droite) montre la carte entière ; un <b>cercle jaune</b> et une <b>flèche à l'écran</b> indiquent ton objectif.`) +
+    S('La saga du Seigneur démon', `Après Grakhul, parle à l'<b>Ancien Théobald</b> : 4 gardiens portent des sceaux noirs (désert, marais, cimes, cratère). Brise-les (dans l'ordre que tu veux), puis la porte de la <b>Citadelle</b> s'ouvre : Malvorak t'y attend.<br>Chaque région a un village avec un PNJ qui te donne une récompense après le boss. Le journal de quêtes (Menu → Quêtes) suit tes sceaux.`) +
+    S('Conseils de survie', `• Si tu meurs, tu te réveilles au village et tu perds 10 % d'or : rien d'autre.<br>• Les marchands et forgerons des villages éloignés te permettent de te soigner et d'améliorer ton équipement sans revenir à Brumeval.<br>• Les monstres sont <b>résistants ou faibles</b> selon l'élément : essaie une autre magie si tes sorts font peu de dégâts.`);
+  return h.replace(/<\/div>\s*$/, extra + '</div>');
+};

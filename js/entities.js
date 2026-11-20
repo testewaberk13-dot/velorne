@@ -79,6 +79,7 @@ function updateEnemies(dt) {
     if (e.dead) {
       e.deadT += dt; e.animT += dt; continue;
     }
+    if (!d.boss && !e.aggro && (Math.abs(e.x - P.x) > 800 || Math.abs(e.y - P.y) > 560)) continue; // trop loin : endormi (fluidité)
     // statuts
     if (e.burn > 0) { e.burn -= dt; e.burnTick = (e.burnTick || 0) - dt; if (e.burnTick <= 0) { e.burnTick = 0.5; damageEnemy(e, 3 + G.player.st8.mag * 0.12, false, 0, 0, 0, 0); } if (Math.random() < 0.4) part(e.x + rnd(-6, 6), e.y - rnd(4, 28), { col: choice(['#ff8a2a', '#ffcf4a']), rise: 30, life: 0.4, size: 2, add: true }); if (e.dead) continue; }
     if (e.shock > 0) { e.shock -= dt; if (Math.random() < 0.3) sparks(e.x, e.y - 18, rnd(0, 6.28), 1, '#fff6a0'); }
