@@ -65,7 +65,7 @@ function startGame(look, sv) {
   if (rectBlocked(P.x - 7, P.y - 8, 14, 8)) { P.x = 48 * TILE + 16; P.y = 66 * TILE; }
   G.npcs = WORLD.npcs.map(n => Object.assign({}, n, { spr: lookSprite(n.look), t: Math.random() * 5 }));
   G.enemies = [];
-  for (const s of WORLD.spawns) { if (s.kind === 'boss_orc_chief' && G.flags.bossDead) continue; for (let i = 0; i < s.n; i++) { const a = Math.random() * 6.28, r = Math.random() * s.r; let x = s.x + Math.cos(a) * r, y = s.y + Math.sin(a) * r; if (rectBlocked(x - 8, y - 8, 16, 8)) { x = s.x; y = s.y; } spawnEnemy(s.kind, x, y, s); } }
+  for (const s of WORLD.spawns) { if (bossGone(s.kind)) continue; for (let i = 0; i < s.n; i++) { const a = Math.random() * 6.28, r = Math.random() * s.r; let x = s.x + Math.cos(a) * r, y = s.y + Math.sin(a) * r; if (rectBlocked(x - 8, y - 8, 16, 8)) { x = s.x; y = s.y; } spawnEnemy(s.kind, x, y, s); } }
   G.cam.x = P.x - W / 2; G.cam.y = P.y - H / 2;
   G.mode = 'play'; G.paused = false;
   $('hudbtns').classList.add('show');

@@ -262,12 +262,13 @@ function interact(n) {
   if (n.role === 'archmage') return talkArchmage(n);
   if (n.role === 'master') return talkMaster(n);
   if (n.role === 'quest' && talkElder(n)) return;
+  if (n.role === 'saga') return sagaTalk(n);
   if (n.role === 'guard' && !hasStyle(P)) return dialog(n.name, 'Halte ! Personne ne quitte Brumeval sans formation : la forêt grouille de monstres. ' + (P.magic ? 'Va voir <b>Kaelen</b> au terrain d\'entraînement, à l\'ouest.' : 'Commence par rencontrer le <b>Maître Mage Orvael</b>, à l\'est.'), [['Compris', closePanel]]);
   if (n.role === 'quest') {
     if (Q.main === 0) dialog(n.name, "Voyageur ! Le chef de guerre orc <b>Grakhul</b> s'est installé dans la clairière au nord de la forêt. Ses gobelins pillent nos réserves. Peux-tu nous débarrasser de lui ?<br><br><small>Au village : la forge de Borin, l'atelier de Maëlys, l'alchimiste Eldrin, Thalor le maître runique et Séraphine pour les reliques. Le <b>Sanctuaire des lames</b> et l'<b>Autel de l'Exception</b> sont au nord de la place.</small>", [['J\'accepte', () => { Q.main = 1; Q.hunt = Q.hunt || 0; toast('Nouvelle quête : Le chef de guerre', '#ffe27a'); sfx('open'); closePanel(); }], ['Plus tard', closePanel]]);
     else if (Q.main === 1) dialog(n.name, `Grakhul se terre au bout du chemin du nord. Améliore tes armes chez Borin avant de l'affronter, et utilise la <b>parade parfaite</b> contre ses coups lourds !<br><br>Chasse : ${Math.min(Q.hunt, 15)}/15 monstres.`, [['Compris', closePanel]]);
     else if (Q.main === 2) dialog(n.name, "Tu l'as fait ! Le village te doit tout. Prends cette récompense, héros. Et garde l'Éclat qu'il portait : on dit que ces fragments viennent de la Couronne d'Aube.", [['Merci', () => { Q.main = 3; P.gold += 300; gainXp(250); giveItem(P, 'ac_cape_azur', 1, 'Récompense de quête'); giveItem(P, 'eclat_exception', 1, 'Récompense de quête'); toast('+300 or · Cape d\'azur · Éclat d\'Exception', '#ffe27a'); sfx('open'); closePanel(); }]]);
-    else dialog(n.name, 'Brumeval dort enfin en paix. Mais on parle de ruines plus anciennes, au-delà des montagnes… et de la Couronne d\'Aube.', [['À bientôt', closePanel]]);
+    else if (sagaElder(n)) { } else dialog(n.name, 'Brumeval dort enfin en paix. Mais on parle de ruines plus anciennes, au-delà des montagnes… et de la Couronne d\'Aube.', [['À bientôt', closePanel]]);
     if (Q.hunt >= 15 && !Q.huntDone && Q.main >= 1) { Q.huntDone = true; P.gold += 120; giveItem(P, 'potion', 2, 'Récompense de quête'); giveItem(P, 'sceau_lame', 1, 'Récompense de quête'); toast('Chasse terminée : +120 or, 2 potions, 1 Sceau de lame', '#ffe27a'); }
   } else if (n.role === 'shop') openShop(n);
   else if (n.role === 'smith') openCraftNpc('forge', n);
@@ -486,6 +487,7 @@ function questEvent(type, arg) {
   if (type === 'dummy' && P.trial) { P.trial.left = Math.max(0, P.trial.left - 1); if (P.trial.left === 0) { toast('Initiation réussie ! Retourne voir ' + MASTERS[P.trial.style].name.split(',')[0], '#ffe27a'); sfx('level'); } else toast('Mannequin détruit (' + (3 - P.trial.left) + '/3)', '#ffe9a0'); return; }
   if (type === 'kill' && Q.main >= 1) { Q.hunt = (Q.hunt || 0) + 1; if (Q.hunt === 15) toast('Chasse : 15/15 ! Retourne voir l\'Ancien', '#ffe27a'); }
   if (type === 'kill' && arg === 'king_specter') { Q.roi = 4; toast('Le dernier roi est apaisé. Retourne voir Séraphine', '#c4b5fd'); }
+  if (type === 'boss' && arg && arg !== 'boss_orc_chief') { G.flags['dead_' + arg] = 1; if (typeof sagaBossDown === 'function') sagaBossDown(arg); return; }
   if (type === 'boss') { G.flags.bossDead = 1; if (Q.main === 1 || Q.main === 0) { Q.main = 2; toast('Grakhul est vaincu ! Retourne au village', '#ffe27a'); } }
   if (type === 'item' && arg === 'sceau_funeraire' && Q.roi === 1 && countItem(G.player, 'sceau_funeraire') >= 3) toast('3 sceaux funéraires : retourne voir Séraphine', '#c4b5fd');
 }
@@ -494,6 +496,8 @@ function questText() {
   if (Q.main === 0) return '→ Parle à l\'Ancien du village';
   if (Q.main === 1) return '→ Vaincs Grakhul (nord) · Chasse ' + Math.min(Q.hunt || 0, 15) + '/15';
   if (Q.main === 2) return '→ Retourne voir l\'Ancien';
+  if (Q.main >= 3 && sagaSeals() < 4 && !sagaDone()) return Q.saga ? '→ Brise les 4 sceaux : ' + sagaSeals() + '/4 (sorties de la forêt : est / sud)' : '→ Parle à l\'Ancien Théobald (saga)';
+  if (Q.main >= 3 && sagaSeals() >= 4 && !sagaDone()) return '→ Affronte Malvorak (Citadelle, sud-est)';
   if (Q.roi === 1) return '→ Sceaux funéraires ' + countItem(G.player, 'sceau_funeraire') + '/3 (cimetière)';
   if (Q.roi === 2 || Q.roi === 3) return '→ Pose les sceaux au tombeau royal';
   if (Q.roi === 4) return '→ Retourne voir Séraphine';
@@ -508,6 +512,7 @@ function questList() {
   r.push(`<div class="q ${Q.main >= 3 ? 'done' : ''}"><b>Le chef de guerre</b><p>${Q.main === 0 ? 'Parle à l\'Ancien Théobald, au centre du village.' : Q.main === 1 ? 'Vaincs Grakhul dans la clairière au nord de la forêt.' : Q.main === 2 ? 'Retourne voir l\'Ancien pour ta récompense.' : 'Terminée. Récompense : 300 or, Cape d\'azur, Éclat d\'Exception.'}</p></div>`);
   if (Q.main >= 1) r.push(`<div class="q ${Q.huntDone ? 'done' : ''}"><b>Nettoyer la forêt</b><p>Vaincs 15 monstres (${Math.min(Q.hunt || 0, 15)}/15). Récompense : 120 or, 2 potions, 1 Sceau de lame.</p></div>`);
   if (Q.roi) r.push(`<div class="q ${Q.roi >= 5 ? 'done' : ''}"><b>Le dernier roi</b><p>${['', 'Rapporte 3 sceaux funéraires à Séraphine (' + countItem(G.player, 'sceau_funeraire') + '/3). Squelettes et chauves-souris du cimetière.', 'Pose les sceaux sur le tombeau royal, au cœur du cimetière.', 'Vaincs le Spectre du dernier roi.', 'Retourne voir Séraphine.', 'Terminée. Tu portes la Faux du dernier roi.'][Q.roi]}</p></div>`);
+  if (Q.main >= 3) { const F = G.flags, sl = sagaSeals(); r.push(`<div class="q ${sagaDone() ? 'done' : ''}"><b>Le Seigneur démon</b><p>${!Q.saga ? 'Parle à l\'Ancien Théobald.' : sagaDone() ? 'Terminée : Malvorak est vaincu.' : 'Sceaux brisés : ' + sl + '/4. ' + SEAL_KEYS.map(k => (F[SAGA[k].flag] ? '✔ ' : '✘ ') + SAGA[k].region + ' (niv. ' + SAGA[k].lvl + '+)').join(' · ') + (sl >= 4 ? ' — La Citadelle est ouverte !' : '')}</p></div>`); }
   r.push(`<div class="q"><b>Chasseur de trésors</b><p>Coffres ouverts : ${WORLD.chests.filter(c => c.opened && !c.hidden).length}/${WORLD.chests.filter(c => !c.hidden).length}. Caches secrètes : ${WORLD.chests.filter(c => c.opened && c.hidden).length}/${WORLD.chests.filter(c => c.hidden).length} (l'Œil du veilleur les révèle).</p></div>`);
   return r.join('');
 }

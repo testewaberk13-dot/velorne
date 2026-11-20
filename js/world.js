@@ -80,7 +80,7 @@ for (let i = 0; i < 6; i++) PROPS['flower' + i] = { im: 'env/wildflowers_summer.
 
 // ===================== carte =====================
 // Terrain par sommets : 0 terre, 1 herbe, 2 eau
-const MW = 96, MH = 72;
+const MW = 288, MH = 144, W0 = 96, H0 = 72; // carte entière / forêt d'origine
 const WORLD = { V: null, cells: null, solid: null, props: [], grid: null, zones: [], spawns: [], chests: [], npcs: [] };
 const T_DIRT = 0, T_GRASS = 1, T_WATER = 2;
 function vget(x, y) { if (x < 0 || y < 0 || x > MW || y > MH) return T_GRASS; return WORLD.V[y * (MW + 1) + x]; }
@@ -103,21 +103,27 @@ function cornerOps(mask, set, fillSet, h) {
   return [set[mask]];
 }
 function hash(x, y) { let h = x * 374761393 + y * 668265263; h = (h ^ (h >> 13)) * 1274126177; return (h ^ (h >> 16)) >>> 0; }
+function regionIdx(tx, ty) { const X = tx + Math.sin(ty * 0.35) * 2 + Math.sin(ty * 0.11 + 1) * 3, Y = ty + Math.sin(tx * 0.31) * 2 + Math.cos(tx * 0.13) * 3; return (Y < H0 ? 0 : 3) + (X < W0 ? 0 : X < 2 * W0 ? 1 : 2); }
 function buildCells() {
+  WORLD.region = new Uint8Array(MW * MH); for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) WORLD.region[y * MW + x] = regionIdx(x, y);
+  // numérotation : 0 forêt, 1 désert, 2 neige (3e colonne, haut), 3 marais, 4 volcan, 5 citadelle
+  const MAPR = [0, 1, 2, 3, 4, 5]; for (let i = 0; i < WORLD.region.length; i++) WORLD.region[i] = MAPR[WORLD.region[i]];
   WORLD.cells = new Array(MW * MH);
   WORLD.solid = new Uint8Array(MW * MH);
   for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
     const c = [vget(x, y), vget(x + 1, y), vget(x, y + 1), vget(x + 1, y + 1)];
     const h = hash(x, y);
-    const ops = [];
+    let ops = [];
+    const rg = REGION_TILES[WORLD.region[y * MW + x]] || REGION_TILES[0];
     let gm = 0, wm = 0;
     for (let i = 0; i < 4; i++) { if (c[i] >= T_GRASS) gm |= 1 << i; if (c[i] === T_WATER) wm |= 1 << i; }
     if (wm === 9 || wm === 6) wm = 15;
-    if (wm === 15) { ops.push(TS.waterFill[0]); }
+    const L = a => a.map(o => [o[0], o[1], rg.land]), Wt = a => a.map(o => [o[0], o[1], rg.water]);
+    if (wm === 15) { ops.push(...Wt([TS.waterFill[0]])); }
     else {
-      if (gm !== 15) ops.push(TS.dirtFill[h % TS.dirtFill.length]);
-      ops.push(...cornerOps(gm, TS.grass, TS.grassFill, h));
-      if (wm) ops.push(...cornerOps(wm, TS.water, TS.waterFill, h));
+      if (gm !== 15) ops.push(...L([TS.dirtFill[h % TS.dirtFill.length]]));
+      ops.push(...L(cornerOps(gm, TS.grass, TS.grassFill, h)));
+      if (wm) ops.push(...Wt(cornerOps(wm, TS.water, TS.waterFill, h)));
     }
     WORLD.cells[y * MW + x] = ops;
     let wc = 0; for (let i = 0; i < 4; i++) if (c[i] === T_WATER) wc++;
@@ -176,6 +182,7 @@ function genWorld() {
   disc(18, 14, 8, 6, T_GRASS, 0); reserve(9, 7, 28, 21);
   for (let i = 0; i < 18; i++) disc(10 + R() * 18, 8 + R() * 12, 1.2, 1, T_DIRT, 0);
   disc(66, 17, 4, 3, T_DIRT, 0.1); reserve(61, 13, 71, 21);
+  regionTerrain(disc, path, reserve, R);
   // le bord de l'eau reste en herbe (anneau)
   for (let y = 1; y < MH; y++) for (let x = 1; x < MW; x++) if (vget(x, y) === T_WATER) {
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (vget(x + dx, y + dy) === T_DIRT) vset(x + dx, y + dy, T_GRASS);
@@ -241,9 +248,9 @@ function genWorld() {
   const trees = ['oak1', 'oak2', 'oak3', 'oak8', 'oak9', 'dark13', 'dark14', 'dark15', 'pine17', 'pine18', 'pine19'];
   const walls = ['wall4', 'wall10', 'wall16', 'wall20'];
   // bordure dense
-  for (let x = 0; x < MW; x += 2) { add(choice2(R, walls), x * TILE + 32, 2 * TILE + R() * 8); add(choice2(R, walls), x * TILE + 32, MH * TILE - 4 + R() * 6); }
-  for (let y = 2; y < MH; y += 2) { add(choice2(R, walls), 1 * TILE + R() * 6, y * TILE + 40); add(choice2(R, walls), (MW - 1) * TILE - R() * 6, y * TILE + 40); }
-  for (let ty = 3; ty < MH - 2; ty++) for (let tx = 2; tx < MW - 2; tx++) {
+  for (let x = 0; x < W0; x += 2) { add(choice2(R, walls), x * TILE + 32, 2 * TILE + R() * 8); if (x < 40 || x > 56) add(choice2(R, walls), x * TILE + 32, H0 * TILE - 4 + R() * 6); }
+  for (let y = 2; y < H0; y += 2) { add(choice2(R, walls), 1 * TILE + R() * 6, y * TILE + 40); if (y < 26 || y > 42) add(choice2(R, walls), (W0 - 1) * TILE - R() * 6, y * TILE + 40); }
+  for (let ty = 3; ty < H0 - 2; ty++) for (let tx = 2; tx < W0 - 2; tx++) {
     if (!tileFree(tx, ty)) continue;
     const inVillage = ty > 46 && tx > 26 && tx < 72;
     const dens = inVillage ? 0.025 : (ty > 44 ? 0.14 : 0.3);
@@ -257,7 +264,7 @@ function genWorld() {
     }
   }
   // végétation basse et rochers
-  for (let ty = 3; ty < MH - 2; ty++) for (let tx = 2; tx < MW - 2; tx++) {
+  for (let ty = 3; ty < H0 - 2; ty++) for (let tx = 2; tx < W0 - 2; tx++) {
     const free = !WORLD.solid[ty * MW + tx];
     if (!free) continue;
     const r = R(); const isDirt = vget(tx, ty) === T_DIRT && vget(tx + 1, ty + 1) === T_DIRT;
@@ -276,6 +283,13 @@ function genWorld() {
   sp('wolf_brute', 66, 17, 2, 3); sp('lizard_spearman', 34, 33, 2, 3); sp('dark_mage', 22, 26, 1);
   sp('eyeball', 58, 30, 2, 3); sp('slime', 38, 24, 2); sp('bee', 60, 38, 2); sp('lizard_spearman', 54, 24, 1);
   sp('demon_brute', 30, 18, 1); sp('orc_warrior', 47, 12, 2, 4); sp('boss_orc_chief', 48, 7, 1, 0);
+  genRegions({ R, add, reserve, tileFree, sp, chestAt });
+  WORLD.zones.splice(WORLD.zones.length - 1, 0,
+    { id: 'desert', name: 'Désert d\'Arkhan', x0: 96, y0: 0, x1: 192, y1: 72, music: 'forest', dark: 0 },
+    { id: 'neige', name: 'Cimes de Givrenuit', x0: 192, y0: 0, x1: 288, y1: 72, music: 'forest', dark: 0.1 },
+    { id: 'marais', name: 'Marais de Grisebrume', x0: 0, y0: 72, x1: 96, y1: 144, music: 'forest', dark: 0.14 },
+    { id: 'volcan', name: 'Cratère de Cendrefeu', x0: 96, y0: 72, x1: 192, y1: 144, music: 'forest', dark: 0.04 },
+    { id: 'citadelle', name: 'Citadelle de Malvorak', x0: 192, y0: 72, x1: 288, y1: 144, music: 'forest', dark: 0.18 });
   buildSolidGrid();
 }
 function choice2(R, a) { return a[Math.floor(R() * a.length)]; }
@@ -305,6 +319,7 @@ function boxesNear(x, y, w, h) {
 }
 function rectBlocked(x, y, w, h) {
   if (x < TILE || y < TILE || x + w > (MW - 1) * TILE || y + h > (MH - 1) * TILE) return true;
+  if (typeof regionWallBlocked === 'function' && regionWallBlocked(x, y, w, h)) return true;
   for (let ty = Math.floor(y / TILE); ty <= Math.floor((y + h) / TILE); ty++) for (let tx = Math.floor(x / TILE); tx <= Math.floor((x + w) / TILE); tx++) if (isSolidTile(tx, ty)) return true;
   for (const b of boxesNear(x, y, w, h)) if (x < b.x + b.w && x + w > b.x && y < b.y + b.h && y + h > b.y) return true;
   return false;
@@ -325,12 +340,11 @@ function lineClear(x0, y0, x1, y1) {
 
 // ===================== rendu du terrain =====================
 function drawTerrain(ctx, cx, cy) {
-  const im = img('env/terrain_summer.png');
   const x0 = Math.max(0, Math.floor(cx / TILE)), y0 = Math.max(0, Math.floor(cy / TILE));
   const x1 = Math.min(MW - 1, Math.floor((cx + W) / TILE)), y1 = Math.min(MH - 1, Math.floor((cy + H) / TILE));
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
     const ops = WORLD.cells[y * MW + x]; const dx = x * TILE - cx, dy = y * TILE - cy;
-    for (const o of ops) ctx.drawImage(im, o[0] * TILE, o[1] * TILE, TILE, TILE, dx, dy, TILE, TILE);
+    for (const o of ops) ctx.drawImage(tilesetFor(o[2]), o[0] * TILE, o[1] * TILE, TILE, TILE, dx, dy, TILE, TILE);
   }
 }
 function propSprite(p) {

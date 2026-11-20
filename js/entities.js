@@ -1,4 +1,5 @@
 // ===================== ennemis =====================
+function bossGone(kind) { return kind === 'boss_orc_chief' ? !!G.flags.bossDead : (kind.startsWith('boss_') && !!G.flags['dead_' + kind]); }
 function spawnEnemy(kind, x, y, sp) {
   const d = ENEMIES[kind];
   const lvlMul = 1;
@@ -42,7 +43,7 @@ function killEnemy(e) {
   if (d.boss) {
     slowmo(1.6, 0.25); flashScreen('#fff', 0.7); shake(10); sfx('boom'); padRumble(1, 1, 700);
     for (let i = 0; i < 6; i++) later(() => { fxAt('explosion', e.x + rnd(-30, 30), e.y - rnd(0, 60), { fps: 24, layer: 1, scale: 1 }); sfx('boom'); }, i * 160);
-    G.boss = null; questEvent('boss'); playMusic('forest');
+    G.boss = null; questEvent('boss', e.kind); playMusic('forest');
   }
   questEvent('kill', e.kind);
   if (e.sp) e.sp.deadAt = G.t;
@@ -109,7 +110,7 @@ function updateEnemies(dt) {
   // nettoyage + réapparition
   G.enemies = G.enemies.filter(e => !(e.dead && e.deadT > 1.6));
   for (const s of WORLD.spawns) {
-    if (s.kind === 'boss_orc_chief' && G.flags.bossDead) continue;
+    if (bossGone(s.kind)) continue;
     if (s.once) continue;
     const alive = G.enemies.filter(e => e.sp === s).length;
     if (alive < s.n && G.t - (s.deadAt || -999) > (s.kind.startsWith('boss') ? 9e9 : 50) && dist(P.x, P.y, s.x, s.y) > 360) {
@@ -254,12 +255,12 @@ function updateHumanoid(e, dt, dP, aP) {
 function updateBoss(e, dt, dP, aP) {
   const d = e.def, P = G.player;
   if (e.aggro && dist(e.x, e.y, e.home.x, e.home.y) > 420) { // laisse : le boss retourne dans sa clairière
-    e.aggro = false; e.hp = e.maxhp; e.phase = 1; e.state = 'idle'; e.x = e.home.x; e.y = e.home.y; G.boss = null; toast('Grakhul retourne dans sa clairière', '#ffb36b'); return;
+    e.aggro = false; e.hp = e.maxhp; e.phase = 1; e.state = 'idle'; e.x = e.home.x; e.y = e.home.y; G.boss = null; toast((d.short || 'Grakhul') + ' retourne dans son repaire', '#ffb36b'); return;
   }
   if (!e.aggro) { e.anim = 'walk'; e.fr = 0; return; }
   const hpk = e.hp / e.maxhp;
-  if (e.phase === 1 && hpk < 0.6) { e.phase = 2; e.state = 'roar'; e.st = 0; sfx('roar'); shake(8); flashScreen('#ff5a3a', 0.35); toast('Grakhul entre en rage !', '#ff8a5a'); }
-  if (e.phase === 2 && hpk < 0.28) { e.phase = 3; e.state = 'roar'; e.st = 0; sfx('roar'); shake(10); flashScreen('#ff2a1a', 0.45); toast('Grakhul est furieux !', '#ff5a3a'); }
+  if (e.phase === 1 && hpk < 0.6) { e.phase = 2; e.state = 'roar'; e.st = 0; sfx('roar'); shake(8); flashScreen('#ff5a3a', 0.35); toast((d.short || 'Grakhul') + ' entre en rage !', '#ff8a5a'); }
+  if (e.phase === 2 && hpk < 0.28) { e.phase = 3; e.state = 'roar'; e.st = 0; sfx('roar'); shake(10); flashScreen('#ff2a1a', 0.45); toast((d.short || 'Grakhul') + ' est furieux !', '#ff5a3a'); }
   const rage = e.phase === 3 ? 1.3 : e.phase === 2 ? 1.12 : 1;
   if (e.phase >= 2 && Math.random() < 0.5) part(e.x + rnd(-12, 12), e.y - rnd(0, 40), { col: e.phase === 3 ? '#ff3a2a' : '#ff8a3a', rise: 40, life: 0.5, size: 2, add: true });
   e.summonT -= dt; e.slamT -= dt; e.chargeT -= dt;
@@ -270,7 +271,7 @@ function updateBoss(e, dt, dP, aP) {
       if (e.st > 1.0) {
         e.state = 'chase';
         const n = e.phase === 3 ? 1 : 2;
-        for (let i = 0; i < n; i++) { const a = Math.random() * 6.28; const k = e.phase === 3 ? 'orc_warrior' : 'goblin_rogue'; const m = spawnEnemy(k, e.x + Math.cos(a) * 50, e.y + Math.sin(a) * 40, null); m.aggro = true; fxAt('explosion', m.x, m.y - 16, { fps: 24, layer: 1, scale: 0.8 }); }
+        for (let i = 0; i < n; i++) { const a = Math.random() * 6.28; const mn = d.minion; const k = mn ? mn[e.phase === 3 ? 1 : 0] : (e.phase === 3 ? 'orc_warrior' : 'goblin_rogue'); const m = spawnEnemy(k, e.x + Math.cos(a) * 50, e.y + Math.sin(a) * 40, null); m.aggro = true; fxAt('explosion', m.x, m.y - 16, { fps: 24, layer: 1, scale: 0.8 }); }
       }
       break;
     }
