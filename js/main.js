@@ -395,4 +395,6 @@ function padUI() {
 PAD.uiPrev = {};
 document.addEventListener('padmenu', e => { if (G.mode !== 'play' || TOUCH.edit) return; if (G.paused) { if (!G.spinning && !$('ritualcv')) closePanel(); } else openMenu(e.detail === 'menu' ? undefined : 'sac'); });
 window.__api = { G, WORLD, PROPS, REG, spawnEnemy, rebuildPlayer, openMenu, closePanel, damageEnemy, hurtPlayer, castSkill, startGame, giveItem, performSpin, computeStats, findInst, equipInst, migrateSave, countItem };
-boot();
+// démarrage après le chargement de TOUS les scripts (sinon, ressources en cache, la génération du monde pouvait
+// s'exécuter avant les modules ajoutés plus bas dans la page)
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else setTimeout(boot, 0);
