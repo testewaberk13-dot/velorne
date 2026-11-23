@@ -106,6 +106,7 @@ function openMenu(tab) {
   else if (menuTab === 'comp') { h += skillsHTML(P); if (G.flags.newSkill) { G.flags.newSkill = 0; if (typeof updateMenuBadge === 'function') updateMenuBadge(); } }
   else if (menuTab === 'aide') h += guideHTML();
   else if (menuTab === 'voyage') h += travelHTML();
+  else if (menuTab === 'codex') h += codexHTML(P);
   else if (menuTab === 'collec') h += collectionHTML(P);
   else if (menuTab === 'hist') h += historyHTML(P);
   else if (menuTab === 'quetes') h += `<div class="quests">${questList()}</div>`;
@@ -327,7 +328,7 @@ function openShop(n, tab) {
   const P = G.player; tab = tab || 'buy'; G.shopNpc = n;
   let h = tabsHTML([['buy', 'Acheter'], ['sell', 'Vendre']], tab, 'shop', `<span class="gold">${P.gold} or</span>`) + '<div class="pbody"><div class="shop">';
   if (tab === 'buy') {
-    const sec = (t, ids) => `<h4>${t}</h4>` + ids.map(id => { const d = REG[id]; const pr = basePrice(d); const lim = id === 'sac_agrandi' && (P.bags || 0) >= CONFIG.inventoryBagMax; return `<div class="srow">${itemIcon(d)}<div><b style="color:${rc(d)}">${d.name}</b><small>${d.desc || d.lore || ''} ${itemRows({ ...mkInst(P, id), lvl: 0, mxp: 0, ench: [] }).map(r => r[0] + ' ' + r[1] + (r[2] || '')).join(' · ')}</small></div><button data-buy="${id}" ${P.gold < pr || lim ? 'disabled' : ''}>${lim ? 'Max' : pr + ' or'}</button></div>`; }).join('');
+    const sec = (t, ids) => `<h4>${t}</h4>` + ids.map(id => { const d = REG[id]; const pr = typeof buyPrice === 'function' ? buyPrice(d) : basePrice(d); const lim = id === 'sac_agrandi' && (P.bags || 0) >= CONFIG.inventoryBagMax; return `<div class="srow">${itemIcon(d)}<div><b style="color:${rc(d)}">${d.name}</b><small>${d.desc || d.lore || ''} ${itemRows({ ...mkInst(P, id), lvl: 0, mxp: 0, ench: [] }).map(r => r[0] + ' ' + r[1] + (r[2] || '')).join(' · ')}</small></div><button data-buy="${id}" ${P.gold < pr || lim ? 'disabled' : ''}>${lim ? 'Max' : pr + ' or'}</button></div>`; }).join('');
     h += sec('Consommables', SHOP.conso) + sec('Matériaux', SHOP.mats) + sec('Équipements de la région', SHOP.equip) + sec('Spécial', SHOP.special);
     h += '<h4>Recettes</h4>' + Object.entries(SHOP_RECIPES).map(([rid, pr]) => { const r = RECIPES.find(x => x.id === rid); const k = recipeKnown(P, r); return `<div class="srow">${itemIcon({ icon: 'Scroll0001' })}<div><b>Recette : ${r.name}</b><small>${STATIONS[r.station]} · ${Object.entries(r.mats).map(([m, q]) => REG[m].name + ' ×' + q).join(', ')}</small></div><button data-buyrec="${rid}" ${k || P.gold < pr ? 'disabled' : ''}>${k ? 'Connue' : pr + ' or'}</button></div>`; }).join('');
   } else {
@@ -557,7 +558,7 @@ document.addEventListener('click', e => {
   if (d.slot4) { P.slot4 = d.slot4; P.cd.s4 = 0; if (IS_TOUCH) setupTouch(); openMenu('comp'); return; }
   if (d.collec) { collecCat = d.collec; openMenu('collec'); return; }
   if (d.cinfo) { const o = REG[d.cinfo]; const box = $('cinfo'); if (box) box.innerHTML = `<b style="color:${rc(o)}">${o.name}</b> ${badge(o)}<p class="lore">« ${esc(o.lore || '')} »</p><p>${esc(o.description || o.acquisition || '')}</p>`; return; }
-  if (d.buy) { const it = REG[d.buy]; const pr = basePrice(it); if (P.gold >= pr) { if (!canReceive(P, [[d.buy, 1]])) toast('Inventaire plein', '#ffb36b'); else { P.gold -= pr; giveItem(P, d.buy, 1, 'Achat : Maëlle'); sfx('gold'); toast('Acheté : ' + it.name); } } openShop(G.shopNpc, 'buy'); return; }
+  if (d.buy) { const it = REG[d.buy]; const pr = typeof buyPrice === 'function' ? buyPrice(it) : basePrice(it); if (P.gold >= pr) { if (!canReceive(P, [[d.buy, 1]])) toast('Inventaire plein', '#ffb36b'); else { P.gold -= pr; giveItem(P, d.buy, 1, 'Achat : Maëlle'); sfx('gold'); toast('Acheté : ' + it.name); } } openShop(G.shopNpc, 'buy'); return; }
   if (d.buyrec) { const pr = SHOP_RECIPES[d.buyrec]; if (P.gold >= pr) { P.gold -= pr; learnRecipe(P, d.buyrec); } openShop(G.shopNpc, 'buy'); return; }
   if (d.sell) { const inst = findInst(P, d.sell); if (inst && !inst.locked && def(inst).tradeRules === 'tradable' && !isEquipped(P, inst.uid)) { P.gold += sellPrice(def(inst)); if (inst.n > 1) inst.n--; else removeUid(P, inst.uid); sfx('gold'); } openShop(G.shopNpc, 'sell'); return; }
   if (d.shop) { openShop(G.shopNpc, d.shop); return; }

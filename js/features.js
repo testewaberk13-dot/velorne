@@ -9,21 +9,21 @@ const TRAVEL = [
   { id: 'cendrefeu', n: 'Forge de Cendrefeu (volcan)', x: 112, y: 107 },
   { id: 'citadelle', n: 'Entrée de la Citadelle', x: 206, y: 108, gate: 1 }
 ];
-const TRAVEL_COST = 25;
+const TRAVEL_COST_BASE = 25;
 MENU_TABS.splice(3, 0, ['voyage', 'Voyage']);
 function travelHTML() {
   const P = G.player, F = G.flags, fight = G.enemies.some(e => e.aggro && !e.dead && dist(e.x, e.y, P.x, P.y) < 500) || !!G.boss;
-  let h = `<div class="guide"><div class="sk"><div><b>Voyage rapide</b><div style="margin-top:4px;line-height:1.45">Rends-toi dans un village déjà visité pour <b>${TRAVEL_COST} or</b>. Impossible pendant un combat.${fight ? '<br><b style="color:#ff8a5a">Combat en cours : voyage indisponible.</b>' : ''}</div></div></div>`;
+  let h = `<div class="guide"><div class="sk"><div><b>Voyage rapide</b><div style="margin-top:4px;line-height:1.45">Rends-toi dans un village déjà visité pour <b>${(typeof travelCost === "function" ? travelCost() : TRAVEL_COST_BASE)} or</b>. Impossible pendant un combat.${fight ? '<br><b style="color:#ff8a5a">Combat en cours : voyage indisponible.</b>' : ''}</div></div></div>`;
   TRAVEL.forEach((t, i) => {
     const seen = F['seen_' + t.id] || t.id === 'brumeval', locked = t.gate && !gateOpen();
-    h += `<div class="sk"><div><b>${seen && !locked ? t.n : '???'}</b><div style="opacity:.7">${locked ? 'Porte scellée' : seen ? '' : 'Pas encore découvert'}</div></div>${seen && !locked ? `<button data-travel="${i}" ${fight || P.gold < TRAVEL_COST ? 'disabled' : ''}>Y aller</button>` : ''}</div>`;
+    h += `<div class="sk"><div><b>${seen && !locked ? t.n : '???'}</b><div style="opacity:.7">${locked ? 'Porte scellée' : seen ? '' : 'Pas encore découvert'}</div></div>${seen && !locked ? `<button data-travel="${i}" ${fight || P.gold < (typeof travelCost === "function" ? travelCost() : TRAVEL_COST_BASE) ? 'disabled' : ''}>Y aller</button>` : ''}</div>`;
   });
   return h + '</div>';
 }
 function fastTravel(i) {
-  const t = TRAVEL[i], P = G.player; if (!t || P.gold < TRAVEL_COST) return;
+  const t = TRAVEL[i], P = G.player; if (!t || P.gold < (typeof travelCost === "function" ? travelCost() : TRAVEL_COST_BASE)) return;
   if (G.enemies.some(e => e.aggro && !e.dead && dist(e.x, e.y, P.x, P.y) < 500) || G.boss) return toast('Impossible pendant un combat', '#ffb36b');
-  P.gold -= TRAVEL_COST; closePanel(); P.x = t.x * TILE; P.y = t.y * TILE; flashScreen('#c4b5fd', 0.5); toast('Voyage vers ' + t.n, '#c4b5fd'); G.cam && (G.cam.x = P.x - W / 2, G.cam.y = P.y - H / 2);
+  P.gold -= (typeof travelCost === "function" ? travelCost() : TRAVEL_COST_BASE); closePanel(); P.x = t.x * TILE; P.y = t.y * TILE; flashScreen('#c4b5fd', 0.5); toast('Voyage vers ' + t.n, '#c4b5fd'); G.cam && (G.cam.x = P.x - W / 2, G.cam.y = P.y - H / 2);
 }
 const _openMenu0 = openMenu;
 openMenu = function (tab) { if (tab === 'voyage') { menuTab = 'voyage'; } return _openMenu0(tab); };
