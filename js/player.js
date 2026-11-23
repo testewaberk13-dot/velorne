@@ -216,7 +216,7 @@ function updatePlayer(P, dt) {
   if (IN.pressed.dodge && P.state !== 'dodge' && P.state !== 'hurt' && P.cd.dodge <= 0 && (canAct || P.state === 'attack' || P.state === 'block' || P.state === 'charge')) startDodge(P, mx, my, mv);
   else if (IN.held.block && (canAct || P.state === 'charge') && P.state !== 'block' && P.sta > 5) { P.state = 'block'; P.blockT = 0; P.st = 0; }
   else if (P.atkBuffer > 0 && canAct) { P.atkBuffer = 0; startAttack(P, mx, my, mv, false); }
-  for (const s of ['s1', 's2', 's3', 's4', 'ult', 'tech']) if (IN.pressed[s === 'ult' ? 'ult' : s === 'tech' ? 'tech' : 'skill' + s[1]]) {
+  for (const s of ['s1', 's2', 's3', 's4', 's5', 'ult', 'tech']) if (IN.pressed[s === 'ult' ? 'ult' : s === 'tech' ? 'tech' : 'skill' + s[1]]) {
     if (s === 'tech' && !hasStyle(P)) { toast('Aucun style de combat appris : pas encore de technique d\'arme.', '#ffd27a'); continue; }
     if (s !== 'tech' && !P.magic) { toast('Ta magie innée n\'est pas encore révélée : va voir le Maître Mage Orvael (Cercle des Arcanes, est du village).', '#c4b5fd'); continue; }
     P.skBuf = { s, t: 0.35 };
@@ -487,11 +487,12 @@ function aimTarget(P, mx, my, mv, rangeMax) {
 }
 function skillDef(id) {
   const P = G.player;
-  if (P && (id === 's1' || id === 's2' || id === 's3' || id === 'm2') && P.magic) return innateSpell(P, id) || SKILLS[id];
+  if (P && (id === 's1' || id === 's2' || id === 's3' || id === 's5' || id === 'm2') && P.magic) return innateSpell(P, id) || SKILLS[id];
   return SKILLS[id] || SECRET_SPELLS[id];
 }
 function castSkill(P, id, mx, my, mv, slot) {
-  if (id === 's1' || id === 's2' || id === 's3' || id === 'm2') return castInnate(P, id, mx, my, mv, slot);
+  if (id === 's5' && P.magic && !innateSpell(P, 's5')) { toast('Emplacement 5 : se débloque avec la 4e compétence de ton grimoire (maîtrise ' + (SKILL_LVL[4] || 2) + ').', '#c4b5fd'); return; }
+  if (id === 's1' || id === 's2' || id === 's3' || id === 's5' || id === 'm2') return castInnate(P, id, mx, my, mv, slot);
   if (!P.magic) { toast('Ta magie innée n\'est pas encore révélée.', '#c4b5fd'); return; }
   const sk = skillDef(id); const S = P.st8; const cdKey = slot || id;
   if (P.cd[cdKey] > 0) return;

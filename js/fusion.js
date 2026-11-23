@@ -3,7 +3,8 @@
 // Combinaisons du cahier (10 à deux éléments, 3 à trois éléments). Conditions, coûts et effets chiffrés : PROPOSITIONS.
 // Affinités secondaires : obtenues par un « Rituel d'affinité » auprès du Maître Mage Orvael, tiré avec les MÊMES
 // probabilités que le Magic Spin (rollMagicTier / rollMagicFamily : taux 5/25/35/25/10 % inchangés).
-// Une affinité secondaire ne donne pas les sorts de la famille : elle permet les fusions qui l'utilisent (PROPOSITION).
+// Affinité (décision du 23/11) : prédisposition envers une famille — +25 % de maîtrise et +10 % de puissance quand elle est
+// utilisée ; la magie innée est l'affinité principale. Les affinités du rituel comptent aussi pour les fusions (contenu conservé).
 const FUSIONS = [
   { id: 'fu_plasma', n: 'Plasma', f: ['feu', 'foudre'], k: 'storm', el: 'foudre', st: 'burn', col: '255,170,255', hits: 6, m: 1.4, mp: 38, cd: 14, d: 'Des arcs de plasma frappent jusqu\'à 6 ennemis et les embrasent.' },
   { id: 'fu_givre', n: 'Givre absolu', f: ['eau', 'glace'], k: 'nova', el: 'glace', st: 'freeze', col: '190,240,255', r: 110, m: 1.6, mp: 36, cd: 14, d: 'Une onde de froid absolu gèle tout autour de toi.' },
@@ -55,7 +56,7 @@ castSkill = function (P, id, mx, my, mv, slot) {
   P.mp -= F.mp; P.cd[cdKey] = F.cd; P.state = 'cast'; P.animT = 0; P.castDone = false; P.st = 0;
   const t = aimTarget(P, mx, my, mv, 240); const a = P.aim;
   const tx = t ? t.x : P.x + Math.cos(a) * 110, ty = t ? t.y : P.y + Math.sin(a) * 110;
-  const pw = (30 + P.st8.mag * 1.6) / Math.max(1, P.st8.mag); // multiplicateur relatif à la puissance magique
+  const pw = (30 + P.st8.mag * 1.6) / Math.max(1, P.st8.mag) * (F.f.some(k => (P.affin || []).includes(k)) ? 1.1 : 1); // +10 % si une famille de la fusion est une affinité
   const hit = (e, mul) => { strikeEnemy(P, e, mul * pw * 0.6, { magic: true, el: F.el, noXp: true, kb: 60 }); if (F.st) applyStatus(P, e, F.st, F.f[0]); };
   const col = 'rgb(' + F.col + ')'; sfx('cast'); sfx('boom'); shake(5); if (typeof flashScreen === 'function') flashScreen(col, 0.25);
   ring(P.x, P.y, 34, col, 0.5, 4); for (let i = 0; i < 18; i++) { const q = i / 18 * 6.28; part(P.x + Math.cos(q) * 20, P.y + Math.sin(q) * 10, { rise: 50, col, life: 0.7, size: 2, add: true }); }
@@ -100,7 +101,7 @@ function fusionHTML(P) {
     if (s === 'maitrise') return `<div>◇ <b>${F.n}</b> — ${names} <small>maîtrise ${F.tri ? FUSION_MASTERY_TRI : FUSION_MASTERY} requise</small></div>`;
     if (s === 'indice') return `<div style="opacity:.7">◇ ??? — ${names}${F.tri ? ' (trois éléments)' : ''}</div>`;
     return `<div style="opacity:.4">◇ ??? — fusion inconnue</div>`; }).join('');
-  h += `<br><b>Rituel d'affinité</b> (auprès du Maître Mage Orvael, ${AFFINITY_COST} or, maîtrise ${FUSION_MASTERY}) : révèle une famille secondaire avec les probabilités du Magic Spin. ${near ? `<button data-affin="1" ${P.gold < AFFINITY_COST || innateMastery(P) < FUSION_MASTERY || !P.magic ? 'disabled' : ''}>Accomplir le rituel</button>` : '<i>Rends-toi au Cercle des Arcanes.</i>'}`;
+  h += `<br><b>Rituel d'affinité</b> (auprès du Maître Mage Orvael, ${AFFINITY_COST} or, maîtrise ${FUSION_MASTERY}) : révèle une affinité (prédisposition) envers une famille, tirée avec les probabilités du Magic Spin : +25 % de maîtrise et +10 % de puissance pour cette famille, et elle compte pour les fusions. Ta magie innée est ton affinité principale. ${near ? `<button data-affin="1" ${P.gold < AFFINITY_COST || innateMastery(P) < FUSION_MASTERY || !P.magic ? 'disabled' : ''}>Accomplir le rituel</button>` : '<i>Rends-toi au Cercle des Arcanes.</i>'}`;
   return h + '<br><small style="opacity:.7">Conditions et effets des fusions : propositions à valider.</small></div></div>';
 }
 const _codexHTMLF = codexHTML;

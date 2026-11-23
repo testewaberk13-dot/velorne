@@ -84,7 +84,7 @@ genRegions = function (c) {
   // Cavernes de Lave : forge souterraine
   add('obsidian', 134 * T, 455 * T); add('obsidian', 146 * T, 455 * T); add('brazier', 137 * T, 461 * T); add('brazier', 143 * T, 461 * T); add('anvil', 140 * T, 462 * T);
   WORLD.npcs.push({ look: 'npc_guard', x: 140 * T, y: 457 * T, name: 'Iska, gardienne des cavernes', role: 'south', key: 'lave', saga: 'lave', dir: 2 });
-  WORLD.npcs.push({ look: 'npc_smith', x: 143 * T, y: 461 * T + 8, name: 'Dorgan l\'Ancien, forgeron du magma', role: 'smith', dir: 1 });
+  WORLD.npcs.push({ look: 'npc_smith', x: 143 * T, y: 461 * T + 8, name: 'Ulrik Braisefer, forgeron du magma', role: 'smith', dir: 1 });
   sp('salamandre_geante', 116, 442, 3, 3); sp('salamandre_geante', 172, 444, 2, 3); sp('elementaire_magma', 120, 486, 2, 3); sp('elementaire_magma', 184, 466, 2, 2); sp('chauve_lave', 104, 466, 3, 4); sp('chauve_lave', 160, 496, 3, 4);
   chestAt(104, 498, ['cendres', 'gold:2100', 'mithril']); chestAt(186, 440, ['eclat_exception', 'gold:2150']);
   // Temple Enfoui : campement d'archéologues

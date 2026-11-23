@@ -10,6 +10,7 @@ const EYES = ['blue', 'brown', 'green', 'gray', 'purple', 'red'];
 
 // ===================== compétences =====================
 const SKILLS = {
+  s5: { name: 'Emplacement 5 (verrouillé)', icon: 'spell_shield', mp: 0, cd: 1, desc: 'Se débloque avec la 4e compétence de ton grimoire ; choisis ensuite le sort dans Compétences.' },
   s1: { name: 'Lion de feu', icon: 'spell_firelion', mp: 16, cd: 3.5, desc: 'Un lion de flammes charge droit devant, traverse les ennemis et les enflamme.' },
   s2: { name: 'Étreinte de glace', icon: 'spell_icetacle', mp: 20, cd: 6, desc: 'Des tentacules de glace jaillissent sous la cible et la gèlent.' },
   s3: { name: 'Griffe de foudre', icon: 'spell_lightning', mp: 24, cd: 7, desc: 'La foudre frappe la cible puis rebondit sur 3 ennemis proches et les paralyse.' },

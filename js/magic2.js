@@ -25,14 +25,14 @@ function magicXp(P, fam, n) {
     later(() => { toast('Maîtrise ' + F.n + ' niveau ' + after + (g ? ' — nouvelle compétence : ' + g.n + (got.includes(10) ? ' (ultime)' : '') : ''), F.col); sfx('level'); }, 250);
   }
 }
-function defSel(P, id) { const fam = id === 'm2' ? P.magic2 : P.magic, i = id === 'm2' ? 0 : { s1: 0, s2: 1, s3: 2 }[id]; return fam && GRIMOIRE[fam] ? 'C' + (i + 1) : 'L' + i; }
+function defSel(P, id) { const fam = id === 'm2' ? P.magic2 : P.magic, i = id === 'm2' ? 0 : { s1: 0, s2: 1, s3: 2, s5: 3 }[id]; return fam && GRIMOIRE[fam] ? 'C' + (i + 1) : 'L' + i; }
 function equippedSel(P, id) { const v = P.eqM && P.eqM[id]; if (v) return v; return defSel(P, id); }
 function equipM(P, slot, sel) {
   const fam = slot === 'm2' ? P.magic2 : P.magic; if (!fam) return false;
   if (sel[0] === 'C') { const n = +sel.slice(1); if (n < 1 || n > 9 || !grimSpell(fam, n) || !skillOpen(P, fam, n)) return false; }
   P.eqM = P.eqM || {};
   // un même sort n'occupe qu'un emplacement : échange si besoin
-  for (const k of ['s1', 's2', 's3', 'm2']) if (k !== slot && (P.eqM[k] || defSel(P, k)) === sel && (k === 'm2' ? P.magic2 : P.magic) === fam) P.eqM[k] = equippedSel(P, slot);
+  for (const k of ['s1', 's2', 's3', 's5', 'm2']) if (k !== slot && (P.eqM[k] || defSel(P, k)) === sel && (k === 'm2' ? P.magic2 : P.magic) === fam) P.eqM[k] = equippedSel(P, slot);
   P.eqM[slot] = sel; P.cd[slot] = 0; return true;
 }
 function grimUltReady(P) { return !!(P.magic && P.ultSel === 'C10' && grimSpell(P.magic, 10) && magLevel(P, P.magic) >= 10); }

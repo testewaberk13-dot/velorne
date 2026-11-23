@@ -4,8 +4,8 @@
 // Prix, conditions, vitesses : PROPOSITIONS. Sprites dessinés en code (pas de monture dans les ressources LPC).
 const MOUNTS = {
   cheval: { n: 'Cheval de Brumeval', kind: 'terrestre', spd: 0.75, price: 400, d: 'Monture terrestre : +75 % de vitesse sur la terre ferme.', req: P => hasStyleAny(P) ? null : 'Apprends d\'abord un style de combat.' },
-  raie: { n: 'Raie des brumes', kind: 'aquatique', spd: 0.4, price: 900, d: 'Monture aquatique : glisse sur l\'eau des lacs, rivières et marais (pas sur la lave ni l\'abîme).', req: () => (typeof SAGA !== 'undefined' && G.flags[SAGA.marais.flag]) ? null : 'Brise d\'abord le sceau des marais (Mère Odile, Vasebourg).' },
-  griffon: { n: 'Griffon d\'Aether', kind: 'volante', spd: 0.9, price: 2500, d: 'Monture volante : survole le vide entre les Îles flottantes d\'Aether.', req: () => null }
+  raie: { n: 'Raie des brumes', kind: 'aquatique', spd: 0.4, price: 1500, d: 'Monture aquatique : glisse sur l\'eau des lacs, rivières et marais (pas sur la lave ni l\'abîme).', req: () => (typeof SAGA !== 'undefined' && G.flags[SAGA.marais.flag]) ? null : 'Brise d\'abord le sceau des marais (Mère Odile, Vasebourg).' },
+  griffon: { n: 'Griffon d\'Aether', kind: 'volante', spd: 0.9, price: 15000, d: 'Monture volante : survole le vide entre les Îles flottantes d\'Aether.', req: () => null }
 };
 function ownsMount(P, k) { return (P.mounts || []).includes(k); }
 function mountToggle() {

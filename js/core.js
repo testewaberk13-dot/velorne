@@ -20,12 +20,12 @@ const DIRV = [[0, -1], [-1, 0], [0, 1], [1, 0]];
 const DEFAULT_KEYS = {
   up: ['KeyW', 'ArrowUp'], down: ['KeyS', 'ArrowDown'], left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'],
   attack: ['KeyJ'], dodge: ['Space'], block: ['KeyL'], skill1: ['Digit1', 'KeyU'], skill2: ['Digit2', 'KeyI'],
-  skill3: ['Digit3', 'KeyO'], skill4: ['Digit4', 'KeyP'], ult: ['KeyR'], potion: ['KeyF'], interact: ['KeyE'],
+  skill3: ['Digit3', 'KeyO'], skill4: ['Digit4', 'KeyP'], skill5: ['Digit5', 'KeyK'], ult: ['KeyR'], potion: ['KeyF'], interact: ['KeyE'],
   menu: ['Escape'], inventory: ['KeyB', 'Tab'], character: ['KeyC'], map: ['KeyM'], tech: ['KeyQ'], awaken: ['KeyG'], relic: ['KeyV'], racial: ['KeyX'], mount: ['KeyH']
 };
 const ACTION_LABEL = {
   up: 'Haut', down: 'Bas', left: 'Gauche', right: 'Droite', attack: 'Attaque', dodge: 'Esquive', block: 'Parade',
-  skill1: 'Compétence 1', skill2: 'Compétence 2', skill3: 'Compétence 3', skill4: 'Compétence 4', ult: 'Ultime',
+  skill1: 'Compétence 1', skill2: 'Compétence 2', skill3: 'Compétence 3', skill4: 'Compétence 4', skill5: 'Compétence 5', ult: 'Ultime',
   potion: 'Potion', interact: 'Interagir', menu: 'Menu', inventory: 'Inventaire', character: 'Personnage', map: 'Quêtes', tech: 'Technique d\'arme', awaken: 'Éveil / transformation', relic: 'Relique', racial: 'Aptitude raciale', mount: 'Monture'
 };
 const SET = Object.assign({ sound: true, music: true, shake: true, keys: null, touch: null, btnScale: 1, durability: false, fastSpin: false, rumble: true, padDead: 0.2 }, store('vel_set') || {});
@@ -118,6 +118,7 @@ const TOUCH_BTNS = [
   { id: 'block', act: 'block', r: 42, b: 168, s: 64 },
   { id: 'skill3', act: 'skill3', r: 228, b: 94, s: 58 },
   { id: 'skill4', act: 'skill4', r: 179, b: 179, s: 58 },
+  { id: 'skill5', act: 'skill5', r: 296, b: 86, s: 54 },
   { id: 'ult', act: 'ult', r: 92, b: 226, s: 62 },
   { id: 'potion', act: 'potion', r: 300, b: 18, s: 50 },
   { id: 'interact', act: 'interact', r: 330, b: 150, s: 58 },

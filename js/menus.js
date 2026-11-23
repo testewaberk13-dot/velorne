@@ -193,7 +193,7 @@ function skillsHTML(P) {
     h += `<div class="sk"><img src="${lockIcon().url}"><div><b>Sorts 1 à 4 et ultime</b><p>Ta magie innée n'est pas encore révélée. Le Maître Mage Orvael l'éveillera lors du rituel du Magic Spin, au Cercle des Arcanes (est du village).</p></div></div>`;
   } else {
     const F = MAGIC_DATA[P.magic];
-    ['s1', 's2', 's3'].forEach((id, i) => { const k = skillDef(id); h += `<div class="sk">${icoHTML(k)}<div><b>${k.name}</b> <small style="color:${F.col}">${F.n}</small> <small>${k.mp ? k.mp + ' mana · ' : ''}${k.cd} s · touche ${actLabel('skill' + (i + 1))}</small><p>${k.desc}</p></div></div>`; });
+    ['s1', 's2', 's3', 's5'].forEach((id, i) => { const k = skillDef(id); h += `<div class="sk">${icoHTML(k)}<div><b>${k.name}</b> <small style="color:${F.col}">${F.n}</small> <small>${k.mp ? k.mp + ' mana · ' : ''}${k.cd} s · touche ${actLabel('skill' + (i + 1))}</small><p>${k.desc}</p></div></div>`; });
     h += grimHTML(P);
     const s4 = skillDef(P.slot4) || SKILLS.s4; const opts = ['s4', ...Object.keys(P.spells)];
     h += `<div class="sk">${icoHTML(s4)}<div><b>Emplacement 4 : ${s4.name}</b> <small>${s4.mp} mana · ${s4.cd} s · touche ${actLabel('skill4')}</small><p>${s4.desc}</p><div class="row">${opts.map(k => `<button class="${P.slot4 === k ? 'on' : ''}" data-slot4="${k}">${(skillDef(k) || {}).name}</button>`).join('')}</div>${Object.keys(P.spells).length ? '' : '<small>Les grimoires interdits apprennent des sorts secrets à placer ici.</small>'}</div></div>`;
@@ -615,7 +615,7 @@ function grimHTML(P) {
   const fam = P.magic, GR = GRIMOIRE[fam]; if (!GR) return '';
   const F = MAGIC_DATA[fam], info = magXpInfo(P, fam); const pct = info.next ? Math.round((info.x - info.base) / (info.next - info.base) * 100) : 100;
   let h = `<div class="sk"><div><b style="color:${F.col}">Maîtrise du ${F.n} : niveau ${info.l}/10</b> <small>${info.next ? info.x + ' / ' + info.next + ' XP' : 'maîtrise complète'}</small><div style="height:6px;background:#2a1f33;border-radius:3px;margin:4px 0"><i style="display:block;height:6px;width:${pct}%;background:${F.col};border-radius:3px"></i></div><p>Chaque sort lancé fait progresser la maîtrise. Chaque niveau débloque une compétence du grimoire. Tes trois sorts de base restent toujours disponibles.</p></div></div>`;
-  const slots = [['s1', 1], ['s2', 2], ['s3', 3]];
+  const slots = [['s1', 1], ['s2', 2], ['s3', 3], ['s5', 5]];
   for (const [sl, n] of slots) {
     const cur = equippedSel(P, sl); const opts = [];
     MAGIC_DATA[fam].spells.forEach((sp, i) => opts.push(['L' + i, sp.n + ' (base)']));

@@ -168,6 +168,7 @@ function innateSpell(P, id) {
   const sel = typeof equippedSel === 'function' ? equippedSel(P, id) : null;
   if (sel && sel[0] === 'C') { const n = +sel.slice(1), g = grimSpell(fam, n); if (g && skillOpen(P, fam, n)) return { name: g.n, desc: g.d, fam, canvasIcon: grimIcon(fam, g), custom: g, mp: g.mp, cd: g.cd, k: 'custom' }; }
   const idx = sel && sel[0] === 'L' ? +sel.slice(1) : (id === 'm2' ? 0 : { s1: 0, s2: 1, s3: 2 }[id]); const sp = MAGIC_DATA[fam].spells[idx];
+  if (!sp) return null; // emplacement 5 : pas encore de compétence débloquée
   return Object.assign({ name: sp.n, desc: sp.d, fam, canvasIcon: spellIcon(fam, sp.k) }, sp, { mp: sp.mp, cd: sp.cd });
 }
 // ---------------- moteur des sorts innés ----------------

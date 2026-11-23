@@ -82,7 +82,7 @@ function drawHUD(ctx) {
 }
 function drawSkillBar(ctx) {
   const P = G.player; const tf = transformReady(P), rl = equippedRelic(P);
-  const ids = (hasStyle(P) ? ['tech'] : []).concat(['s1', 's2', 's3', 's4', 'ult', 'potion', 'racial']).concat(tf ? ['awaken'] : []).concat(rl ? ['relic'] : []);
+  const ids = (hasStyle(P) ? ['tech'] : []).concat(['s1', 's2', 's3', 's4', 's5', 'ult', 'potion', 'racial']).concat(tf ? ['awaken'] : []).concat(rl ? ['relic'] : []);
   const sz = 22, gap = 4, total = ids.length * (sz + gap) - gap; let x = (W - total) / 2; const y = H - sz - 6;
   for (const id of ids) {
     ctx.fillStyle = 'rgba(12,8,20,0.82)'; ctx.fillRect(x - 1, y - 1, sz + 2, sz + 2); ctx.strokeStyle = id === 'ult' || id === 'awaken' ? '#ffcf5a' : id === 'tech' ? '#f0d08a' : '#8a7550'; ctx.lineWidth = 1; ctx.strokeRect(x - 0.5, y - 0.5, sz + 1, sz + 1);
@@ -107,7 +107,7 @@ function setupTouch() {
   const pad = document.createElement('div'); pad.id = 'stickzone'; box.appendChild(pad);
   const base = document.createElement('div'); base.id = 'stickbase'; const knob = document.createElement('div'); knob.id = 'stickknob'; base.appendChild(knob); box.appendChild(base);
   const P0 = G.player; const ico = s => { const sk = P0 && skillDef(s); if (!P0 || !P0.magic) return lockIcon().url; return sk && sk.canvasIcon ? sk.canvasIcon.url : 'assets/ui/' + (sk ? sk.icon : 'spell_shield') + '.png'; };
-  const icons = { skill1: ico('s1'), skill2: ico('s2'), skill3: ico('s3'), skill4: ico(P0 ? P0.slot4 : 's4'), ult: P0 && P0.magic ? 'assets/ui/spell_watertacle.png' : lockIcon().url };
+  const icons = { skill1: ico('s1'), skill2: ico('s2'), skill3: ico('s3'), skill4: ico(P0 ? P0.slot4 : 's4'), skill5: ico('s5'), ult: P0 && P0.magic ? 'assets/ui/spell_watertacle.png' : lockIcon().url };
   const labels = { attack: '⚔', dodge: '»', block: '🛡', potion: '', interact: '✋', ult: '', tech: '✦', awaken: '☀', relic: '◉', racial: '❖', mount: '♞' };
   for (const b of TOUCH_BTNS) {
     const el = document.createElement('div'); el.className = 'tbtn tb-' + b.id; el.id = 'tb_' + b.id; el.dataset.act = b.act;
@@ -183,7 +183,7 @@ function updateTouchUI() {
   const set = (id, k, v) => { const key = id + k; if (touchCache[key] === v) return; touchCache[key] = v; const el = $('tb_' + id); if (!el) return; if (k === 'cd') el.querySelector('.cd') && el.querySelector('.cd').style.setProperty('--k', v); else if (k === 'cls') el.className = 'tbtn tb-' + id + ' ' + v + (el.classList.contains('down') ? ' down' : ''); else if (k === 'cnt') { const c = el.querySelector('.cnt'); if (c) c.textContent = v; } };
   const iconKey = (P.magic || '-') + (P.slot4 || '') + JSON.stringify(P.eqM || {});
   if (touchCache.icons !== iconKey) { touchCache.icons = iconKey; setupTouch(); return; }
-  for (const s of ['s1', 's2', 's3', 's4']) {
+  for (const s of ['s1', 's2', 's3', 's4', 's5']) {
     const id = 'skill' + s[1]; const sk = skillDef(s === 's4' ? P.slot4 : s) || SKILLS[s]; set(id, 'cd', P.magic ? (P.cd[s] / sk.cd).toFixed(2) : '0'); set(id, 'cls', !P.magic ? 'locked' : P.mp < sk.mp ? 'nomana' : '');
   }
   set('attack', 'cls', hasStyle(P) ? '' : 'locked'); set('tech', 'cls', hasStyle(P) ? '' : 'hide');

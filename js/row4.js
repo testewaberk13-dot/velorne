@@ -121,7 +121,7 @@ TRAVEL.push({ id: 'vess', n: 'Village de Vess (Archipel des Sirènes)', x: 40, y
 SAFE_ZONES.push({ id: 'vess', n: 'Village de Vess', c: [40, 386], r: 7 }, { id: 'eshara', n: 'Sanctuaire d\'Aether', c: [140, 386], r: 7 }, { id: 'drazek', n: 'Dernier bastion', c: [236, 388], r: 7 });
 Object.assign(TIPS, {
   reg_archipel: ['Archipel des Sirènes (niv. 54+)', () => `Des îles perdues dans une mer chaude.<br><br>• <b>Village de Vess</b> sur l'île principale.<br>• Les autres îles se rejoignent par la mer : la <b>Raie des brumes</b> (Vasebourg) traverse les eaux de l'archipel.`],
-  reg_aether: ['Îles flottantes d\'Aether (niv. 58+)', () => `Des îles suspendues au-dessus du vide, vestiges d'Aether.<br><br>• <b>Sanctuaire</b> sur la première île : <b>Luthen</b> y dresse des <b>griffons</b>, seule monture capable de survoler le vide.<br>• Gardiens d'Aether, golems et sylphes célestes.`],
+  reg_aether: ['Îles flottantes d\'Aether (niv. 58+)', () => `Des îles suspendues au-dessus du vide, vestiges d'Aether.<br><br>• <b>Sanctuaire</b> sur la première île : <b>Luthen</b> y dresse des <b>griffons</b> (15 000 or), seule monture capable de survoler le vide.<br>• Gardiens d'Aether, golems et sylphes célestes.`],
   reg_corrompues: ['Terres Corrompues (niv. 62+)', () => `Le sol saigne là où Nyx a touché le monde.<br><br>• <b>Dernier bastion</b> : Drazek et Nyra la purificatrice.<br>• Horreurs corrompues, cultistes de Nyx, loups corrompus.`]
 });
 SIDEQ.push(
