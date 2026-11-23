@@ -254,6 +254,10 @@ function updateHumanoid(e, dt, dP, aP) {
   }
 }
 // ----------------- boss -----------------
+// répertoire des boss : une même attaque jamais plus de deux fois d'affilée (canon IA, V0.1 §7.2)
+function bossNote(e, m) { const h = e.hist || (e.hist = []); h.push(m); if (h.length > 6) h.shift(); }
+function bossRepeated(e, m) { const h = e.hist || []; return h.length >= 2 && h[h.length - 1] === m && h[h.length - 2] === m; }
+function bossPick(e, opts) { let o = opts.filter(x => !bossRepeated(e, x)); if (!o.length) o = opts; const r = o[Math.floor(Math.random() * o.length)]; bossNote(e, r); return r; }
 function updateBoss(e, dt, dP, aP) {
   const d = e.def, P = G.player;
   if (e.aggro && dist(e.x, e.y, e.home.x, e.home.y) > 420) { // laisse : le boss retourne dans sa clairière
@@ -279,9 +283,9 @@ function updateBoss(e, dt, dP, aP) {
     }
     case 'idle': case 'chase': {
       e.state = 'chase';
-      if (e.phase >= 2 && e.slamT <= 0 && dP < 180) { e.state = 'slamw'; e.st = 0; e.slamT = e.phase === 3 ? 5 : 7.5; e.slamX = P.x; e.slamY = P.y; G.zones2.push({ x: e.x, y: e.y, r: 100, t: 0, delay: 0.9, dmg: 0, telegraph: 1, col: '255,80,40' }); sfx('roar'); break; }
-      if (e.chargeT <= 0 && dP > 80 && dP < 220) { e.state = 'cwind'; e.st = 0; e.atkA = aP; e.chargeT = 6 / rage; break; }
-      if (dP < d.range + 10 && e.cd <= 0) { e.state = 'wind'; e.st = 0; e.atkA = aP; e.dir = dirOf(Math.cos(aP), Math.sin(aP)); e.atk = Math.random() < 0.5 ? 'slash' : 'thrust'; break; }
+      if (e.phase >= 2 && e.slamT <= 0 && dP < 180 && !bossRepeated(e, 'slam')) { bossNote(e, 'slam'); e.state = 'slamw'; e.st = 0; e.slamT = e.phase === 3 ? 5 : 7.5; e.slamX = P.x; e.slamY = P.y; G.zones2.push({ x: e.x, y: e.y, r: 100, t: 0, delay: 0.9, dmg: 0, telegraph: 1, col: '255,80,40' }); sfx('roar'); break; }
+      if (e.chargeT <= 0 && dP > 80 && dP < 220 && !bossRepeated(e, 'charge')) { bossNote(e, 'charge'); e.state = 'cwind'; e.st = 0; e.atkA = aP; e.chargeT = 6 / rage; break; }
+      if (dP < d.range + 10 && e.cd <= 0) { e.state = 'wind'; e.st = 0; e.atkA = aP; e.dir = dirOf(Math.cos(aP), Math.sin(aP)); e.atk = bossPick(e, ['slash', 'thrust']); break; }
       if (dP > d.range - 8) { enemyMove(e, aP, d.spd * rage, dt); animate('walk', 9); e.fr = 1 + Math.floor(e.animT) % 8; } else { e.anim = 'walk'; e.fr = 0; }
       e.dir = dirOf(Math.cos(aP), Math.sin(aP));
       break;
