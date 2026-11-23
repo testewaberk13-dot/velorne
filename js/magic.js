@@ -71,7 +71,7 @@ const MAGIC_DATA = {
     { n: 'Crachat toxique', k: 'proj', p: 0.8, mp: 11, cd: 2.5, st: 'poison', d: 'Empoisonne la cible (cumulable).' },
     { n: 'Nuage toxique', k: 'zone', p: 0.25, mp: 20, cd: 8, r: 58, life: 5, st: 'poison', d: 'Un nuage empoisonne tous les ennemis qui le traversent.' },
     { n: 'Fléau', k: 'chain', p: 0.9, mp: 22, cd: 8, n2: 5, st: 'poison', d: 'Le poison se propage d\'ennemi en ennemi.' }]),
-  neant: MF('Néant', '#6d28d9', 'ombre', 5, 'obscure', 'espace', 'Le vide originel : il efface tout ce qu\'il touche.', 'Effacement', [
+  neant: MF('Vide', '#6d28d9', 'ombre', 5, 'obscure', 'espace', 'Le vide originel : il efface tout ce qu\'il touche.', 'Effacement', [
     { n: 'Sphère du néant', k: 'proj', p: 1.5, mp: 18, cd: 4, pierce: 1, speed: 120, d: 'Une sphère lente qui désintègre tout sur son passage.' },
     { n: 'Faille du néant', k: 'vortex', p: 2.0, mp: 26, cd: 9, d: 'Une faille aspire les ennemis puis implose.' },
     { n: 'Annihilation', k: 'nova', p: 1.9, mp: 34, cd: 12, r: 90, st: 'curse', d: 'Le néant s\'ouvre autour de toi et maudit les survivants.' }]),

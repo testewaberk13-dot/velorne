@@ -109,7 +109,7 @@ function tick(dt) {
   if (G.zoneBanner) G.zoneBanner.t += dt;
   const fighting = G.enemies.some(e => e.aggro && !e.dead && !e.def.boss);
   if (!G.boss && G.zone.id !== 'village') playMusic(fighting ? 'combat' : (G.zone.music === 'boss' ? (G.flags.bossDead ? 'forest' : 'boss') : 'forest'));
-  ambientParticles(sdt, G.zone, G.cam.x, G.cam.y); ambientWorld(sdt);
+  ambientParticles(sdt, G.zone, G.cam.x, G.cam.y); ambientWorld(sdt); if (typeof safeAnnounce === 'function') safeAnnounce();
   if (Math.random() < sdt * 6) { const tx = Math.floor((G.cam.x + Math.random() * W) / TILE), ty = Math.floor((G.cam.y + Math.random() * H) / TILE); if (WORLD.solid[ty * MW + tx]) part(tx * TILE + rnd(4, 28), ty * TILE + rnd(4, 28), { col: '#e8fbff', size: 1, life: 0.6, add: true, drag: 1 }); }
   // lumières
   addLight(P.x, P.y - 14, 90, null, 1);
@@ -130,6 +130,7 @@ function render() {
   const sx = G.shake ? rnd(-G.shake, G.shake) : 0, sy = G.shake ? rnd(-G.shake, G.shake) : 0;
   const cx = Math.round(G.cam.x + sx), cy = Math.round(G.cam.y + sy);
   drawTerrain(ctx, cx, cy);
+  if (typeof g0Ground === 'function') g0Ground(ctx, cx, cy, G.zone);
   // décors plats
   const vis = (x, y, m) => x > cx - m && x < cx + W + m && y > cy - 30 && y < cy + H + m * 1.6;
   for (const p of WORLD.props) if (p.def.flat && vis(p.x, p.y, 40)) drawProp(ctx, p, cx, cy);
@@ -176,6 +177,7 @@ function render() {
   drawParts(ctx, cx, cy, false);
   // ombres de nuages qui glissent sur le monde (profondeur)
   drawCloudShadows(ctx, cx, cy);
+  if (typeof g0Post === 'function') g0Post(ctx, cx, cy);
   // lumière / ambiance
   const z = G.zone || WORLD.zones[0];
   let dark = z.dark; let tint = 'rgba(8,10,30,1)';
@@ -192,6 +194,7 @@ function render() {
   for (const t of G.tornados) drawFx(ctx, 'tornado', 4 + Math.floor(t.t * 14) % 8, t.x - cx, t.y - cy - 40, 1, 0.9);
   for (const p of G.pillars) { const k = p.t / 0.8; ctx.globalAlpha = 1 - k; const g = ctx.createLinearGradient(0, p.y - cy - 200, 0, p.y - cy); g.addColorStop(0, 'rgba(255,250,210,0)'); g.addColorStop(1, 'rgba(255,245,190,0.95)'); ctx.fillStyle = g; ctx.fillRect(p.x - cx - 22 * (1 - k * 0.5), p.y - cy - 200, 44 * (1 - k * 0.5), 200); ctx.globalAlpha = 1; }
   ctx.globalCompositeOperation = 'source-over';
+  if (typeof g0Light === 'function') g0Light(ctx, cx, cy);
   drawMfx(ctx, cx, cy, 'top');
   drawRings(ctx, cx, cy);
   drawNums(ctx, cx, cy);

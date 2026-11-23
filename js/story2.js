@@ -7,7 +7,7 @@ const SAGA = {
   marais: { boss: 'boss_marais', flag: 'dead_boss_marais', region: 'Marais de Grisebrume', where: 'au sud de la forêt, au fond du marais', gold: 700, lvl: 10,
     intro: "<b>Mère Grisebrume</b> était guérisseuse avant que le sceau noir ne la ronge. Son marais empoisonne tout. Va au bout du chemin de pilotis, vers le sud : emporte des antidotes.",
     done: "Elle repose enfin… Merci, voyageur. Le marais pourra guérir. Prends ceci." },
-  neige: { boss: 'boss_neige', flag: 'dead_boss_neige', region: 'Cimes de Givrenuit', where: 'à l\'extrémité est du désert, dans les cimes', gold: 1000, lvl: 14,
+  neige: { boss: 'boss_neige', flag: 'dead_boss_neige', region: 'Pics de Givrenuit', where: 'à l\'extrémité est du désert, dans les cimes', gold: 1000, lvl: 14,
     intro: "<b>Kragh</b>, l'Alpha blanc, mène les loups des neiges depuis qu'il porte le sceau. Il se tient au nord-est des cimes. Couvre-toi : le froid ralentit.",
     done: "Le blizzard se calme déjà. Tu as brisé le sceau des cimes. Prends cette récompense." },
   volcan: { boss: 'boss_volcan', flag: 'dead_boss_volcan', region: 'Cratère de Cendrefeu', where: 'au sud du désert ou à l\'est du marais, au cœur du cratère', gold: 1400, lvl: 18,

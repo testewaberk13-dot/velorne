@@ -225,7 +225,7 @@ function historyHTML(P) {
   return `<p class="hint">Historique des récompenses de Spin (les 80 dernières).</p><div class="hist">${rows || '<p class="dim">Aucune récompense pour l\'instant.</p>'}</div>`;
 }
 function optsHTML() {
-  return `<div class="opts"><div class="row"><button data-opt="sound">Effets sonores : ${SET.sound ? 'oui' : 'non'}</button><button data-opt="music">Musique : ${SET.music ? 'oui' : 'non'}</button><button data-opt="shake">Tremblements : ${SET.shake ? 'oui' : 'non'}</button><button data-opt="fs">Plein écran</button><button data-opt="fastspin">Animations de Spin : ${SET.fastSpin ? 'rapides' : 'complètes'}</button><button data-opt="durability">Durabilité des équipements : ${SET.durability ? 'activée' : 'désactivée'}</button><button data-opt="transfer">Transférer ma sauvegarde</button></div>
+  return `<div class="opts"><div class="row"><button data-opt="sound">Effets sonores : ${SET.sound ? 'oui' : 'non'}</button><button data-opt="music">Musique : ${SET.music ? 'oui' : 'non'}</button><button data-opt="shake">Tremblements : ${SET.shake ? 'oui' : 'non'}</button><button data-opt="fs">Plein écran</button><button data-opt="quality">Qualité graphique : ${G0_LABEL[SET.gfx || 'auto']}</button><button data-opt="fastspin">Animations de Spin : ${SET.fastSpin ? 'rapides' : 'complètes'}</button><button data-opt="durability">Durabilité des équipements : ${SET.durability ? 'activée' : 'désactivée'}</button><button data-opt="transfer">Transférer ma sauvegarde</button></div>
     <h4>Manette</h4><div class="row"><button data-opt="rumble">Vibrations : ${SET.rumble ? 'oui' : 'non'}</button><button data-opt="dead">Zone morte du stick : ${Math.round((SET.padDead || 0.2) * 100)} %</button><span class="hint">${PAD.connected ? 'Manette détectée : ' + esc((PAD.id || '').split('(')[0]) : 'Aucune manette détectée : branche-la ou appuie sur un bouton.'}</span></div>
     ${IS_TOUCH ? `<h4>Commandes tactiles</h4><div class="row"><button data-opt="edit">Déplacer les boutons</button><button data-opt="bigger">Boutons plus grands</button><button data-opt="smaller">Boutons plus petits</button><button data-opt="resettouch">Disposition par défaut</button></div>` : ''}
     <h4>Touches du clavier</h4><div class="keys">${Object.keys(ACTION_LABEL).map(a => `<div><span>${ACTION_LABEL[a]}</span><button data-bind="${a}">${SET.keys[a].map(keyName).join(' / ')}</button></div>`).join('')}</div>
@@ -595,6 +595,7 @@ document.addEventListener('click', e => {
     if (o === 'dead') { const v = [0.12, 0.16, 0.2, 0.25, 0.3]; SET.padDead = v[(v.indexOf(SET.padDead || 0.2) + 1) % v.length]; }
     if (o === 'durability') { SET.durability = !SET.durability; if (P) P.dirty = true; }
     if (o === 'fs') goFullscreen();
+    if (o === 'quality') g0Cycle();
     if (o === 'transfer') { openSaveTransfer(); return; }
     if (o === 'resetkeys') SET.keys = JSON.parse(JSON.stringify(DEFAULT_KEYS));
     if (o === 'bigger') { SET.btnScale = Math.min(1.4, (SET.btnScale || 1) + 0.1); if (G.player) setupTouch(); }

@@ -1,7 +1,7 @@
 'use strict';
 // ===================== LE GRAND MONDE : 5 nouvelles régions autour de la forêt =====================
 // Plan (en tuiles) : haut = forêt (0-96) | désert (96-192) | cimes enneigées (192-288) ; bas = marais (0-96) | volcan (96-192) | citadelle (192-288)
-const REGION_NAMES = ['Forêt', 'Désert d\'Arkhan', 'Cimes de Givrenuit', 'Marais de Grisebrume', 'Cratère de Cendrefeu', 'Citadelle de Malvorak'];
+const REGION_NAMES = ['Forêt', 'Désert d\'Arkhan', 'Pics de Givrenuit', 'Marais de Grisebrume', 'Cratère de Cendrefeu', 'Citadelle de Malvorak'];
 // murs infranchissables entre régions (x0,y0,x1,y1 en tuiles) — les passages sont les trous
 const REGION_WALLS = [
   [95, 0, 97, 28], [95, 40, 97, 72],          // forêt | désert (passage y 28-40)

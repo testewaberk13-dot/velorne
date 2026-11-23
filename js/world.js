@@ -286,7 +286,7 @@ function genWorld() {
   genRegions({ R, add, reserve, tileFree, sp, chestAt });
   WORLD.zones.splice(WORLD.zones.length - 1, 0,
     { id: 'desert', name: 'Désert d\'Arkhan', x0: 96, y0: 0, x1: 192, y1: 72, music: 'forest', dark: 0 },
-    { id: 'neige', name: 'Cimes de Givrenuit', x0: 192, y0: 0, x1: 288, y1: 72, music: 'forest', dark: 0.1 },
+    { id: 'neige', name: 'Pics de Givrenuit', x0: 192, y0: 0, x1: 288, y1: 72, music: 'forest', dark: 0.1 },
     { id: 'marais', name: 'Marais de Grisebrume', x0: 0, y0: 72, x1: 96, y1: 144, music: 'forest', dark: 0.14 },
     { id: 'volcan', name: 'Cratère de Cendrefeu', x0: 96, y0: 72, x1: 192, y1: 144, music: 'forest', dark: 0.04 },
     { id: 'citadelle', name: 'Citadelle de Malvorak', x0: 192, y0: 72, x1: 288, y1: 144, music: 'forest', dark: 0.18 });

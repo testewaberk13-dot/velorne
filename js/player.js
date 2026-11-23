@@ -398,6 +398,7 @@ function useConsumable(P, inst) {
 function hurtPlayer(P, dmg, sx, sy, src, el) {
   if (P.state !== 'dead' && P.iframes <= 0) padRumble(Math.min(1, 0.35 + dmg / Math.max(1, P.st8.maxhp) * 2), 0.4, 140);
   if (P.state === 'dead' || P.iframes > 0 || G.mode !== 'play') return false;
+  if (typeof safeAt === 'function' && safeAt(P.x, P.y) && !(src && src.def && src.def.boss)) return false; // zone sûre (canon V2)
   el = el || 'physique'; const S = P.st8;
   dmg = gbufHurt(P, dmg, src); if (dmg <= 0) return false;
   const ang = Math.atan2(sy - P.y, sx - P.x);
