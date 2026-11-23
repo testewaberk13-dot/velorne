@@ -88,7 +88,7 @@ drawHUD = function (ctx) {
     const t = objectiveTarget(); if (!t || G.mode !== 'play') return; const P = G.player;
     const pulse = 0.6 + 0.4 * Math.sin(G.t * 5);
     // minicarte
-    const mw = 96, mh = 48, mx = W - mw - 5, my = 5, sx = mw / (MW * TILE), sy = mh / (MH * TILE);
+    const mw = 96, mh = Math.round(96 * MH / MW), mx = W - mw - 5, my = 5, sx = mw / (MW * TILE), sy = mh / (MH * TILE);
     ctx.strokeStyle = `rgba(255,226,122,${pulse})`; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(mx + t.x * sx, my + t.y * sy, 2.5 + pulse * 1.5, 0, 7); ctx.stroke();
     // flèche à l'écran si l'objectif est hors champ
     const ox = t.x - G.cam.x, oy = t.y - G.cam.y; const dtl = Math.round(dist(P.x, P.y, t.x, t.y) / TILE);

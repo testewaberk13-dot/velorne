@@ -5,7 +5,7 @@ function buildMinimap() {
   const c = document.createElement('canvas'); c.width = MW; c.height = MH; const x = c.getContext('2d');
   for (let ty = 0; ty < MH; ty++) for (let tx = 0; tx < MW; tx++) {
     const v = vget(tx, ty) + vget(tx + 1, ty + 1);
-    const rg = WORLD.region[ty * MW + tx], PL = [['#2c6f91', '#3f7a34', '#6f8a3f', '#9a7a4e'], ['#4a98a8', '#d8b66a', '#c89a4a', '#a8794a'], ['#8cb8d8', '#e8f0f8', '#c8d8e4', '#9aa8b4'], ['#1c4a3c', '#3a5a34', '#4a5a30', '#6a5a3a'], ['#d8481a', '#4a3c38', '#5e4a44', '#7a4a2a'], ['#3a2a68', '#3a3452', '#4a4464', '#5e4a80']][rg] || [];
+    const rg = WORLD.region[ty * MW + tx], PL = [['#2c6f91', '#3f7a34', '#6f8a3f', '#9a7a4e'], ['#4a98a8', '#d8b66a', '#c89a4a', '#a8794a'], ['#8cb8d8', '#e8f0f8', '#c8d8e4', '#9aa8b4'], ['#1c4a3c', '#3a5a34', '#4a5a30', '#6a5a3a'], ['#d8481a', '#4a3c38', '#5e4a44', '#7a4a2a'], ['#3a2a68', '#3a3452', '#4a4464', '#5e4a80'], ['#2a7aa8', '#cdb878', '#c0a868', '#a89058'], ['#2c6f91', '#c8b040', '#b09838', '#8a6a40'], ['#3a7ab8', '#4a5a90', '#5a5a8a', '#4a3a6a']][rg] || [];
     x.fillStyle = WORLD.solid[ty * MW + tx] ? PL[0] : v >= 2 ? PL[1] : v === 1 ? PL[2] : PL[3]; x.fillRect(tx, ty, 1, 1);
   }
   for (const p of WORLD.props) { if (!p.def.fade) continue; x.fillStyle = p.type.startsWith('house') ? '#b5523a' : '#244d22'; x.fillRect(Math.floor(p.x / TILE) - 1, Math.floor(p.y / TILE) - 1, p.type.startsWith('house') ? 4 : 2, 2); }
@@ -41,7 +41,7 @@ function drawHUD(ctx) {
   if (P.shield > 0) txt(ctx, 'Bouclier ' + Math.ceil(P.shield) + 's', 140, 24, '#bff', 8);
   // minicarte
   if (MINIMAP) {
-    const mw = 96, mh = 48, mx = W - mw - 5, my = 5;
+    const mw = 96, mh = Math.round(96 * MH / MW), mx = W - mw - 5, my = 5;
     ctx.fillStyle = 'rgba(10,8,16,0.8)'; ctx.fillRect(mx - 2, my - 2, mw + 4, mh + 4); ctx.strokeStyle = '#c9a45a'; ctx.strokeRect(mx - 1.5, my - 1.5, mw + 3, mh + 3);
     ctx.globalAlpha = 0.9; ctx.drawImage(MINIMAP, mx, my, mw, mh); ctx.globalAlpha = 1; if (typeof drawFog === 'function') drawFog(ctx, mx, my, mw, mh);
     const sx = mw / (MW * TILE), sy = mh / (MH * TILE);
