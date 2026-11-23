@@ -4,6 +4,7 @@
 // Contenu détaillé (PNJ, monstres, niveaux, villages) : PROPOSITIONS. Générées APRÈS le monde existant, avec leur propre
 // générateur aléatoire : le monde d'origine, les coffres et les sauvegardes restent identiques.
 const SOUTH_Y = 144;
+const SOUTH_TALK = {}, SOUTH_REP = {}; // textes « Parler » et faction des chefs ajoutés par les rangées suivantes
 // ---------- régions (index 6, 7, 8) ----------
 const _regionIdxS = regionIdx;
 regionIdx = function (tx, ty) {
@@ -161,11 +162,11 @@ Object.assign(TIPS, {
 const _interactS = interact;
 interact = function (n) {
   if (!n || n.role !== 'south') return _interactS(n);
-  const T = {
+  const T = SOUTH_TALK[n.key] || {
     cote: 'Bienvenue à Port-Épave. Les navires qui s\'échouent ici viennent de la Mer Intérieure… et les noyés ne restent pas toujours au fond. La Ligue des Navigateurs cherche des marins courageux.',
     plaines: 'Les Plaines d\'Or nourrissent la moitié de Vélorne. Depuis que les sceaux faiblissent, les brigands pillent nos convois. Les routes ont besoin de protecteurs.',
     cristal: 'Cette forêt s\'est cristallisée en une nuit, il y a mille ans, quand la Couronne d\'Aube s\'est brisée. Je cherche à comprendre pourquoi. Les éclats chantent encore, écoute…'
   }[n.key];
-  try { codexAdd('p', n.name, n.name); if (relData()[n.name] === undefined) relGain(n.name, 20); if (n.key === 'cote') repGain('navigateurs', 40); if (n.key === 'cristal') repGain('archives', 40); } catch (e) {}
+  try { codexAdd('p', n.name, n.name); if (relData()[n.name] === undefined) relGain(n.name, 20); if (n.key === 'cote') repGain('navigateurs', 40); if (n.key === 'cristal') repGain('archives', 40); if (SOUTH_REP[n.key]) repGain(SOUTH_REP[n.key], 40); } catch (e) {}
   dialog(n.name, T, [['Au revoir', closePanel]]);
 };
