@@ -43,11 +43,11 @@ function drawHUD(ctx) {
   if (MINIMAP) {
     const mw = 96, mh = 48, mx = W - mw - 5, my = 5;
     ctx.fillStyle = 'rgba(10,8,16,0.8)'; ctx.fillRect(mx - 2, my - 2, mw + 4, mh + 4); ctx.strokeStyle = '#c9a45a'; ctx.strokeRect(mx - 1.5, my - 1.5, mw + 3, mh + 3);
-    ctx.globalAlpha = 0.9; ctx.drawImage(MINIMAP, mx, my, mw, mh); ctx.globalAlpha = 1;
+    ctx.globalAlpha = 0.9; ctx.drawImage(MINIMAP, mx, my, mw, mh); ctx.globalAlpha = 1; if (typeof drawFog === 'function') drawFog(ctx, mx, my, mw, mh);
     const sx = mw / (MW * TILE), sy = mh / (MH * TILE);
     for (const e of G.enemies) if (!e.dead && dist(e.x, e.y, P.x, P.y) < 500) { ctx.fillStyle = e.def.boss ? '#ff3a3a' : '#ff8a8a'; ctx.fillRect(mx + e.x * sx - (e.def.boss ? 1.5 : 0.5), my + e.y * sy - (e.def.boss ? 1.5 : 0.5), e.def.boss ? 3 : 1.5, e.def.boss ? 3 : 1.5); }
-    for (const n of G.npcs) { ctx.fillStyle = '#ffe27a'; ctx.fillRect(mx + n.x * sx - 1, my + n.y * sy - 1, 2, 2); }
-    for (const c of WORLD.chests) if (!c.opened) { ctx.fillStyle = '#d9a441'; ctx.fillRect(mx + c.x * sx - 1, my + c.y * sy - 1, 2, 2); }
+    for (const n of G.npcs) { if (typeof fogSeen === 'function' && !fogSeen(n.x, n.y)) continue; ctx.fillStyle = '#ffe27a'; ctx.fillRect(mx + n.x * sx - 1, my + n.y * sy - 1, 2, 2); }
+    for (const c of WORLD.chests) if (!c.opened && (typeof fogSeen !== 'function' || fogSeen(c.x, c.y))) { ctx.fillStyle = '#d9a441'; ctx.fillRect(mx + c.x * sx - 1, my + c.y * sy - 1, 2, 2); }
     ctx.fillStyle = '#fff'; ctx.fillRect(mx + P.x * sx - 1.5, my + P.y * sy - 1.5, 3, 3);
     const q = questText(); if (q) { if (IS_TOUCH) txt(ctx, q, 6, 38 + 40 / SCALE + 10, '#ffe9a0', 8, 'left'); else txt(ctx, q, W - 5, my + mh + 12, '#ffe9a0', 8, 'right'); }
   }

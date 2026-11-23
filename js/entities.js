@@ -97,6 +97,7 @@ function updateEnemies(dt) {
     }
     const dP = dist(e.x, e.y, P.x, P.y), aP = Math.atan2(P.y - e.y, P.x - e.x);
     if (P.state === 'dead') e.aggro = false;
+    else if (!d.boss && typeof playerSafe === 'function' && playerSafe()) e.aggro = false; // zone sûre : poursuite coupée
     else if (dP < (d.boss ? 230 : 150) && (e.aggro || lineClear(e.x, e.y - 8, P.x, P.y - 8))) e.aggro = true;
     if (e.aggro && dP > 360 && !d.boss) e.aggro = false;
     if (d.boss && e.aggro && !G.boss) { G.boss = e; playMusic('boss'); sfx('roar'); toast(d.name, '#ff9b6b'); shake(6); }

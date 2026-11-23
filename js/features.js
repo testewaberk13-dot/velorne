@@ -5,7 +5,7 @@ const TRAVEL = [
   { id: 'brumeval', n: 'Village de Brumeval', x: 48, y: 66 },
   { id: 'arkhan', n: 'Camp d\'Arkhan (désert)', x: 113, y: 37 },
   { id: 'vasebourg', n: 'Vasebourg (marais)', x: 48, y: 89 },
-  { id: 'givrenuit', n: 'Village d\'Orélia (cimes)', x: 210, y: 39 },
+  { id: 'givrenuit', n: 'Village d\'Orélia (Pics de Givrenuit)', x: 210, y: 39 },
   { id: 'cendrefeu', n: 'Forge de Cendrefeu (volcan)', x: 112, y: 107 },
   { id: 'citadelle', n: 'Entrée de la Citadelle', x: 206, y: 108, gate: 1 }
 ];
