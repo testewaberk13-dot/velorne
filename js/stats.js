@@ -75,3 +75,17 @@ startGame = function (look, sv) {
   try { const P = G.player; const fresh = !sv || !sv.stats || (sv.statResetFree === undefined && STAT_KEYS.every(k => !sv.stats[k]));
     if (sv && !fresh) { P.stats = sv.stats; P.statResetFree = sv.statResetFree; } else { statAutoAllocate(P); P.statResetFree = true; } refreshStats(P); P.hp = Math.min(P.st8.maxhp, Math.max(P.hp, 1)); } catch (e) { console.warn('stats', e); }
 };
+
+// ---------- équivalent côté armes de l'affinité : affinité martiale (style principal = premier style appris) ----------
+// +25 % d'expérience de style et +10 % d'attaque avec ce style (miroir de l'affinité magique, PROPOSITION de valeurs).
+function mainStyle(P) { if (!P.styleMain) { const k = Object.keys(P.stylesKnown || {})[0]; if (k) P.styleMain = k; } return P.styleMain || null; }
+const _addWeaponXpST = addWeaponXp;
+addWeaponXp = function (P, inst, n) { _addWeaponXpST(P, inst, n); try { if (inst && P.style === mainStyle(P)) P.styleXp[P.style] = (P.styleXp[P.style] || 0) + n * 0.6 * 0.25; } catch (e) {} };
+const _computeStatsST2 = computeStats;
+computeStats = function (P) { const S = _computeStatsST2(P); try { if (P.stylesKnown && P.stylesKnown[P.style] && P.style === mainStyle(P)) S.atk *= 1.10; } catch (e) {} return S; };
+// renfort des boss des régions avancées (personnages plus forts avec les statistiques) : +15 % de PV
+for (const B of [typeof RBOSS !== 'undefined' && RBOSS, typeof RBOSS3 !== 'undefined' && RBOSS3, typeof RBOSS4 !== 'undefined' && RBOSS4, typeof RBOSS5 !== 'undefined' && RBOSS5]) if (B) for (const k in B) if (ENEMIES[k]) ENEMIES[k].hp = Math.round(ENEMIES[k].hp * 1.15);
+const _saveGameST2 = saveGame;
+saveGame = function () { _saveGameST2(); try { const P = G.player; if (!P || G.mode !== 'play') return; const s = store(SAVE_KEY); if (s) { s.styleMain = P.styleMain || null; store(SAVE_KEY, s); } } catch (e) {} };
+const _startGameST2 = startGame;
+startGame = function (look, sv) { _startGameST2(look, sv); try { if (sv && sv.styleMain) G.player.styleMain = sv.styleMain; refreshStats(G.player); } catch (e) {} };

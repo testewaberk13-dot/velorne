@@ -65,9 +65,9 @@ function moveAxis() {
 // Disposition (Xbox ; PlayStation : A=✕, B=○, X=□, Y=△) :
 // A attaque (interagir près d'un PNJ ou d'un objet) · B esquive · X technique d'arme · Y ultime
 // LB parade · RB sort 3 · LT sort 1 · RT sort 2 · croix : ↑ sort 4, ↓ potion, ← aptitude raciale, → relique
-// L3 éveil · R3 interagir · stick droit : viser · Select inventaire · Start menu
-const PAD_MAP = { 0: 'attack', 1: 'dodge', 2: 'tech', 3: 'ult', 4: 'block', 5: 'skill3', 6: 'skill1', 7: 'skill2', 8: 'inventory', 9: 'menu', 10: 'awaken', 11: 'interact', 12: 'skill4', 13: 'potion', 14: 'racial', 15: 'relic' };
-const PAD_LABEL = { attack: 'A', dodge: 'B', tech: 'X', ult: 'Y', block: 'LB', skill3: 'RB', skill1: 'LT', skill2: 'RT', inventory: 'Sel', menu: 'Start', awaken: 'L3', interact: 'A', skill4: '↑', potion: '↓', racial: '←', relic: '→', map: 'Sel', character: 'Start' };
+// L3 éveil · R3 sort 5 (interagir : A) · stick droit : viser · Select inventaire · Start menu
+const PAD_MAP = { 0: 'attack', 1: 'dodge', 2: 'tech', 3: 'ult', 4: 'block', 5: 'skill3', 6: 'skill1', 7: 'skill2', 8: 'inventory', 9: 'menu', 10: 'awaken', 11: 'skill5', 12: 'skill4', 13: 'potion', 14: 'racial', 15: 'relic' };
+const PAD_LABEL = { attack: 'A', dodge: 'B', tech: 'X', ult: 'Y', block: 'LB', skill3: 'RB', skill1: 'LT', skill2: 'RT', inventory: 'Sel', menu: 'Start', awaken: 'L3', interact: 'A', skill5: 'R3', skill4: '↑', potion: '↓', racial: '←', relic: '→', map: 'Sel', character: 'Start' };
 const PAD = { active: false, connected: false, ax: 0, ay: 0, rx: 0, ry: 0, prev: {}, held: {}, id: null, nav: { t: 0, dir: null }, gp: null };
 function padDead(v) { const d = SET.padDead || 0.2; return Math.abs(v) < d ? 0 : Math.sign(v) * (Math.abs(v) - d) / (1 - d); }
 function setPadMode(on) { if (PAD.active === on) return; PAD.active = on; document.body.classList.toggle('padmode', on); }
