@@ -125,7 +125,12 @@ function setupTouch() {
     for (const t of e.changedTouches) {
       const el = btnFor(document.elementFromPoint(t.clientX, t.clientY));
       if (TOUCH.edit) { if (el) { active.set(t.identifier, { el, edit: true, sx: t.clientX, sy: t.clientY, r: parseFloat(el.style.right), b: parseFloat(el.style.bottom) }); } continue; }
-      if (el) { active.set(t.identifier, { el }); press(el.dataset.act); el.classList.add('down'); audioInit(); }
+      if (el) {
+        // visée libre tactile : glisser depuis un bouton d'attaque ou de sort puis relâcher (sorts lancés au relâchement)
+        const defer = /^(skill[1-4]|ult)$/.test(el.dataset.act);
+        active.set(t.identifier, { el, sx: t.clientX, sy: t.clientY, defer, drag: false });
+        if (!defer) press(el.dataset.act); el.classList.add('down'); audioInit();
+      }
       else if (t.clientX < window.innerWidth * 0.5 && !TOUCH.stick.on) {
         TOUCH.stick = { on: true, id: t.identifier, ox: t.clientX, oy: t.clientY, x: 0, y: 0 };
         base.style.display = 'block'; base.style.left = (t.clientX - 60) + 'px'; base.style.top = (t.clientY - 60) + 'px'; knob.style.transform = 'translate(0px,0px)'; audioInit();
@@ -137,6 +142,11 @@ function setupTouch() {
     for (const t of e.changedTouches) {
       const a = active.get(t.identifier);
       if (a && a.edit) { a.el.style.right = (a.r - (t.clientX - a.sx)) + 'px'; a.el.style.bottom = (a.b - (t.clientY - a.sy)) + 'px'; continue; }
+      if (a && /^(attack|skill[1-4]|ult)$/.test(a.el.dataset.act)) {
+        const dx = t.clientX - a.sx, dy = t.clientY - a.sy, m = Math.hypot(dx, dy);
+        if (m > 14) { a.drag = true; TOUCH.aim = { on: true, x: dx / m, y: dy / m, until: 0 }; }
+        continue;
+      }
       if (TOUCH.stick.on && t.identifier === TOUCH.stick.id) {
         let dx = t.clientX - TOUCH.stick.ox, dy = t.clientY - TOUCH.stick.oy; const m = Math.hypot(dx, dy), R = 52;
         if (m > R) { dx = dx / m * R; dy = dy / m * R; }
@@ -149,7 +159,14 @@ function setupTouch() {
   const onEnd = e => {
     for (const t of e.changedTouches) {
       const a = active.get(t.identifier);
-      if (a) { if (!a.edit) { release(a.el.dataset.act); a.el.classList.remove('down'); } active.delete(t.identifier); }
+      if (a) {
+        if (!a.edit) {
+          if (a.drag) TOUCH.aim = Object.assign(TOUCH.aim || {}, { on: false, until: G.t + 0.35 });
+          if (a.defer) press(a.el.dataset.act);
+          release(a.el.dataset.act); a.el.classList.remove('down');
+        }
+        active.delete(t.identifier);
+      }
       if (TOUCH.stick.on && t.identifier === TOUCH.stick.id) { TOUCH.stick = { on: false, x: 0, y: 0 }; base.style.display = 'none'; }
     }
     e.preventDefault();

@@ -326,7 +326,8 @@ function doAttackHit(P, heavy) {
     const pierce = heavy; const sp = (heavy ? 420 : 330) * (has(P, 'galeArrow') ? 1.3 : 1);
     const split = (heavy && has(P, 'astralSplit')) || (P.trans && P.trans.form === 'astrale');
     const angs = split ? [-0.18, 0, 0.18] : [0];
-    for (const da of angs) spawnProj({ kind: split ? 'star' : 'arrow', x: cx + Math.cos(P.aim) * 12, y: cy + Math.sin(P.aim) * 12, vx: Math.cos(P.aim + da) * sp, vy: Math.sin(P.aim + da) * sp, mult: heavy ? 1.6 + P.chargeLvl * 1.2 : 1, heavy, charged: heavy, from: 'p', life: 0.9, r: 6, pierce, kb: has(P, 'galeArrow') ? 160 : 90, col: '200,190,255' });
+    const spr = typeof aimSpread === 'function' ? aimSpread(P, heavy) : 0;
+    for (const da of angs) spawnProj({ kind: split ? 'star' : 'arrow', x: cx + Math.cos(P.aim) * 12, y: cy + Math.sin(P.aim) * 12, vx: Math.cos(P.aim + da + spr) * sp, vy: Math.sin(P.aim + da + spr) * sp, mult: heavy ? 1.6 + P.chargeLvl * 1.2 : 1, heavy, charged: heavy, from: 'p', life: 0.9, r: 6, pierce, kb: has(P, 'galeArrow') ? 160 : 90, col: '200,190,255' });
     sfx('arrow'); if (heavy) ring(cx, P.y, 30, '#ffe26b', 0.3);
     wear(P, 'weapon', 0.3);
     return;
