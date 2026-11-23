@@ -80,7 +80,7 @@ for (let i = 0; i < 6; i++) PROPS['flower' + i] = { im: 'env/wildflowers_summer.
 
 // ===================== carte =====================
 // Terrain par sommets : 0 terre, 1 herbe, 2 eau
-const MW = 288, MH = 432, W0 = 96, H0 = 72; // carte entière / forêt d'origine
+const MW = 288, MH = 504, W0 = 96, H0 = 72; // carte entière / forêt d'origine
 const WORLD = { V: null, cells: null, solid: null, props: [], grid: null, zones: [], spawns: [], chests: [], npcs: [] };
 const T_DIRT = 0, T_GRASS = 1, T_WATER = 2;
 function vget(x, y) { if (x < 0 || y < 0 || x > MW || y > MH) return T_GRASS; return WORLD.V[y * (MW + 1) + x]; }
@@ -107,7 +107,7 @@ function regionIdx(tx, ty) { const X = tx + Math.sin(ty * 0.35) * 2 + Math.sin(t
 function buildCells() {
   WORLD.region = new Uint8Array(MW * MH); for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) WORLD.region[y * MW + x] = regionIdx(x, y);
   // numérotation : 0 forêt, 1 désert, 2 neige (3e colonne, haut), 3 marais, 4 volcan, 5 citadelle
-  const MAPR = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]; for (let i = 0; i < WORLD.region.length; i++) WORLD.region[i] = MAPR[WORLD.region[i]];
+  const MAPR = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]; for (let i = 0; i < WORLD.region.length; i++) WORLD.region[i] = MAPR[WORLD.region[i]];
   WORLD.cells = new Array(MW * MH);
   WORLD.solid = new Uint8Array(MW * MH);
   for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
