@@ -108,7 +108,7 @@ function setupTouch() {
   const base = document.createElement('div'); base.id = 'stickbase'; const knob = document.createElement('div'); knob.id = 'stickknob'; base.appendChild(knob); box.appendChild(base);
   const P0 = G.player; const ico = s => { const sk = P0 && skillDef(s); if (!P0 || !P0.magic) return lockIcon().url; return sk && sk.canvasIcon ? sk.canvasIcon.url : 'assets/ui/' + (sk ? sk.icon : 'spell_shield') + '.png'; };
   const icons = { skill1: ico('s1'), skill2: ico('s2'), skill3: ico('s3'), skill4: ico(P0 ? P0.slot4 : 's4'), ult: P0 && P0.magic ? 'assets/ui/spell_watertacle.png' : lockIcon().url };
-  const labels = { attack: '⚔', dodge: '»', block: '🛡', potion: '', interact: '✋', ult: '', tech: '✦', awaken: '☀', relic: '◉', racial: '❖' };
+  const labels = { attack: '⚔', dodge: '»', block: '🛡', potion: '', interact: '✋', ult: '', tech: '✦', awaken: '☀', relic: '◉', racial: '❖', mount: '♞' };
   for (const b of TOUCH_BTNS) {
     const el = document.createElement('div'); el.className = 'tbtn tb-' + b.id; el.id = 'tb_' + b.id; el.dataset.act = b.act;
     const pos = (SET.touch && SET.touch[b.id]) || b; const sc = SET.btnScale || 1;

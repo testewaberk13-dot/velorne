@@ -172,7 +172,7 @@ button{font-family:inherit;cursor:pointer}
 .resc{display:flex;flex-direction:column;align-items:center;gap:2px;border:2px solid;border-radius:8px;padding:8px;background:#211a29;text-align:center;font-size:12px;animation:pop .35s}
 .resc.r6{box-shadow:0 0 18px rgba(255,60,110,.6)}@keyframes pop{from{transform:scale(.6);opacity:0}}
 .crdesc{font-size:11px;color:#a99a7a}
-.tb-tech{border-color:#f0d08a}.tb-awaken{border-color:#ff5d8f}.tb-awaken.ready{box-shadow:0 0 14px 4px rgba(255,93,143,.75);animation:pulse 1s infinite}.tb-awaken.hide,.tb-relic.hide{display:none}
+.tb-tech{border-color:#f0d08a}.tb-awaken{border-color:#ff5d8f}.tb-awaken.ready{box-shadow:0 0 14px 4px rgba(255,93,143,.75);animation:pulse 1s infinite}.tb-awaken.hide,.tb-relic.hide,.tb-mount.hide{display:none}
 @media (max-height:520px){.pbody{padding:8px}.detail{min-width:220px}.spinhead canvas{width:220px;height:103px}.ptabs button{padding:5px 8px;font-size:12px}.spinanim canvas{width:auto;height:82vh}}
 
 /* ===== Refonte : accueil, création, rituel ===== */
@@ -332,6 +332,7 @@ body.padmode .tb:focus{padding-left:26px}
 <script src="js/progression.js"></script>
 <script src="js/fusion.js"></script>
 <script src="js/market.js"></script>
+<script src="js/mounts.js"></script>
 <script>
 // application installable : hors ligne + mises à jour automatiques
 const IS_APP = window.matchMedia('(display-mode: fullscreen)').matches || window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;

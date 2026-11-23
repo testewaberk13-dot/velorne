@@ -21,12 +21,12 @@ const DEFAULT_KEYS = {
   up: ['KeyW', 'ArrowUp'], down: ['KeyS', 'ArrowDown'], left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'],
   attack: ['KeyJ'], dodge: ['Space'], block: ['KeyL'], skill1: ['Digit1', 'KeyU'], skill2: ['Digit2', 'KeyI'],
   skill3: ['Digit3', 'KeyO'], skill4: ['Digit4', 'KeyP'], ult: ['KeyR'], potion: ['KeyF'], interact: ['KeyE'],
-  menu: ['Escape'], inventory: ['KeyB', 'Tab'], character: ['KeyC'], map: ['KeyM'], tech: ['KeyQ'], awaken: ['KeyG'], relic: ['KeyV'], racial: ['KeyX']
+  menu: ['Escape'], inventory: ['KeyB', 'Tab'], character: ['KeyC'], map: ['KeyM'], tech: ['KeyQ'], awaken: ['KeyG'], relic: ['KeyV'], racial: ['KeyX'], mount: ['KeyH']
 };
 const ACTION_LABEL = {
   up: 'Haut', down: 'Bas', left: 'Gauche', right: 'Droite', attack: 'Attaque', dodge: 'Esquive', block: 'Parade',
   skill1: 'Compétence 1', skill2: 'Compétence 2', skill3: 'Compétence 3', skill4: 'Compétence 4', ult: 'Ultime',
-  potion: 'Potion', interact: 'Interagir', menu: 'Menu', inventory: 'Inventaire', character: 'Personnage', map: 'Quêtes', tech: 'Technique d\'arme', awaken: 'Éveil / transformation', relic: 'Relique', racial: 'Aptitude raciale'
+  potion: 'Potion', interact: 'Interagir', menu: 'Menu', inventory: 'Inventaire', character: 'Personnage', map: 'Quêtes', tech: 'Technique d\'arme', awaken: 'Éveil / transformation', relic: 'Relique', racial: 'Aptitude raciale', mount: 'Monture'
 };
 const SET = Object.assign({ sound: true, music: true, shake: true, keys: null, touch: null, btnScale: 1, durability: false, fastSpin: false, rumble: true, padDead: 0.2 }, store('vel_set') || {});
 if (!SET.keys) SET.keys = JSON.parse(JSON.stringify(DEFAULT_KEYS));
@@ -125,6 +125,7 @@ const TOUCH_BTNS = [
   { id: 'awaken', act: 'awaken', r: 30, b: 240, s: 52 },
   { id: 'relic', act: 'relic', r: 360, b: 18, s: 50 },
   { id: 'racial', act: 'racial', r: 420, b: 18, s: 50 },
+  { id: 'mount', act: 'mount', r: 480, b: 18, s: 50 },
 ];
 
 // ===================== son =====================
