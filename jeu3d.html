@@ -342,6 +342,46 @@ document.addEventListener('webglcontextlost',function(){show('Le contexte graphi
 </script>
 <script src="assets/data.js"></script>
 <script src="js/core.js"></script>
+<script>
+// MANETTE (24/11) : détection plus robuste, notamment sur iPhone/iPad (Safari).
+// - Safari peut renvoyer une liste vide par navigator.getGamepads() alors que l'événement « gamepadconnected » a bien eu lieu :
+//   on garde la manette reçue par l'événement et on s'en sert en secours ;
+// - on préfère une manette au schéma « standard » (DualSense, Xbox…) ;
+// - un bandeau confirme la détection dès l'écran titre (avant : seulement en partie).
+(function () {
+  const LIVE = {};
+  function note(t) { let n = document.getElementById('padnote'); if (!n) { n = document.createElement('div'); n.id = 'padnote'; n.style.cssText = 'position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:9999;background:rgba(20,14,30,.92);border:1px solid #c9a45a;color:#f3e3bf;font:13px Georgia,serif;padding:6px 14px;border-radius:6px;pointer-events:none;transition:opacity .5s'; document.body.appendChild(n); } n.textContent = t; n.style.opacity = '1'; clearTimeout(n._t); n._t = setTimeout(() => n.style.opacity = '0', 3500); }
+  window.addEventListener('gamepadconnected', e => { LIVE[e.gamepad.index] = e.gamepad; note('🎮 Manette détectée : ' + ((e.gamepad.id || 'manette').split('(')[0].trim() || 'manette')); });
+  window.addEventListener('gamepaddisconnected', e => { delete LIVE[e.gamepad.index]; note('🎮 Manette déconnectée'); });
+  function pickPad() {
+    let list = [];
+    try { const g = navigator.getGamepads ? navigator.getGamepads() : []; for (let i = 0; i < g.length; i++) { const p = g[i]; if (p && p.connected !== false && p.buttons && p.buttons.length) list.push(p); } } catch (e) { }
+    if (!list.length) for (const k in LIVE) { const p = LIVE[k]; if (p && p.connected !== false && p.buttons && p.buttons.length) list.push(p); }
+    return list.find(p => p.mapping === 'standard') || list[0] || null;
+  }
+  window.__pickPad = pickPad;
+  pollPad = function () {
+    const gp = pickPad();
+    PAD.gp = gp; if (!gp) { PAD.ax = PAD.ay = PAD.rx = PAD.ry = 0; return; }
+    if (!PAD.connected || PAD.id !== gp.id) { PAD.connected = true; PAD.id = gp.id; }
+    const ax = gp.axes || [];
+    PAD.ax = padDead(ax[0] || 0); PAD.ay = padDead(ax[1] || 0); PAD.rx = padDead(ax[2] || 0); PAD.ry = padDead(ax[3] || 0);
+    let any = Math.abs(PAD.ax) + Math.abs(PAD.ay) + Math.abs(PAD.rx) + Math.abs(PAD.ry) > 0.3;
+    const inPlay = typeof G !== 'undefined' && G.mode === 'play' && !G.paused;
+    for (const k in PAD_MAP) {
+      const i = +k; const on = padBtn(gp, i); const was = !!PAD.prev[i];
+      if (on && !was) {
+        any = true; let a = PAD_MAP[i];
+        if (i === 0 && inPlay && G.near) a = 'interact';
+        PAD.held[i] = a; press(a);
+        if (a === 'menu' || a === 'inventory') document.dispatchEvent(new CustomEvent('padmenu', { detail: a }));
+      } else if (!on && was) { if (PAD.held[i]) release(PAD.held[i]); PAD.held[i] = null; }
+      PAD.prev[i] = on;
+    }
+    if (any) setPadMode(true);
+  };
+})();
+</script>
 <script src="js/gfx.js"></script>
 <script>
 // Safari (iPhone) : images chargées en mode partage autorisé, sinon Safari peut les considérer comme venant d'un autre site
