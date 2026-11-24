@@ -1,19 +1,46 @@
 // =====================================================================
-//  VÉLORNE 3D — MOTEUR DE RENDU DU JEU (socle, étape 1)
-//  Dessine en 3D l'état du jeu (G, WORLD) : sol par blocs, décors, personnages, effets, caméra, lumière.
+//  VÉLORNE 3D — MOTEUR DE RENDU DU JEU
+//  Dessine en 3D l'état du jeu (G, WORLD) : sol par blocs, décors, personnages en 8 directions, effets au sol et en volume,
+//  caméra réglable (angle 24°–69°, rotation, distance), visée immersive, cycle jour/nuit, qualité automatique.
 //  La logique reste entièrement celle du jeu (voir js3d/bridge2d.js).
 // =====================================================================
-import { THREE, scene, camera, renderer, STATE, U, time, DAY, applyDay, buildPost, resize as resize3d, render as render3d, MOBILE, patch } from '../assets/demo/v4/core.js';
+import { THREE, scene, camera, renderer, STATE, U, time, DAY, applyDay, buildPost, resize as resize3d, render as render3d, MOBILE } from '../assets/demo/v4/core.js';
+import { updateWorld, forceBuildAround, groundH } from './world3d.js';
+import { MAP } from './kit3d.js';
+import { VM } from '../assets/demo/v4/village.js';
 
 const B = B2D; const T = 32; // pixels par mètre
 const m = v => v / T;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, k) => a + (b - a) * k;
+const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const angLerp = (a, b, k) => { let d = (b - a) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return a + d * k; };
 buildPost(); resize3d(); addEventListener('resize', resize3d);
 STATE.pix = true;
-DAY.speed = 0; // l'heure suit pour l'instant la lumière de la zone du jeu (voir plus bas)
+DAY.speed = 24 / 480; // un jour complet en 8 minutes de jeu (comme le village pilote)
 
-import { updateWorld, forceBuildAround, groundH } from './world3d.js';
+// ---------------- réglages 3D (conservés avec les paramètres du jeu) ----------------
+const PMIN = 24 * Math.PI / 180, PMAX = 69 * Math.PI / 180, DMIN = 8, DMAX = 26;
+const C3 = () => { if (!SET.c3d) SET.c3d = {}; const c = SET.c3d; if (c.pitch == null) c.pitch = 0.85; if (c.yaw == null) c.yaw = 0; if (c.dist == null) c.dist = 15; if (c.slow == null) c.slow = true; if (c.day == null) c.day = true; if (c.btns == null) c.btns = true; if (c.wx == null) c.wx = true; return c; };
+let setDirty = 0; const markSet = () => { setDirty = performance.now(); };
+B.cam3d = {
+  rot(d) { CAM.yawT += d; C3().yaw = CAM.yawT; markSet(); },
+  tilt(d) { CAM.pitchT = clamp(CAM.pitchT + d, PMIN, PMAX); C3().pitch = CAM.pitchT; markSet(); },
+  reset() { const c = C3(); c.pitch = 0.85; c.yaw = 0; c.dist = 15; CAM.pitchT = 0.85; CAM.yawT = Math.round(CAM.yaw / (Math.PI * 2)) * Math.PI * 2; CAM.distT = 15; markSet(); },
+  angleDeg() { return Math.round(CAM.pitchT * 180 / Math.PI); },
+};
 
-// ---------------- personnages, ennemis, PNJ, butin : panneaux dessinés chaque image par les fonctions du jeu ----------------
+// qualité graphique : réglage du jeu (auto / haute / moyenne / basse) appliqué au moteur 3D
+function syncQual() {
+  const g = SET.gfx || 'auto', q = { haute: 2, moyenne: 1, basse: 0 }[g];
+  if (q == null) STATE.auto = true; else { STATE.auto = false; if (STATE.qual !== q) { STATE.qual = q; resize3d(); setLights(); } }
+}
+B.qualLabel = () => (SET.gfx === 'auto' || !SET.gfx ? 'auto (' : '') + ['basse', 'moyenne', 'haute'][STATE.qual] + (SET.gfx === 'auto' || !SET.gfx ? ')' : '');
+
+// ---------------- mesure du temps par image (diagnostic) ----------------
+const PROF = { world: 0, actors: 0, fx: 0, render: 0, frame: 0, fps: 0, nAct: 0, fxUp: 0 };
+const pm = (k, t0) => { PROF[k] = PROF[k] * 0.92 + (performance.now() - t0) * 0.08; };
+
+// ---------------- personnages, ennemis, PNJ, butin : panneaux dessinés par les fonctions du jeu ----------------
 const ACT = new Map();
 function actor(o, kind) {
   let a = ACT.get(o); if (a) return a;
@@ -21,65 +48,227 @@ function actor(o, kind) {
   const c = document.createElement('canvas'); c.width = c.height = S; const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false;
   const mat = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.4, side: THREE.DoubleSide });
   const foot = Math.round(S * 0.8); const g = new THREE.PlaneGeometry(m(S), m(S)); g.translate(0, m(S) / 2 - m(S - foot), 0);
-  const mesh = new THREE.Mesh(g, mat); mesh.castShadow = kind !== 'proj'; mesh.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: tex, alphaTest: 0.4 }); scene.add(mesh);
-  a = { o, kind, c, tex, mesh, seen: 0 }; ACT.set(o, a); return a;
+  const mesh = new THREE.Mesh(g, mat); mesh.castShadow = kind !== 'proj' && kind !== 'drop'; mesh.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: tex, alphaTest: 0.4 }); scene.add(mesh);
+  a = { o, kind, c, tex, mesh, seen: 0, sig: '', n: 0 }; ACT.set(o, a); return a;
+}
+// signature d'image : on ne redessine un panneau que si ce qu'il montre a changé (PNJ, butin) ou à cadence réduite au loin
+function sigOf(o, kind, d2) {
+  if (kind === 'npc') return (o.moving ? 1 + Math.floor(o.t * 8) % 8 : 0) + ':' + B.sectorOf(o);
+  if (kind === 'drop') return Math.floor(G.t * 6) + '';
+  if (kind === 'enemy' && d2 > 110) return Math.floor(G.t * 15) + ''; // au-delà d'environ 10 m : 15 images par seconde suffisent
+  return null; // toujours redessiné
 }
 let frameId = 0;
+const yawQ = new THREE.Quaternion(), _up = new THREE.Vector3(0, 1, 0);
 function updateActors(px, pz) {
-  frameId++; const near = o => Math.abs(m(o.x) - px) < 26 && Math.abs(m(o.y) - pz) < 20;
+  frameId++; const near = o => Math.abs(m(o.x) - px) < 26 && Math.abs(m(o.y) - pz) < 22;
   const list = [[G.player, 'player']]; for (const e of G.enemies) if (near(e)) list.push([e, 'enemy']); for (const n of G.npcs) if (near(n)) list.push([n, 'npc']); for (const d of G.drops) if (near(d)) list.push([d, 'drop']); for (const p of G.projs) if (near(p)) list.push([p, 'proj']);
-  for (const [o, kind] of list) { const a = actor(o, kind); a.seen = frameId; B.drawActor(a.c, kind, o); a.tex.needsUpdate = true; a.mesh.position.set(m(o.x), groundH(m(o.x), m(o.y)) + (kind === 'proj' ? 0.6 : 0), m(o.y)); a.mesh.visible = true; }
-  for (const [o, a] of ACT) if (a.seen !== frameId) { scene.remove(a.mesh); a.tex.dispose(); a.mesh.material.dispose(); ACT.delete(o); }
+  yawQ.setFromAxisAngle(_up, CAM.yaw); let n = 0;
+  for (const [o, kind] of list) {
+    const a = actor(o, kind); a.seen = frameId; const ox = m(o.x), oz = m(o.y), d2 = (ox - px) ** 2 + (oz - pz) ** 2;
+    const s = sigOf(o, kind, d2);
+    if (s === null || s !== a.sig) { B.drawActor(a.c, kind, o); a.tex.needsUpdate = true; a.sig = s === null ? '' : s; n++; }
+    a.mesh.position.set(ox, groundH(ox, oz) + (kind === 'proj' ? 0.6 : 0), oz); a.mesh.quaternion.copy(yawQ); a.mesh.visible = true;
+  }
+  PROF.nAct = n;
+  for (const [o, a] of ACT) if (a.seen !== frameId) { scene.remove(a.mesh); a.tex.dispose(); a.mesh.material.dispose(); a.mesh.geometry.dispose(); ACT.delete(o); }
 }
 
-// ---------------- effets : couche au sol couvrant la zone autour du joueur ----------------
-const FXW = 1408, FXH = 1024, FXS = MOBILE ? 0.4 : 0.5; // en pixels du jeu ; échelle de la toile
-const fxCanvas = document.createElement('canvas'); fxCanvas.width = Math.round(FXW * FXS); fxCanvas.height = Math.round(FXH * FXS);
-const fxTex = new THREE.CanvasTexture(fxCanvas); fxTex.colorSpace = THREE.SRGBColorSpace; fxTex.magFilter = THREE.NearestFilter; fxTex.minFilter = THREE.LinearFilter; fxTex.generateMipmaps = false;
-const fxMesh = new THREE.Mesh((() => { const g = new THREE.PlaneGeometry(m(FXW), m(FXH)); g.rotateX(-Math.PI / 2); return g; })(), new THREE.MeshBasicMaterial({ map: fxTex, transparent: true, depthWrite: false, toneMapped: false }));
-fxMesh.renderOrder = 3; scene.add(fxMesh);
+// ---------------- effets ----------------
+// couche au sol (télégraphes, cercles, zones, ondes) et couche en volume (coups, impacts, particules, éclairs, tornades)
+// tournée vers la caméra, pour que les effets aient la même présence que les personnages.
+const GW = 1280, GS = MOBILE ? 0.4 : 0.5; // sol : carré de 40 m autour du joueur
+const AW = 1024, AH = 900, AS = MOBILE ? 0.45 : 0.55, AFY = 0.62; // volume : le joueur est à 62 % de la hauteur
+function fxLayer(w, h, s, mat) {
+  const c = document.createElement('canvas'); c.width = Math.round(w * s); c.height = Math.round(h * s);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = THREE.NearestFilter; t.minFilter = THREE.LinearFilter; t.generateMipmaps = false;
+  mat.map = t; return { c, t, empty: false };
+}
+const gMat = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, toneMapped: false });
+const GL = fxLayer(GW, GW, GS, gMat);
+const gMesh = new THREE.Mesh(new THREE.PlaneGeometry(m(GW), m(GW)).rotateX(-Math.PI / 2), gMat); gMesh.renderOrder = 3; scene.add(gMesh);
+const aMat = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, depthTest: false, toneMapped: false });
+const AL = fxLayer(AW, AH, AS, aMat);
+const aMesh = new THREE.Mesh(new THREE.PlaneGeometry(m(AW), m(AH)), aMat); aMesh.renderOrder = 10; aMesh.frustumCulled = false; scene.add(aMesh);
+let arcProps = null;
+const any = a => a && a.length > 0;
 function updateEffects() {
-  const P = G.player, cx = Math.round(P.x - FXW / 2), cy = Math.round(P.y - FXH / 2);
-  B.drawEffects(fxCanvas, cx, cy, FXW, FXH, FXS); fxTex.needsUpdate = true; fxMesh.position.set(m(cx + FXW / 2), 0.04, m(cy + FXH / 2));
+  const P = G.player; if (!arcProps) arcProps = WORLD.props.filter(p => p.def.arcane || p.def.circle);
+  // sol
+  const gx = Math.round(P.x - GW / 2), gy = Math.round(P.y - GW / 2);
+  const arcNear = arcProps.some(p => Math.abs(p.x - P.x) < GW / 2 + 90 && Math.abs(p.y - P.y) < GW / 2 + 90);
+  const gAny = arcNear || G.sacred || any(G.zones2) || any(G.rifts) || any(G.voids) || any(G.mfx) || any(G.rings) || any(G.fx);
+  let up = 0;
+  if (gAny || !GL.empty) { B.drawEffects(GL.c, gx, gy, GW, GW, GS, 'ground', 0); GL.t.needsUpdate = true; GL.empty = !gAny; up++; }
+  gMesh.visible = !GL.empty; gMesh.position.set(m(gx + GW / 2), Math.max(0, groundH(m(P.x), m(P.y))) + 0.12, m(gy + GW / 2));
+  // volume
+  const ax = Math.round(P.x - AW / 2), ay = Math.round(P.y - AH * AFY);
+  const aAny = any(G.fx) || any(G.parts) || any(G.mfx) || any(G.bolts) || any(G.beams) || any(G.tornados) || any(G.pillars);
+  if (aAny || !AL.empty) { B.drawEffects(AL.c, ax, ay, AW, AH, AS, 'air', CAM.yaw); AL.t.needsUpdate = true; AL.empty = !aAny; up++; }
+  aMesh.visible = !AL.empty;
+  if (aMesh.visible) {
+    // plan face à la caméra, ancré aux pieds du joueur ; la profondeur du sol est écrasée par sin(angle) comme à l'écran
+    const sp = Math.sin(CAM.pitch), fy = groundH(m(P.x), m(P.y));
+    aMesh.quaternion.copy(camera.quaternion); aMesh.scale.set(1, sp, 1);
+    const vC = -(AH / 2 - AH * AFY) / T * sp; // décalage vertical du centre de la toile par rapport aux pieds
+    _v.set(0, 1, 0).applyQuaternion(camera.quaternion);
+    aMesh.position.set(m(P.x), fy, m(P.y)).addScaledVector(_v, vC);
+  }
+  PROF.fxUp = up;
 }
 
-// ---------------- lumières dynamiques du jeu (torches, sorts) → quelques lumières 3D ----------------
-const PL = []; for (let i = 0; i < 6; i++) { const l = new THREE.PointLight('#ffcc88', 0, 8, 1.5); scene.add(l); PL.push(l); }
-const _c = new THREE.Color();
-function updateLights() {
+// ---------------- lumières : torches et sorts du jeu, lanterne du héros la nuit ----------------
+const PL = []; const _c = new THREE.Color();
+function setLights() {
+  const n = [2, 4, 6][STATE.qual]; while (PL.length < n) { const l = new THREE.PointLight('#ffcc88', 0, 8, 1.5); scene.add(l); PL.push(l); }
+  while (PL.length > n) scene.remove(PL.pop());
+}
+setLights();
+const HL = new THREE.PointLight('#ffd6a0', 0, 7.5, 1.3); scene.add(HL);
+function updateLights(darkK) {
   const P = G.player; const L = (G.lights || []).filter(l => l && l.x != null).map(l => [l, Math.hypot(l.x - P.x, l.y - P.y)]).sort((a, b) => a[1] - b[1]).slice(0, PL.length);
-  PL.forEach((pl, i) => { const it = L[i]; if (!it) { pl.intensity = 0; return; } const l = it[0]; pl.position.set(m(l.x), 1.2, m(l.y)); pl.distance = Math.max(4, m(l.r || 90) * 1.6); if (l.col) _c.set('rgb(' + l.col + ')'); else _c.set('#ffd9a0'); pl.color.copy(_c); pl.intensity = 6 * (l.a ?? 1); });
+  PL.forEach((pl, i) => { const it = L[i]; if (!it) { pl.intensity = 0; return; } const l = it[0]; pl.position.set(m(l.x), 1.2 + groundH(m(l.x), m(l.y)), m(l.y)); pl.distance = Math.max(4, m(l.r || 90) * 1.6); if (l.col) _c.set('rgb(' + l.col + ')'); else _c.set('#ffd9a0'); pl.color.copy(_c); pl.intensity = 6 * (l.a ?? 1); });
+  const night = DAY.cur ? DAY.cur.night : 0, k = Math.max(night, darkK);
+  VM.glass.emissiveIntensity = sstep(0.25, 0.75, k) * 1.3; // fenêtres allumées la nuit et dans l'obscurité
+  HL.intensity = 3.2 * sstep(0.15, 0.8, k); HL.position.set(m(P.x), groundH(m(P.x), m(P.y)) + 1.7, m(P.y));
 }
 
 // ---------------- caméra ----------------
-const CAM = { dist: 15, pitch: 0.92, look: new THREE.Vector3() };
-addEventListener('wheel', e => { if (G.mode === 'play' && !document.querySelector('.ov.show,.panel.show')) CAM.dist = Math.max(8, Math.min(26, CAM.dist + Math.sign(e.deltaY) * 1.2)); }, { passive: true });
-const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hit = new THREE.Vector3(), _p = new THREE.Vector3();
+const c0 = C3();
+const CAM = { dist: c0.dist, distT: c0.dist, pitch: c0.pitch, pitchT: c0.pitch, yaw: c0.yaw, yawT: c0.yaw, look: new THREE.Vector3(), aimK: 0, aimA: 0, slowB: 2.5, slowIdle: 0 };
+B.yaw = CAM.yaw;
+const openUI = () => !!document.querySelector('.ov.show,.panel.show,#dlg.show');
+addEventListener('wheel', e => { if (G.mode === 'play' && !openUI()) { CAM.distT = clamp(CAM.distT + Math.sign(e.deltaY) * 1.2, DMIN, DMAX); C3().dist = CAM.distT; markSet(); } }, { passive: true });
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hit = new THREE.Vector3(), _p = new THREE.Vector3(), _v = new THREE.Vector3();
 const gameCv = document.getElementById('game');
-gameCv.addEventListener('mousemove', e => { if (!B.on || G.mode !== 'play') return; ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera); if (ray.ray.intersectPlane(ground, hit)) B.setMouseWorld(hit.x * T, hit.z * T); });
-// projection d'un point du monde vers la toile d'interface du jeu
-B.project = (x, y, h) => { _p.set(m(x), h || 0, m(y)).project(camera); if (_p.z > 1) return null; const r = gameCv.getBoundingClientRect(), [w, hh] = B.view(); const sx = (_p.x + 1) / 2 * innerWidth, sy = (1 - _p.y) / 2 * innerHeight; return { x: (sx - r.left) / r.width * w, y: (sy - r.top) / r.height * hh }; };
+const MS = { x: 0, y: 0, ok: false, drag: false, lx: 0, ly: 0 };
+gameCv.addEventListener('mousemove', e => {
+  MS.x = e.clientX; MS.y = e.clientY; MS.ok = true;
+  if (MS.drag) { B.cam3d.rot(-(e.clientX - MS.lx) * 0.008); B.cam3d.tilt((e.clientY - MS.ly) * 0.004); MS.lx = e.clientX; MS.ly = e.clientY; }
+});
+// bouton du milieu (molette enfoncée) : faire tourner la caméra et changer son angle
+gameCv.addEventListener('mousedown', e => { if (e.button === 1 && B.on && G.mode === 'play') { e.preventDefault(); MS.drag = true; MS.lx = e.clientX; MS.ly = e.clientY; } });
+addEventListener('mouseup', e => { if (e.button === 1) MS.drag = false; });
+function mouseToWorld(py) {
+  if (!MS.ok || IS_TOUCH) return; ndc.set(MS.x / innerWidth * 2 - 1, -(MS.y / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera); ground.constant = -py;
+  if (ray.ray.intersectPlane(ground, hit)) B.setMouseWorld(hit.x * T, hit.z * T, false);
+}
+// boutons de caméra à l'écran (tactile et souris)
+const cbar = document.getElementById('cam3d');
+if (cbar) cbar.addEventListener('pointerdown', e => { const b = e.target.closest('button'); if (!b) return; e.preventDefault(); e.stopPropagation(); const k = b.dataset.c;
+  if (k === 'l') B.cam3d.rot(-Math.PI / 4); if (k === 'r') B.cam3d.rot(Math.PI / 4); if (k === 'u') B.cam3d.tilt(0.1); if (k === 'd') B.cam3d.tilt(-0.1); });
+// projection d'un point du monde vers la toile d'interface du jeu (h en mètres au-dessus du sol)
+B.project = (x, y, h) => { const X = m(x), Z = m(y); _p.set(X, (h || 0) + groundH(X, Z), Z).project(camera); if (_p.z > 1) return null; const r = gameCv.getBoundingClientRect(), [w, hh] = B.view(); const sx = (_p.x + 1) / 2 * innerWidth, sy = (1 - _p.y) / 2 * innerHeight; return { x: (sx - r.left) / r.width * w, y: (sy - r.top) / r.height * hh }; };
+
+// la caméra ne passe pas derrière un bâtiment : elle se rapproche du héros (les arbres, eux, s'estompent autour du héros)
+let HOUSES = null;
+function camLimit(lx, ly, lz, yaw, pitch, dist) {
+  if (!HOUSES) HOUSES = WORLD.props.filter(p => MAP[p.type] && /^(house|sanctuary|darkgate|tent)$/.test(MAP[p.type][0])).map(p => { const s = MAP[p.type][0] === 'house' ? (p.def.r ? p.def.r[2] / T / 5.2 : 1) : 1.2; return { x: m(p.x), z: m(p.y), hw: 3.1 * s, hd: 2.4 * s, h: 5.2 * s }; });
+  const dx = Math.sin(yaw) * Math.cos(pitch), dy = Math.sin(pitch), dz = Math.cos(yaw) * Math.cos(pitch); let best = dist;
+  for (const H of HOUSES) {
+    if (Math.abs(H.x - lx) > 34 || Math.abs(H.z - lz) > 34) continue;
+    // intersection rayon / boîte (méthode des dalles)
+    let t0 = 0, t1 = best; const gy = groundH(H.x, H.z);
+    for (const [o, d, a, b] of [[lx, dx, H.x - H.hw, H.x + H.hw], [ly, dy, gy - 1, gy + H.h], [lz, dz, H.z - H.hd, H.z + H.hd]]) {
+      if (Math.abs(d) < 1e-6) { if (o < a || o > b) { t0 = 1; t1 = 0; break; } continue; }
+      let ta = (a - o) / d, tb = (b - o) / d; if (ta > tb) [ta, tb] = [tb, ta]; t0 = Math.max(t0, ta); t1 = Math.min(t1, tb); if (t0 > t1) break;
+    }
+    if (t0 <= t1 && t0 > 0.3) best = Math.min(best, Math.max(3.2, t0 - 0.6));
+  }
+  return best;
+}
+
+// visée immersive : zoom progressif, cadrage décalé vers la cible, ralenti maîtrisé (55 %, 2,5 s au plus par visée)
+function updateAim(dt, rdt) {
+  const A = B.aimInfo ? B.aimInfo() : null; const P = G.player;
+  const strong = !!(A && (A.held || (A.bow && A.f.src !== 'mouse')));
+  CAM.aimK = lerp(CAM.aimK, strong ? 1 : 0, Math.min(1, dt * (strong ? 2.2 : 4)));
+  if (A) CAM.aimA = A.a;
+  if (strong && A.held && C3().slow && CAM.slowB > 0 && !G.paused && !openUI()) {
+    if (G.slowT <= 0.02 || G.slowF >= 0.55) { G.slowT = Math.max(G.slowT, 0.06); G.slowF = 0.55; }
+    CAM.slowB -= rdt; CAM.slowIdle = 0; // temps réel : la limite de 2,5 s ne dépend pas de la fluidité
+  } else if (!strong) { CAM.slowIdle += rdt; if (CAM.slowIdle > 0.8) CAM.slowB = 2.5; }
+}
+
+// ---------------- météo : pluie (reprise des prototypes v1 à v3, perdue dans la v4) et neige dans les régions froides ----------------
+// Fréquences et répartition par région : PROPOSITION de réglage.
+const WX_RAIN = { village: 0.25, forest: 0.3, ruins: 0.35, camp: 0.25, boss: 0.25, marais: 0.55, cote: 0.35, plaines: 0.25, jungle: 0.55, archipel: 0.3, oasis: 0.08, corrompues: 0.3 };
+const WX_SNOW = { neige: 0.6, monts: 0.45, hurlevents: 0.5, fjord: 0.45 };
+function precip(n, h, snow) {
+  const pos = new Float32Array(n * (snow ? 3 : 6)); let r = 9;
+  const R = () => { r = (r * 16807) % 2147483647; return r / 2147483647; };
+  for (let i = 0; i < n; i++) { const x = (R() - 0.5) * 44, y = R() * h, z = (R() - 0.5) * 44; if (snow) pos.set([x, y, z], i * 3); else pos.set([x, y, z, x + 0.04, y - 0.7, z + 0.02], i * 6); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const mat = snow ? new THREE.PointsMaterial({ color: '#f4f8ff', size: 0.11, transparent: true, opacity: 0, depthWrite: false }) : new THREE.LineBasicMaterial({ color: '#cfe0f4', transparent: true, opacity: 0, depthWrite: false });
+  const grp = new THREE.Group(); for (const dy of [0, h]) { const o = snow ? new THREE.Points(g, mat) : new THREE.LineSegments(g, mat); o.position.y = dy; o.frustumCulled = false; grp.add(o); }
+  grp.visible = false; scene.add(grp); return { grp, mat, h };
+}
+const RAIN = precip(MOBILE ? 900 : 1500, 22, false), SNOW = precip(MOBILE ? 700 : 1200, 18, true);
+const WX = { kind: null, k: 0, t: 40 + Math.random() * 60, zone: null };
+function updateWeather(dt, z, darkS) {
+  const c = C3(), id = z && z.id; if (id !== WX.zone) { WX.zone = id; WX.t = Math.min(WX.t, 8); }
+  WX.t -= dt;
+  if (WX.t <= 0) { const pr = WX_RAIN[id] || 0, ps = WX_SNOW[id] || 0; const r = Math.random(); WX.kind = r < ps ? 'snow' : r < ps + pr ? 'rain' : null; WX.t = WX.kind ? 60 + Math.random() * 100 : 50 + Math.random() * 90; }
+  const want = c.wx !== false && WX.kind && darkS < 0.45 && (WX.kind === 'snow' ? WX_SNOW[id] : WX_RAIN[id]) ? 1 : 0;
+  WX.k = lerp(WX.k, want, Math.min(1, dt * 0.35));
+  for (const [P, kind, sp] of [[RAIN, 'rain', 17], [SNOW, 'snow', 1.6]]) {
+    const k = WX.kind === kind ? WX.k : Math.max(0, WX.k - 1); P.grp.visible = k > 0.02;
+    if (!P.grp.visible) continue;
+    P.mat.opacity = (kind === 'rain' ? 0.5 : 0.85) * k;
+    P.grp.position.set(Math.round(CAM.look.x), CAM.look.y - 4 - ((time.value * sp) % P.h), Math.round(CAM.look.z));
+    if (kind === 'snow') P.grp.position.x += Math.sin(time.value * 0.7) * 0.6;
+  }
+  B.weather = WX;
+}
 
 // ---------------- une image ----------------
-let built = false, lastT = performance.now(), darkS = 0;
+let built = false, lastT = performance.now(), darkS = 0, HOUR = null, hourSave = 0;
+let fpsN = 0, fpsAcc = 0;
 const info = document.getElementById('v3dinfo');
+const zoneOf = () => G.zone || WORLD.zones[0];
 B.frame3d = function () {
-  const now = performance.now(), dt = Math.min(0.05, (now - lastT) / 1000); lastT = now; time.value += dt;
-  const P = G.player, px = m(P.x), pz = m(P.y);
-  if (!built) { built = true; forceBuildAround(px, pz); }
-  updateWorld(px, pz, time.value); updateActors(px, pz); updateEffects(); updateLights();
-  // caméra qui suit le joueur (secousses du jeu reprises)
-  const sh = G.shake && SET.shake !== false ? G.shake * 0.02 : 0;
-  CAM.look.lerp(_p.set(px, groundH(px, pz) + 0.8, pz), Math.min(1, dt * 8));
-  camera.position.set(CAM.look.x + (Math.random() - 0.5) * sh, CAM.look.y + Math.sin(CAM.pitch) * CAM.dist, CAM.look.z + Math.cos(CAM.pitch) * CAM.dist); camera.lookAt(CAM.look);
+  const now = performance.now(), rdt = Math.min(1, (now - lastT) / 1000), dt = Math.min(0.05, rdt); lastT = now; time.value += dt;
+  const P = G.player, px = m(P.x), pz = m(P.y), c = C3();
+  if (!built) { built = true; forceBuildAround(px, pz); syncQual(); }
+  if (HOUR == null) HOUR = G.flags && G.flags.h3d != null ? +G.flags.h3d : 9.5;
+  // commandes de caméra au clavier (touches modifiables dans les paramètres)
+  if (!openUI()) { if (IN.held.camL) B.cam3d.rot(-dt * 1.7); if (IN.held.camR) B.cam3d.rot(dt * 1.7); if (IN.held.camU) B.cam3d.tilt(dt * 0.7); if (IN.held.camD) B.cam3d.tilt(-dt * 0.7); }
+  if (setDirty && now - setDirty > 800) { setDirty = 0; saveSet(); }
+  const t0 = performance.now();
+  updateWorld(px, pz, time.value); pm('world', t0);
+  const t1 = performance.now(); updateActors(px, pz); pm('actors', t1);
+  updateAim(dt, rdt);
+  // caméra qui suit le joueur (secousses du jeu reprises), en mode portrait plus éloignée
+  CAM.yaw = angLerp(CAM.yaw, CAM.yawT, Math.min(1, dt * 7)); B.yaw = CAM.yaw;
+  CAM.pitch = lerp(CAM.pitch, CAM.pitchT, Math.min(1, dt * 5));
+  const portrait = innerHeight > innerWidth ? 1.45 : 1;
+  CAM.dist = lerp(CAM.dist, CAM.distT * portrait * (1 - 0.2 * CAM.aimK), Math.min(1, dt * 4));
+  const sh = G.shake && SET.shake !== false ? G.shake * 0.02 : 0, py = groundH(px, pz);
+  const off = 2.2 * CAM.aimK; _p.set(px + Math.cos(CAM.aimA) * off, py + 0.8, pz + Math.sin(CAM.aimA) * off);
+  CAM.look.lerp(_p, Math.min(1, dt * 8));
+  const lim = camLimit(CAM.look.x, CAM.look.y, CAM.look.z, CAM.yaw, CAM.pitch, CAM.dist); CAM.lim = lerp(CAM.lim || lim, lim, Math.min(1, dt * (lim < (CAM.lim || lim) ? 14 : 2.5)));
+  const cd = Math.min(CAM.dist, CAM.lim), hd = Math.cos(CAM.pitch) * cd;
+  camera.position.set(CAM.look.x + Math.sin(CAM.yaw) * hd + (Math.random() - 0.5) * sh, CAM.look.y + Math.sin(CAM.pitch) * cd, CAM.look.z + Math.cos(CAM.yaw) * hd + (Math.random() - 0.5) * sh); camera.lookAt(CAM.look);
+  camera.updateMatrixWorld();
+  mouseToWorld(py);
+  const t2 = performance.now(); updateEffects(); pm('fx', t2);
   // découpe des arbres devant le héros
-  _p.set(px, 1.0, pz).project(camera); U.uPS.value.set((_p.x + 1) / 2, (_p.y + 1) / 2); U.uPD.value = _p.z * 0.5 + 0.5; U.uOR.value = 0.12 * 15 / CAM.dist;
-  // lumière : zones sombres du jeu (grottes, nuit, donjons) → heure et intensité
-  const z = G.zone || WORLD.zones[0]; darkS += (((z && z.dark) || 0) - darkS) * Math.min(1, dt * 2); const dark = darkS;
-  DAY.h = dark > 0.55 ? 23 : dark > 0.3 ? 19.5 : 11;
-  applyDay(px, 0, pz);
-  render3d();
-  if (info) info.textContent = 'Vélorne 3D — socle (étape 1) · ' + (z ? z.name : '');
+  _p.set(px, py + 1.0, pz).project(camera); U.uPS.value.set((_p.x + 1) / 2, (_p.y + 1) / 2); U.uPD.value = _p.z * 0.5 + 0.5; U.uOR.value = 0.12 * 15 / cd;
+  // heure : cycle jour/nuit continu (sauvegardé avec la partie) ; les zones sombres du jeu (grottes, ombres, donjons) assombrissent la lumière
+  if (c.day && !G.paused && !G.dlg && !openUI()) HOUR = (HOUR + dt * DAY.speed) % 24;
+  if (now - hourSave > 1000) { hourSave = now; if (G.flags) G.flags.h3d = Math.round(HOUR * 100) / 100; }
+  const z = zoneOf(); darkS += (((z && z.dark) || 0) - darkS) * Math.min(1, dt * 2);
+  const k = sstep(0.12, 0.6, darkS); let hEff = HOUR;
+  if (k > 0 && HOUR >= 4.5 && HOUR < 21) hEff = lerp(HOUR, HOUR >= 12 ? 23 : 1, k);
+  DAY.h = hEff;
+  applyDay(px, 0, pz); updateLights(k); updateWeather(dt, z, darkS);
+  const t3 = performance.now(); render3d(); pm('render', t3);
+  pm('frame', now);
+  // qualité automatique (mesurée en temps réel)
+  fpsN++; fpsAcc += dt; if (fpsAcc > 1.5) { PROF.fps = fpsN / fpsAcc; fpsN = 0; fpsAcc = 0; syncQual();
+    if (STATE.auto) { if (PROF.fps < 26 && STATE.qual > 0) { STATE.qual--; resize3d(); setLights(); } else if (PROF.fps > 55 && STATE.qual < (MOBILE ? 1 : 2)) { STATE.qual++; resize3d(); setLights(); } } }
+  if (cbar) cbar.classList.toggle('on', !!c.btns);
+  if (info) info.textContent = 'Vélorne 3D · ' + (z ? z.name : '') + ' · ' + String(Math.floor(HOUR)).padStart(2, '0') + ' h ' + String(Math.floor(HOUR % 1 * 60)).padStart(2, '0');
 };
 B.on = true;
-window.V3D = { THREE, scene, camera, renderer, CAM, ACT };
+window.V3D = { THREE, scene, camera, renderer, CAM, ACT, PROF, STATE, DAY, hour: () => HOUR, setHour: h => { HOUR = h; } };

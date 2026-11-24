@@ -123,7 +123,7 @@ function buildChunk(i, j) {
 // décor sans modèle 3D : image du jeu, debout (ou au sol si le décor est plat)
 const FB_MAT = new Map();
 function fbMat(pr) { const key = B.propKey(pr); let m = FB_MAT.get(key); if (m) return m; const c = document.createElement('canvas'); const r = B.drawPropSprite(c, pr); const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false;
-  m = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5, side: THREE.DoubleSide }); m.userData = { w: r[2], h: r[3], depth: new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: tex, alphaTest: 0.5 }) }; FB_MAT.set(key, m); return m; }
+  m = patch(new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5, side: THREE.DoubleSide }), { cut: true, near: false }); m.userData = { w: r[2], h: r[3], depth: new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: tex, alphaTest: 0.5 }) }; FB_MAT.set(key, m); return m; }
 function fallback(pr, ch) {
   const mat = fbMat(pr), w = mat.userData.w / T, h = mat.userData.h / T, x = pr.x / T, z = pr.y / T; const g = new THREE.PlaneGeometry(w, h);
   if (pr.def.flat) { g.rotateX(-Math.PI / 2); g.translate(0, 0, -h / 2 + 0.1); } else g.translate(0, h / 2, 0);

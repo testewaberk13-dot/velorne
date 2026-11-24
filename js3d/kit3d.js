@@ -4,6 +4,7 @@
 //  Tout type sans modèle garde son image du jeu (panneau ou décalque au sol) : rien ne disparaît.
 // =====================================================================
 import { THREE, patch, canvasTex } from '../assets/demo/v4/core.js';
+import { VM } from '../assets/demo/v4/village.js';
 import { mergeGeos, shade, NATURE_MAT, cardCanopy, trunk, blobsOak, NATURE_TEX, SHADOW_ONLY, shadowBlobs, leafMat, leafClump } from '../assets/demo/v4/nature.js';
 
 let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
@@ -16,15 +17,15 @@ function noisy(g, amt, sy = 1, sd = 1) { const p = g.attributes.position; for (l
 const cut = { cut: true, near: false };
 const MAT = {
   wood: patch(new THREE.MeshLambertMaterial({ vertexColors: true }), cut),
-  solid: new THREE.MeshLambertMaterial({ vertexColors: true }),
+  solid: patch(new THREE.MeshLambertMaterial({ vertexColors: true }), cut),
   bark: NATURE_MAT.bark, core: NATURE_MAT.core, pine: NATURE_MAT.pine, rock: NATURE_MAT.rock,
   oak: NATURE_MAT.oak, birch: NATURE_MAT.birch, autumn: NATURE_MAT.autumn, bush: NATURE_MAT.bush, bloom: NATURE_MAT.bloom,
   glow: new THREE.MeshBasicMaterial({ color: '#ffb84a' }),
   ice: new THREE.MeshLambertMaterial({ color: '#bfe8ff', emissive: '#3a7aa8', emissiveIntensity: 0.35, transparent: true, opacity: 0.85 }),
-  crystal: new THREE.MeshLambertMaterial({ vertexColors: true, emissive: '#7a4ae0', emissiveIntensity: 0.55 }),
+  crystal: patch(new THREE.MeshLambertMaterial({ vertexColors: true, emissive: '#7a4ae0', emissiveIntensity: 0.55 }), cut),
   crystalLeaf: new THREE.MeshLambertMaterial({ color: '#c8a8ff', emissive: '#6a3ad0', emissiveIntensity: 0.6, transparent: true, opacity: 0.9 }),
-  obsidian: new THREE.MeshLambertMaterial({ vertexColors: true, emissive: '#ff5a1a', emissiveIntensity: 0.0 }),
-  canvas: new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }),
+  obsidian: patch(new THREE.MeshLambertMaterial({ vertexColors: true, emissive: '#ff5a1a', emissiveIntensity: 0.0 }), cut),
+  canvas: patch(new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }), cut),
   portal: new THREE.MeshBasicMaterial({ color: '#9a5aff', transparent: true, opacity: 0.75, side: THREE.DoubleSide })
 };
 // feuillages sombres et palmes peintes
@@ -112,16 +113,53 @@ const GEN = {
   darkgate: () => [{ geo: mergeGeos([B(0.5, 3.4, 0.5, -1.1, 1.7, 0, '#2a2236'), B(0.5, 3.4, 0.5, 1.1, 1.7, 0, '#2a2236'), B(2.8, 0.5, 0.6, 0, 3.5, 0, '#2a2236')]), mat: MAT.rock }, { geo: new THREE.PlaneGeometry(1.7, 3.0).translate(0, 1.6, 0), mat: MAT.portal, cast: false }],
   house: (v) => houseGen(v)
 };
+// maison à colombages du village pilote : soubassement de pierre, enduit, pans de bois, toit en tuiles, ardoises, chaume ou mousse,
+// fenêtres vitrées (allumées la nuit), volets, porte, cheminée
+function roofGeo(W, d, h, rise, ov, th) {
+  const s = d / 2 + ov, yr = h + rise, ye = h - ov * rise / (d / 2), L = Math.hypot(s, yr - ye), pos = [], uv = [];
+  const quad = (a, b, c, e, ua, ub, uc, ue) => { pos.push(...a, ...b, ...c, ...a, ...c, ...e); uv.push(...ua, ...ub, ...uc, ...ua, ...uc, ...ue); };
+  for (const sg of [1, -1]) {
+    const R0 = [-W / 2, yr, 0], R1 = [W / 2, yr, 0], E0 = [-W / 2, ye, sg * s], E1 = [W / 2, ye, sg * s];
+    const dn = (p) => [p[0], p[1] - th, p[2]];
+    if (sg > 0) { quad(R0, E0, E1, R1, [0, L], [0, 0], [W, 0], [W, L]); quad(dn(R1), dn(E1), dn(E0), dn(R0), [W, L], [W, 0], [0, 0], [0, L]); quad(E0, dn(E0), dn(E1), E1, [0, 0], [0, 0.2], [W, 0.2], [W, 0]); }
+    else { quad(R1, E1, E0, R0, [W, L], [W, 0], [0, 0], [0, L]); quad(dn(R0), dn(E0), dn(E1), dn(R1), [0, L], [0, 0], [W, 0], [W, L]); quad(E1, dn(E1), dn(E0), E0, [W, 0], [W, 0.2], [0, 0.2], [0, 0]); }
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.computeVertexNormals(); return g;
+}
 function houseGen(v) {
-  const w = 4.4 + (v % 3) * 0.6, d = 3.6 + (v % 2) * 0.5, h = 2.5, t = 0.2; const plaster = [], wood = [], roof = [];
-  for (const [sx, sz, L, ry] of [[0, d / 2, w, 0], [0, -d / 2, w, 0], [w / 2, 0, d, Math.PI / 2], [-w / 2, 0, d, Math.PI / 2]]) { plaster.push(B(L, h, t, sx, h / 2, sz, '#e9dcc0', ry, 0, 0, 0.85)); const n = Math.round(L / 1.3); for (let i = 0; i <= n; i++) { const a = -L / 2 + i * L / n; const g = new THREE.BoxGeometry(0.14, h, 0.06).translate(a, h / 2, t / 2 + 0.02); if (ry) g.rotateY(ry); g.translate(sx + (ry ? (sx > 0 ? 0.01 : -0.01) : 0), 0, sz + (ry ? 0 : Math.sign(sz) * 0.0)); wood.push(shade(g, '#3e2716', 0.8)); } }
-  wood.push(B(w + 0.1, 0.16, d + 0.1, 0, 1.15, 0, '#3e2716'), B(w + 0.1, 0.16, d + 0.1, 0, h, 0, '#3e2716'), B(1.0, 1.9, 0.08, 0, 0.95, d / 2 + 0.12, '#6e4426'));
-  for (const s of [-1, 1]) { wood.push(B(0.8, 0.7, 0.06, s * w * 0.28, 1.6, d / 2 + 0.11, '#33445a')); }
-  const rise = d / 2 * 0.9, ov = 0.45, L = Math.hypot(d / 2 + ov, rise + ov * 0.9), ang = Math.atan2(rise, d / 2);
-  for (const s of [-1, 1]) roof.push(B(w + ov * 2, 0.14, L, 0, h + rise / 2 - 0.05, s * (d / 4 + ov / 2 - 0.1), ['#a2523a', '#4a5466', '#7a6a52'][v % 3], 0, s * ang, 0, 0.8));
-  const gab = new THREE.BufferGeometry(); const gv = []; for (const sx of [-w / 2, w / 2]) gv.push(sx, h, d / 2, sx, h, -d / 2, sx, h + rise, 0); gab.setAttribute('position', new THREE.Float32BufferAttribute(gv, 3)); gab.computeVertexNormals(); plaster.push(shade(gab, '#e0d2b6', 0.9));
-  const chim = B(0.5, 1.4, 0.5, w * 0.28, h + rise * 0.7, -d * 0.15, '#7a7468');
-  return [{ geo: mergeGeos(plaster), mat: MAT.wood }, { geo: mergeGeos(wood), mat: MAT.wood }, { geo: mergeGeos([...roof, chim]), mat: MAT.wood }];
+  const w = 4.4 + (v % 3) * 0.6, d = 3.6 + (v % 2) * 0.5, h = 2.6, t = 0.22, base = 0.45, rise = d / 2 * 0.95, ov = 0.42;
+  const plaster = [], wood = [], stone = [], roof = [], glass = [];
+  const DK = '#3e2716', WD = '#6a4428';
+  // soubassement et murs
+  stone.push(B(w + 0.12, base, d + 0.12, 0, base / 2, 0, '#9a948a', 0, 0, 0, 0.8));
+  for (const [sx, sz, L, ry] of [[0, d / 2, w, 0], [0, -d / 2, w, 0], [w / 2, 0, d, Math.PI / 2], [-w / 2, 0, d, Math.PI / 2]]) {
+    plaster.push(B(L, h - base, t, sx, base + (h - base) / 2, sz, '#f6eedc', ry, 0, 0, 0.9));
+    // pans de bois : poteaux, sablières, écharpes
+    const n = Math.max(2, Math.round(L / 1.25)), off = 0.02 + t / 2;
+    const P = (lx, y, lz) => ry ? [sx + lz * (sx > 0 ? 1 : -1), y, sz - lx] : [sx + lx, y, sz + lz * (sz > 0 ? 1 : -1)];
+    for (let i = 0; i <= n; i++) { const a = -L / 2 + i * L / n; const p = P(a, base + (h - base) / 2, off); wood.push(B(0.14, h - base, 0.06, p[0], p[1], p[2], DK, ry)); }
+    for (const yy of [base + 0.04, 1.32, h - 0.05]) { const p = P(0, yy, off); wood.push(B(L + 0.06, 0.13, 0.06, p[0], p[1], p[2], DK, ry)); }
+    for (let i = 0; i < n; i += 2) { const a = -L / 2 + (i + 0.5) * L / n, p = P(a, (1.32 + h) / 2, off); wood.push(B(0.1, Math.hypot(L / n, h - 1.32) * 0.92, 0.05, p[0], p[1], p[2], DK, ry, 0, (i / 2) % 2 ? 0.7 : -0.7)); }
+  }
+  // pignons enduits avec leurs bois
+  const gab = new THREE.BufferGeometry(); const gv = []; for (const sx of [-w / 2, w / 2]) { const o = sx > 0 ? 0.01 : -0.01; if (sx > 0) gv.push(sx + o, h, d / 2, sx + o, h, -d / 2, sx + o, h + rise, 0); else gv.push(sx + o, h, -d / 2, sx + o, h, d / 2, sx + o, h + rise, 0); }
+  gab.setAttribute('position', new THREE.Float32BufferAttribute(gv, 3)); gab.computeVertexNormals(); plaster.push(shade(gab, '#efe4cc', 0.9));
+  for (const sx of [-w / 2 - 0.04, w / 2 + 0.04]) { wood.push(B(0.06, rise * 0.9, 0.12, sx, h + rise * 0.45, 0, DK)); for (const sg of [-1, 1]) wood.push(B(0.06, 0.12, Math.hypot(d / 2, rise), sx, h + rise / 2, sg * d / 4, DK, 0, sg * Math.atan2(rise, d / 2))); }
+  // porte et fenêtres (façade avant, côtés)
+  wood.push(B(1.0, 1.95, 0.08, 0, base + 0.95, d / 2 + 0.13, '#7a4a28'), B(1.18, 0.12, 0.1, 0, base + 1.98, d / 2 + 0.14, DK), B(0.08, 0.08, 0.06, 0.3, base + 0.95, d / 2 + 0.19, '#c8a040'));
+  stone.push(B(1.3, 0.12, 0.5, 0, 0.06, d / 2 + 0.3, '#8a847a'));
+  const win = (x, y, z, ry) => { const c = Math.cos(ry), sn = Math.sin(ry), T = (lx, lz) => [x + lx * c + lz * sn, z - lx * sn + lz * c];
+    let q = T(0, 0.12); glass.push(B(0.7, 0.62, 0.05, q[0], y, q[1], '#ffffff', ry));
+    q = T(0, 0.15); wood.push(B(0.84, 0.08, 0.07, q[0], y + 0.34, q[1], DK, ry), B(0.84, 0.08, 0.07, q[0], y - 0.34, q[1], DK, ry), B(0.06, 0.62, 0.07, q[0], y, q[1], DK, ry));
+    for (const sd of [-1, 1]) { q = T(sd * 0.62, 0.16); wood.push(B(0.36, 0.7, 0.04, q[0], y, q[1], ['#3a5a7a', '#5a3a2a', '#3a6a4a'][v % 3], ry)); } };
+  for (const s2 of [-1, 1]) win(s2 * w * 0.3, 1.75, d / 2, 0);
+  win(0, 1.75, -d / 2, Math.PI); win(w / 2, 1.75, 0, Math.PI / 2); win(-w / 2, 1.75, 0, -Math.PI / 2);
+  // toit et cheminée
+  const rg = roofGeo(w + ov * 2, d, h, rise, ov, 0.12); shade(rg, '#ffffff', 0.85); roof.push(rg);
+  wood.push(B(w + ov * 2 + 0.1, 0.14, 0.18, 0, h + rise + 0.02, 0, DK));
+  stone.push(B(0.55, 1.6, 0.55, w * 0.28, h + rise * 0.55, -d * 0.18, '#857e72'), B(0.68, 0.12, 0.68, w * 0.28, h + rise * 0.55 + 0.82, -d * 0.18, '#6e685e'));
+  const RM = [VM.tile, VM.slate, VM.thatch, VM.moss][v % 4];
+  return [{ geo: mergeGeos(stone), mat: VM.stone }, { geo: mergeGeos(plaster), mat: VM.plaster }, { geo: mergeGeos(wood), mat: VM.wood }, { geo: mergeGeos(roof), mat: RM }, { geo: mergeGeos(glass), mat: VM.glass, cast: false }];
 }
 GEN.house = houseGen;
 

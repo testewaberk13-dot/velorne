@@ -1,0 +1,196 @@
+# Vélorne — liste de conformité permanente
+
+Établie le 24/11/2026 (audit historique, directive 12 ; auto-diagnostic, directive 13). Elle est **à tenir à jour à chaque séance** : toute nouvelle demande y entre avec son origine, son état et ses tests.
+
+**Version contrôlée :** `jeu3d.html`, la version 3D officielle en construction. `index.html` reste le village pilote v4 tant que `jeu3d.html` n'a pas intégré Brumeval v4. `jeu-2d.html` est la référence logique, laissée intacte.
+
+**Méthode de vérification :** les tests sont automatiques, dans Chrome sans carte graphique (rendu logiciel), sur ordinateur et en émulation de téléphone tactile. **Aucun test n'a été fait sur un vrai téléphone ni avec une vraie manette** : la manette est simulée. Les images par seconde mesurées en rendu logiciel ne représentent pas un appareil réel.
+
+## Légende des états
+
+| Code | État |
+|---|---|
+| ✅ | Entièrement intégré et fonctionnel dans la 3D |
+| 🟨 | Intégré, mais incomplet |
+| 👁 | Présent visuellement, mais non fonctionnel |
+| 🔷 | Partiellement adapté à la 3D |
+| ❌ | Absent de la 3D |
+| ⚠️ | Modifié involontairement ou incohérent |
+| ❓ | Impossible à vérifier |
+
+**Origines :** U = demande de l'utilisateur · C2 = cahier des charges V2 · P5 = Partie 5 (armes, équipements, Spins) · CG = cahier de conception général · 2D = système du jeu 2D · 3D = exigence de la transformation 3D · B = bibles V1.2.
+
+---
+
+## A. Règles permanentes
+
+| N° | Intitulé | Origine | État | Vérification |
+|---|---|---|---|---|
+| A1 | Ne rien supprimer, simplifier ni remplacer sans autorisation | U | ✅ | Aucun contenu retiré. Les anciennes versions sont conservées : `jeu-2d.html`, `demo3d-v1` à `v3`, `demo3d.html`. Les fichiers du jeu 2D (`js/`) n'ont pas été modifiés par la 3D : tout passe par des enveloppes dans `js3d/bridge2d.js`. |
+| A2 | Taux du Magic Spin 5/25/35/25/10, jamais modifiés | U | ✅ | Données lues dans la 3D : 5/25/35/25/10. Mesure sur 100 000 tirages : 5,00 / 25,13 / 34,75 / 25,01 / 10,10 %. Garantie au 5e tirage (palier 4) et double magie 0,5 % inchangées. |
+| A3 | 27 familles et 270 compétences, jamais supprimées ni fusionnées | U | ✅ | 27 familles et 270 compétences comptées dans la 3D. Chaque compétence est lancée en 3D par le test `t3d_270.py` (résultat en section E). |
+| A4 | Ne pas présenter comme canon un lore non validé | U | ✅ | Les ajouts restent marqués PROPOSITION : histoires des missions, habitants du village pilote, réglages de la météo. |
+| A5 | Ne jamais prétendre avoir testé ce qui ne l'a pas été | U | ✅ | Les limites sont rappelées en tête de ce document. |
+| A6 | Connecteurs réservés au projet, aucune dépense, rien supprimer dans les comptes | U | ✅ | Hébergement sur GitHub public, publication par commits sans push forcé. |
+| A7 | Distinguer existant, décidé, proposé et à valider | U | ✅ | Statuts tenus dans les bibles et dans ce document. |
+| A8 | Sauvegarde `vel_td_save_v1` compatible | U/2D | ✅ | La 3D lit et écrit la même sauvegarde. Elle n'y ajoute que l'heure du jour (`G.flags.h3d`). Ses réglages vont dans `vel_set.c3d`. Le test `gst` charge une ancienne sauvegarde de niveau 20 dans la 3D. |
+| A9 | Jeu 2D intact et accessible | U | ✅ | `jeu-2d.html` est inchangé. Le test `gc` montre un monde d'origine identique entre la 2D et la 3D : même empreinte de carte. |
+
+## B. Demandes et directives de l'utilisateur
+
+| N° | Intitulé | Origine | État | Écarts constatés | Corrections du 24/11 | Test |
+|---|---|---|---|---|---|---|
+| B1 | Deux bibles (monde, conception), mises à jour en V1.2 | U | ✅ | — | — | Documents du projet |
+| B2 | Pixel 3D, direction prioritaire | U 23/11 | ✅ | — | — | Rendu basse définition avec contours, dans `jeu3d` |
+| B3 | Feuillages denses, peints à la main | U 23/11 | ✅ | — | — | Végétation du village pilote reprise par blocs sur toute la carte |
+| B4 | Héros en 8 directions | U 23/11 | ✅ | Dans `jeu3d`, le héros, les PNJ et les ennemis n'avaient que 4 directions. | Diagonales composées comme dans le village pilote : jambes de profil, haut du corps de face ou de dos. Le sens est calculé par rapport à la caméra. | Déplacement en diagonale : secteur SE affiché (capture `c1_diag`). |
+| B4b | 8 directions pour les petits monstres | U 23/11 | 🟨 | Leurs planches ne contiennent que 4 directions. | Le sens suit désormais la caméra : 4 directions vues depuis la caméra. | 8 vraies directions impossibles sans nouvelles planches |
+| B5 | Caméra fluide, angle ajustable de 24° à 69° | U 23/11 | ✅ | Dans `jeu3d`, l'angle était fixe et la caméra ne tournait pas. | Angle de 24° à 69°, rotation, distance de 8 à 26 m. Commandes : touches modifiables (N/Y pour tourner, T/Z ou Page haut/bas pour l'angle), bouton du milieu de la souris, molette, boutons tactiles, menu Paramètres > Caméra 3D. Réglages conservés. | Rotation de 90° : « haut » déplace bien vers l'ouest. Tactile : rotation de 45°, le stick va au nord-ouest. Angle minimal mesuré : 24°. |
+| B5b | La caméra ne passe pas derrière les bâtiments | 3D (auto-diagnostic) | ✅ | Toit en plein écran en vue rasante, écran noir caméra tournée. | La caméra se rapproche du héros devant un bâtiment. La découpe autour du héros est étendue à tous les décors du kit. | Capture `c3_low` : vue rasante correcte |
+| B6 | Visée : zoom progressif, ralenti maîtrisé, cadrage naturel | U 23/11 | ✅ | Dans `jeu3d`, le réticule et la trajectoire n'étaient plus dessinés, et il n'y avait ni zoom ni ralenti. | Trajectoire posée dans le monde et réticule (mêmes règles que le jeu). Zoom progressif (−20 %), cadrage décalé vers la visée, ralenti à 55 % limité à 2,5 s par visée. Le ralenti est désactivable : c'était une PROPOSITION dans la bible. | F5 |
+| B7 | Vérifier ombres, collisions, hauteurs, masquage | U 23/11 | ✅ | — | Masquage étendu aux maisons, rochers, cristaux et images de secours | Captures |
+| B8 | Prototype séparé jusqu'à validation, puis version plus aboutie sans perte | U 23/11 | ✅ | — | — | v1 à v4 conservées |
+| B9 | Qualité visuelle de jeu commercial | U 24/11 | 🟨 | `jeu3d` reste moins beau que le village pilote : maisons simplifiées, rochers pâles. | Maisons refaites dans le style du village pilote : soubassement de pierre, enduit, pans de bois, 4 types de toits, fenêtres allumées la nuit, volets, cheminée. Météo rétablie. Effets en volume. | Captures |
+| B10 | La 3D est la version officielle : tout doit y exister | U 24/11 | 🔷 | Toute la logique y est. Manquent : le contenu du village pilote v4 (intérieurs, routines, animaux, secrets) et les effets 3D natifs par famille. | Voir les sections E et F | Section E |
+| B11 | Brumeval v4 comme fondation | U 24/11 | 🔷 | Le moteur v4 sert de base : rendu, végétation, eau, ciel, et désormais matériaux des maisons. **Le contenu du village pilote n'est pas encore dans `jeu3d`.** | Plan au §G1 | — |
+| B12 | Hébergement sur GitHub (liens githack) | U 24/11 | ✅ | — | — | Liens en fin de document |
+| B13 | Noms des habitants cohérents | U 24/11 | ✅ | Doublons Maëlle/Maëlys, Ysolde/Ysold, Maëlis/Maëlys | Maëlys, Gwenna, Torven (bûcheron), Héloïse Vey (décisions du registre) | Relecture |
+| B14 | Un seul lien principal | U 24/11 | 🔷 | L'accueil reste le village pilote, qui est plus beau, et le jeu 3D a son propre lien. | L'accueil basculera sur `jeu3d` quand Brumeval y sera intégré | — |
+| B15 | Ne rien oublier de tout le travail effectué | U 24/11 | 🟨 | Une perte involontaire est retrouvée : la **pluie** des prototypes v1 à v3 avait disparu de la v4. | Pluie rétablie dans `jeu3d`, et neige ajoutée dans les régions froides (PROPOSITION de réglage) | Section F |
+| B16 | Magie innée jamais choisie : rituel du Maître Mage | U (plan du lundi, point 17) | ✅ | — | — | `gs5` : aucune magie ni style à la création. `t7_pad` : Théobald envoie vers Orvael. |
+| B17 | Premier style appris auprès d'un maître de combat | U (point 17) | ✅ | — | — | `gs5`, `gq` |
+| B18 | Création complète, 5 races réellement différentes | U (point 17) | ✅ | La création reste l'écran du jeu, par-dessus la 3D. | — | `gs5` : 5 races ; `t7_pad` : homme-lézard créé à la manette |
+| B19 | Écran d'accueil : Nouvelle partie, Continuer, Paramètres, Commandes, Crédits | U (point 17) | ✅ | — | — | `gs5` |
+| B20 | Trois Spins : Magic, Weapon, Exceptional (probabilités affichées, garanties séparées, doublons, historique, jamais obligatoires) | U (point 18), P5 | ✅ | — | — | Fonctions présentes dans la 3D : `rollWeaponSpin`, `rollExceptionalSpin`, `spinRates`, `spinState`. Interface identique. |
+| B21 | Marché entre joueurs : dormant, sans faux marché hors ligne | U (point 19), P5 §22.1 | ✅ | — | — | Non créé, conformément à la règle |
+| B22 | 7 styles officiels | U (point 20) | ✅ | — | — | `tcombo` : les 7 styles touchent en 3D, l'arc tire 3 projectiles |
+| B23 | Visée libre mobile et PC, assistance réglable | U (point 15) | ✅ | La visée tactile et au stick suivait mal une caméra tournée. | La visée tactile et au stick tourne avec la caméra ; la souris vise un point du sol | `t7_pad` : visée au stick |
+| B24 | Mode autonome : décider, enchaîner, vérifier | U | ✅ | — | — | — |
+
+## C. Cahier des charges V2 (systèmes)
+
+| N° | Système | Origine | État en 3D | Écarts / remarques | Test |
+|---|---|---|---|---|---|
+| C1 | Création et personnalisation | C2 | ✅ | L'aperçu animé reste en 2D, dans l'écran de création | `gs5`, `t7_pad` |
+| C2 | Monde ouvert, régions | C2 | ✅ | 25 zones rendues en 3D, avec leur sol, leur eau et leurs décors. 90 types de décor sur 102 ont un modèle ; les autres gardent leur image du jeu. | `gs5` : régions, boss, 21 destinations de voyage |
+| C3 | Monde vivant : routines, voyageurs, événements | C2 | 🔷 | Les événements dynamiques du jeu fonctionnent. Les routines horaires du village pilote ne sont pas encore dans `jeu3d`. | `narr` : voyageur dynamique |
+| C4 | Secrets, coffres, récompenses d'exploration | C2 | 🔷 | Les coffres et les 13 lieux secrets du jeu fonctionnent (coffres en 3D avec couvercle). Les 7 secrets du village pilote ne sont pas encore dans `jeu3d`. | `narr2` : 72 lieux sur 72 accessibles |
+| C5 | Montures | C2 | 🟨 | Logique du jeu reprise ; le cheval est affiché sous le héros en 3D. Les capacités d'accès aux zones restent à étendre (à compléter, même en 2D). | `t3d_feat` : cheval monté, déplacement, descente |
+| C6 | 27 familles, Magic Spin | C2 | ✅ | — | A2, A3 |
+| C7 | 270 compétences et ultimes | C2 | ✅ | Effets dessinés en deux couches : au sol et en volume face à la caméra. Les effets 3D natifs famille par famille restent à faire (G2). | `t3d_270.py` |
+| C8 | Combat, combos, réactions élémentaires | C2 | ✅ | — | `tcombo` : brûlure, glace, poison, malédiction, entrave ; réaction ×1,6 |
+| C9 | Bestiaire, boss (4 Gardiens, Malvorak, Grakhul, 21 régionaux) | C2 | ✅ | Logique reprise ; IA de boss qui ne répète pas la même attaque plus de 2 fois (déjà dans le jeu) | `gs5` : boss des mines, de la lave et du temple |
+| C10 | Quêtes, arcs, histoire | C2 | ✅ | 44 missions sur 44, 8 arcs terminés | `narr`, `narr2` |
+| C11 | 60 PNJ nommés | C2 | 🟨 | Environ 15 incarnés dans le jeu et 8 dans le village pilote (pas encore dans `jeu3d`) | — |
+| C12 | Inventaire, équipement, objets | C2/P5 | ✅ | — | `t7_pad` : onglets du menu |
+| C13 | Statistiques, progression | C2 | ✅ | — | `gst` |
+| C14 | Factions (9), réputation (7 rangs), relations (6 niveaux) | C2 | ✅ | Logique et menus du jeu ; effets concrets de la réputation à compléter, même en 2D | Non retesté spécifiquement en 3D |
+| C15 | Titres, codex | C2 | ✅ | — | Non retesté spécifiquement en 3D |
+| C16 | Camp, cuisine, compagnons | C2 | ✅ | Aménagements et habitation à compléter, même en 2D | `camp` : repas, compagnon, repos, rechargement |
+| C17 | Professions | C2 | 🟨 | Seul le récolteur existe, même en 2D | — |
+| C18 | Économie et marchands | C2 | 🟨 | Prix et forgerons fonctionnent ; spécialités régionales à compléter | `gst` : prix, forgerons |
+| C19 | Activités permanentes, post-game | C2 | ❌ | À concevoir, même en 2D | — |
+| C20 | Interface et menus | C2 | ✅ | HUD et menus du jeu par-dessus la 3D. La mini-carte reste orientée au nord ; un cône indique désormais la direction de la caméra. | Captures |
+| C21 | Tactile, clavier et souris, manette PS5 | C2 | ✅ | Testés en émulation seulement | `t7_pad`, `tm3d` |
+| C22 | Sauvegarde | C2 | ✅ | — | `camp`, `narr2` : rechargements |
+| C23 | Effets visuels, météo, lumière | C2 | ✅ | Pluie et neige rétablies ; cycle jour/nuit ; lumières des torches et des sorts ; lanterne du héros la nuit | Section F |
+| C24 | Performances mobiles | C2 | 🟨 | Qualité automatique liée au réglage du jeu ; panneaux redessinés seulement si nécessaire ; couches d'effets vides ignorées ; nombre de lumières selon la qualité. **Pas de mesure sur un vrai téléphone.** | Mesures (section F) |
+
+## D. Partie 5 — armes, équipements, Spins
+
+| N° | Exigence | État | Remarques |
+|---|---|---|---|
+| D1 | 7 catégories d'armes compatibles avec les styles | ✅ | Logique du jeu |
+| D2 | Raretés séparées du rang S | ✅ | Logique du jeu |
+| D3 | Weapon Spin et Exceptional Spin distincts, probabilités affichées, garanties séparées et sauvegardées, doublons convertis, historique | ✅ | Fonctions présentes dans la 3D. Taux en PROPOSITION (non définis par le cahier). |
+| D4 | Maîtrise d'arme distincte de la maîtrise de style | ✅ | Logique du jeu |
+| D5 | Évolution, transformation et éveil des armes | ✅ | Logique du jeu |
+| D6 | Armures, accessoires, reliques visibles sur le personnage | ✅ | Le héros 3D est dessiné par la fonction du jeu, avec son équipement réel |
+| D7 | Comparaison, amélioration, fabrication, enchantements | ✅ | Menus du jeu |
+| D8 | Durabilité optionnelle et désactivable | ✅ | Réglage du jeu |
+| D9 | Synergies arme/magie, fusions | ✅ | 13 fusions (conditions en PROPOSITION) |
+| D10 | Interfaces mobiles paysage (12 écrans) | ✅ | Menus du jeu, par-dessus la 3D |
+
+## E. Systèmes du jeu 2D vérifiés dans la 3D (24/11)
+
+| Système | Test | Résultat dans `jeu3d.html` |
+|---|---|---|
+| Écran titre, création, races | `gs5` | ✅ menu complet ; 5 races ; ni magie ni style à la création |
+| Régions, passages, boss, zones sûres, voyage | `gs5` | ✅ 5 passages, 3 boss, 21 destinations |
+| Statistiques, points, emplacement 5, prix, forgerons, boutons tactiles | `gst` | ✅ |
+| Styles, attaque principale, R3 = sort 5 | `gq` | ✅ |
+| Camp, cuisine, compagnon, repos, rechargement | `camp` | ✅ (ennemi 26 → 4 PV par le compagnon) |
+| Manette : création, dialogue, menu, attaque, sort, esquive, potion, aptitude raciale, visée, vibrations, libellés PS5 | `t7_pad` | ✅ |
+| Narration : missions, choix, énigmes, compagnons, rechargement | `narr`, `narr2` | ✅ 44 missions sur 44 ; 72 lieux sur 72 |
+| Souvenirs des anciennes sauvegardes | `qa` | ✅ |
+| Identité du monde | `gc` | ✅ identique à la 2D |
+| 7 styles, réactions élémentaires | `tcombo` | ✅ |
+| 270 compétences lancées une à une en 3D | `t3d_270`, `ult2` | ✅ 270 sur 270, sans erreur. Les 243 compétences 1 à 9 infligent des dégâts ou un effet. Les 27 ultimes, testés à part en refermant les fenêtres d'aide qui mettent le jeu en pause, fonctionnent tous. |
+| Magic Spin | `t3d_270` | ✅ 5 / 25,13 / 34,75 / 25,01 / 10,10 % sur 100 000 tirages |
+
+Remarque : deux tests (`t7_pad`, `camp`) ont échoué une fois lorsqu'ils tournaient en même temps qu'un test lourd. Relancés seuls, ils réussissent. La cause est le manque de puissance de la machine de test, pas le jeu.
+
+## F. Transformation 3D : contrôles propres à la 3D
+
+| N° | Point | État | Corrections du 24/11 | Test |
+|---|---|---|---|---|
+| F1 | Le monde 3D suit toute la carte (288 × 504) | ✅ | — | Captures multi-zones |
+| F2 | Personnages posés sur le relief, ombres réelles | ✅ | — | Captures |
+| F3 | 8 directions | ✅ | Voir B4 | `c1_diag` |
+| F4 | Caméra réglable et rotation, commandes tournées | ✅ | Voir B5 | `g3d3`, `tm3d` |
+| F5 | Visée 3D | ✅ | Voir B6 | Arc et visée tactile maintenue : zoom progressif de 0,3 à 0,97 en 4 s, ralenti à 55 %. La réserve de 2,5 s se vide, puis se recharge après la visée. Elle est désormais comptée en temps réel. |
+| F6 | Effets des compétences | 🔷 | Avant : tout était aplati au sol. Désormais : télégraphes, cercles et ondes au sol ; coups, impacts, particules, éclairs, tornades et piliers sur un plan face à la caméra, avec la même présence que les personnages. Les effets 3D natifs restent à faire (G2). | `t3d_270` |
+| F7 | Cycle jour/nuit continu | ✅ | Avant : l'heure était figée. Désormais, un jour dure 8 minutes, comme dans le village pilote. L'heure est sauvegardée avec la partie. Les zones sombres du jeu assombrissent la lumière. Fenêtres allumées et lanterne du héros la nuit. Désactivable. | Capture `c4_night` |
+| F8 | Météo | ✅ | Pluie (perdue en v4) rétablie ; neige dans les régions froides ; aucune précipitation sous terre. Désactivable. | Pluie au village et neige aux Pics de Givrenuit, visibles (captures `w_rain`, `w_snow`) |
+| F9 | Mini-carte et caméra tournée | 🔷 | Cône de vue sur la mini-carte | Capture |
+| F10 | Qualité graphique | ✅ | Le réglage « Qualité graphique » du jeu pilote maintenant la 3D (auto, haute, moyenne, basse) | — |
+| F11 | Fluidité | 🟨 | Mesure par image (`V3D.PROF`). Panneaux des PNJ et du butin redessinés seulement quand l'image change ; ennemis éloignés à 15 images/s ; couches d'effets vides ignorées ; 2, 4 ou 6 lumières selon la qualité. | Rendu logiciel, qualité basse : 20 images/s (contre 3 avant), temps JS ≈ 3 ms par image |
+| F12 | Brumeval v4 dans `jeu3d` | ❌ | Voir G1 | — |
+| F13 | Intérieurs en coupe | ❌ | Le jeu 2D n'a pas d'intérieurs ; ils viendront avec Brumeval v4 (G1) | — |
+| F14 | Animaux du village pilote | ❌ | Viendront avec Brumeval v4 (G1) | — |
+| F15 | Mobile : boutons, stick, rotation | ✅ | Boutons de caméra placés sans chevauchement | `tm3d` : aucun chevauchement en 844 × 390 |
+
+## G. Restes à faire (par priorité)
+
+1. **G1 — Brumeval v4 dans `jeu3d` (élevée).** Le village du jeu (zone de 46 × 24 m) est plus petit que le village pilote (environ 60 × 60 m, avec rivière et pont). Les deux voies :
+   - agrandir la zone du village dans la carte, ce qui modifie le monde d'origine et sa vérification ;
+   - adapter le village pilote à l'emprise du jeu.
+
+   Il faut aussi relier :
+   - les habitants v4 aux PNJ du jeu ;
+   - les secrets v4 aux drapeaux du jeu ;
+   - les intérieurs au système de collision.
+
+   Choix technique pris par défaut : adapter le village pilote à l'emprise du jeu, sans toucher au monde d'origine.
+2. **G2 — Effets 3D natifs, famille par famille (moyenne).** Ajouter volumes, lumières et particules 3D aux 270 compétences, sans en retirer.
+3. **G3 — Rochers trop pâles, volcan sombre : finitions par région (moyenne).**
+4. **G4 — Vérification sur un vrai téléphone et une vraie manette (élevée, extérieure).** Impossible depuis l'environnement de test.
+5. **G5 — Éléments « À COMPLÉTER » des bibles, même en 2D (faible à moyenne, conception) :**
+   - apprentissage des autres familles (grimoires, sanctuaires) ;
+   - effets de la réputation ;
+   - Destrier des Plaines, monture rare régionale, Dragon par quête ;
+   - métiers ;
+   - économie régionale ;
+   - aménagements du camp et habitation ;
+   - post-game ;
+   - géographie organique ;
+   - 60 PNJ ;
+   - quêtes restantes.
+
+   Ces points demandent des choix de conception : ils seront proposés marqués PROPOSITION, sans inventer de lore présenté comme canon.
+
+## H. Sources introuvables ou non vérifiables
+
+| Source | Situation |
+|---|---|
+| Parties 1 à 4 du cahier des charges maître | Jamais fournies au projet. Leur contenu n'est pas inventé. |
+| Catalogue textuel des 270 compétences | Absent ; les compétences existent dans le code (`js/mf_*.js`). |
+| Annexes de la Bible V0.1 | Absentes du projet. |
+| Vidéos de référence | Non accessibles dans l'environnement. |
+| Conversations antérieures hors documents du projet | Non consultables. L'audit s'appuie sur les documents du projet, le code et les commits. |
+
+## Liens
+
+- Jeu 3D (version officielle en construction) : https://raw.githack.com/testewaberk13-dot/velorne/main/jeu3d.html
+- Village pilote (accueil actuel) : https://raw.githack.com/testewaberk13-dot/velorne/main/index.html
+- Ancien jeu 2D : https://raw.githack.com/testewaberk13-dot/velorne/main/jeu-2d.html
