@@ -270,6 +270,7 @@ function arcCheck(arcId) {
 function arcOutro(arcId) {
   if (arcId === 'a1') return 'La brume s\'est retirée du cimetière oublié. À Brumeval, les lanternes brûlent toute la nuit, la source coule claire, et l\'on ose de nouveau parler de ce qui s\'est passé ici, il y a longtemps.<br><br>Mais l\'Écho n\'était qu\'un reste. Partout où les sceaux noirs passent, d\'autres souffles de Nyx s\'éveillent.<br><br><b>Arc terminé : Débuts à Brumeval.</b><br><small>À suivre : <b>Les Quatre Veilleurs</b> — Ysold, aux Hurlevents.</small>';
   if (arcId === 'a2') return 'Le vent des Hurlevents, la neige des cimes, l\'ombre du Voile et le feu de la montagne : les quatre souffles de Nyx se sont tus.<br><br>Les Veilleuses se réunissent pour la première fois depuis l\'Éclipse des Cent Nuits. Mais celui qui réveillait les échos porte encore ses sceaux noirs, et il efface son nom partout où il passe.<br><br><b>Arc terminé : Les Quatre Veilleurs.</b><br><small>À suivre : <b>Ombres et corruption</b>.</small>';
+  if (arcId === 'a3') return 'De Port-Épave au Fjord des Baleines jusqu\'à l\'archipel des Sirènes, la mer s\'est tue. Le chant qui attirait les marins n\'était pas celui d\'une reine, mais celui d\'un écho de Nyx caché dans une cargaison destinée au porteur des sceaux.<br><br><b>Arc terminé : Peuples de la mer.</b>';
   return '<b>Arc terminé.</b>';
 }
 if (typeof TITLES !== 'undefined') TITLES.push({ id: 'ami_veilleurs', n: 'l\'Ami des Veilleurs', r: 3, d: 'Apaiser les quatre souffles de Nyx (arc « Les Quatre Veilleurs »).', ok: () => narrDone('q016') });
@@ -526,6 +527,7 @@ if (typeof E2 === 'function') Object.assign(ENEMIES, {
   sans_visage: E2('dark_mage', { name: 'L\'homme sans visage', hp: 320, dmg: 16, xp: 140, gold: [20, 35], elite: true, res: { ombre: 0.6, lumiere: -0.5 } }),
   gelee_brume: E2('slime', { name: 'Gelée corrompue', hp: 90, dmg: 11, xp: 32, gold: [4, 9], res: { poison: 0.5, feu: -0.3 } }),
   echo_brume: E2('king_specter', { name: 'Écho de la Brume', hp: 1400, dmg: 24, xp: 520, gold: [80, 120], elite: true, res: { ombre: 0.6, lumiere: -0.5 } }),
+  echo_maree: E2('dark_mage', { name: 'Écho de la marée', hp: 11000, dmg: 116, xp: 6400, gold: [500, 700], elite: true, el: 'eau', scale: 1.3, res: { eau: 0.85, foudre: -0.5, ombre: 0.4 } }),
   echo_givre: E2('king_specter', { name: 'Écho du givre', hp: 2600, dmg: 42, xp: 1800, gold: [160, 240], elite: true, el: 'glace', res: { glace: 0.8, feu: -0.5, ombre: 0.4 } }),
   echo_ombre: E2('king_specter', { name: 'Écho de l\'Éclipse', hp: 9500, dmg: 108, xp: 5200, gold: [420, 600], elite: true, el: 'ombre', res: { ombre: 0.85, lumiere: -0.5 } }),
   braise_vive: E2('bat', { name: 'Braise vivante', hp: 2700, dmg: 128, xp: 560, gold: [120, 180], el: 'feu', res: { feu: 0.9, eau: -0.5 } }),

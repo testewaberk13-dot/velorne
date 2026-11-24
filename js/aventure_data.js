@@ -489,3 +489,41 @@ CTX_LINES.push(
   { id: 'ulrik_coeur', who: 'Ulrik Braisefer, forgeron du magma', when: () => narrDone('q015'), txt: 'Le cœur bat de nouveau au bon rythme. Ma forge aussi. Le métal coule comme il faut.' },
   { id: 'orelia_veilleurs', who: 'Orélia, veilleuse des cimes', when: () => narrWs('veilleurs'), txt: 'Les quatre souffles se taisent. Ysold m\'a écrit. Elle n\'écrit jamais.' }
 );
+
+// =====================================================================
+//  ARC 3 — PEUPLES DE LA MER : Q023–Q024 (conclusion ; Q017–Q022 sont les quêtes existantes) — PROPOSITION
+// =====================================================================
+Object.assign(MISSIONS, {
+  q023: { arc: 'a3', num: 23, type: 'Mystère', n: 'Le journal de la Fortune grise', giver: 'Nyméa, capitaine du port', lvl: 20,
+    req: () => sideDoneId('q018'),
+    ctx: 'Le Capitaine Morne est tombé, mais personne ne sait pourquoi il refusait de mourir. Son navire, la Fortune grise, gît quelque part sur la côte.',
+    trig: 'Nyméa veut comprendre ce qui a maudit son ancien rival.',
+    intro: 'Morne et moi, on a commencé sur le même pont. Il n\'était pas mauvais homme. Quelque chose l\'a changé. Retrouve l\'<b>épave de la Fortune grise</b>, au sud-est de la côte, et lis le registre du <b>phare éteint</b>. Puis va voir <b>Maelor</b>, au Fjord des Baleines : il achetait la cargaison de Morne.',
+    goal: 'Comprendre ce qui a maudit le Capitaine Morne.',
+    steps: [
+      { t: 'read', place: 'p_epave', vague: true, hint: 'Trouver l\'épave de la Fortune grise, au sud-est de la côte', found: 'Dans la cale, une caisse vide marquée d\'un cercle brisé, et un livre de bord trempé : « Cargaison pour l\'étranger. Ne pas ouvrir. »', clue: ['cargaison', 'La Fortune grise transportait une cargaison pour « l\'étranger », marquée du cercle brisé.'] },
+      { t: 'read', place: 'p_phare', hint: 'Lire le registre du phare éteint, à l\'ouest de la côte', found: 'Une dernière ligne, d\'une autre main : « Le capitaine a ouvert la caisse. Il ne dort plus. »' },
+      { t: 'talk', who: 'Maelor, maître du port', hint: 'Interroger Maelor, au port du Fjord des Baleines', say: 'Morne ? Il me vendait des épaves, pas des secrets. Mais la dernière fois, il voulait aller vers l\'archipel des Sirènes, livrer « quelque chose qui chante ». Je lui ai dit qu\'il était fou. Vess, là-bas, en saura plus.' }
+    ],
+    disc: 'Morne a ouvert une cargaison destinée au porteur des sceaux ; elle devait aller vers l\'archipel.', events: 'Exploration côtière.',
+    outro: 'La piste mène à l\'archipel des Sirènes.', cons: 'Vess propose « Le chant de la conque » (niveau 54 conseillé, Nérissa vaincue).', link: 'Relie la côte, le fjord et l\'archipel ; recoupe le fil rouge du porteur des sceaux.',
+    reward: { gold: 1200, xp: 3200, items: [['potion', 4]], rel: ['Nyméa, capitaine du port', 60], rep: ['navigateurs', 100] } },
+  q024: { arc: 'a3', num: 24, type: 'Principale de l\'arc', n: 'Le chant de la conque', giver: 'Vess, cheffe de l\'archipel', lvl: 56,
+    req: () => narrDone('q023') && sideDoneId('q022'),
+    ctx: 'Nérissa chantait pour attirer les marins. Depuis sa chute, la grande conque continue de chanter seule.', trig: 'Maelor t\'a envoyé vers Vess.',
+    intro: '« Quelque chose qui chante »… La <b>conque de Nérissa</b>. Elle chante encore, alors que sa reine est morte. Ce n\'était pas Nérissa qui chantait : c\'était ce qu\'on avait caché dedans. Va l\'écouter. Et sois prêt.',
+    goal: 'Faire taire ce qui chante dans la conque.',
+    steps: [
+      { t: 'read', place: 'p_conque', hint: 'Écouter la conque de Nérissa', found: 'Le chant se tord. Une forme d\'écume se dresse, une couronne fendue sur le front…' },
+      { t: 'kill', kinds: ['echo_maree'], c: 1, spawn: { place: 'p_conque', kind: 'echo_maree', n: 1 }, hint: 'Vaincre l\'Écho de la marée' },
+      { t: 'talk', who: 'Vess, cheffe de l\'archipel', hint: 'Revenir voir Vess', say: 'Le silence… Pour la première fois, la mer ne chante plus. Les peuples de la mer te doivent leurs marins. Je préviendrai Nyméa et Maelor : la Ligue des Navigateurs n\'oubliera pas.' }
+    ],
+    disc: 'La cargaison de Morne était un écho de Nyx caché dans la conque.', events: 'Combat contre l\'Écho de la marée.',
+    outro: 'La mer se tait.', cons: 'Fin de l\'arc « Peuples de la mer » ; répliques des ports.', link: 'Conclusion de l\'arc 3.',
+    reward: { gold: 5000, xp: 11000, items: [['eclat_exception', 1], ['mithril', 2]], rel: ['Vess, cheffe de l\'archipel', 80], rep: ['navigateurs', 200], ws: 'mer_silencieuse' } }
+});
+CTX_LINES.push(
+  { id: 'corven_mer', who: 'Corven le marin', when: () => narrWs('mer_silencieuse'), txt: 'On dit que la mer ne chante plus du côté des Sirènes. Les vieux marins pleurent de soulagement. Les jeunes s\'ennuient déjà.' },
+  { id: 'neroth_mer', who: 'Neroth le pêcheur de perles', when: () => narrWs('mer_silencieuse'), txt: 'Je plonge de nouveau sans boucher mes oreilles. Les perles sont plus belles quand on entend son propre cœur.' },
+  { id: 'nymea_fortune', who: 'Nyméa, capitaine du port', when: () => narrDone('q023'), txt: 'Morne a ouvert une caisse qui ne lui appartenait pas. Ça ne l\'excuse pas. Mais je dormirai mieux en sachant pourquoi.' }
+);
