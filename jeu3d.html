@@ -330,6 +330,16 @@ body.padmode .tb:focus{padding-left:26px}
 <div id="panel" class="panel"></div>
 <div id="fader"></div>
 <div id="rotate" class="ov"><div class="ph">📱</div><div>Tourne ton téléphone en mode paysage<br>pour une meilleure expérience.</div></div>
+<script>
+// Diagnostic visible (24/11) : toute erreur du jeu s'affiche à l'écran, avec le fichier et la ligne, pour pouvoir la corriger.
+(function(){var box=null,seen={},n=0;function show(m){var k=String(m).slice(0,160);if(seen[k])return;seen[k]=1;if(++n>6)return;if(!box){box=document.createElement('div');box.id='errbox';box.style.cssText='position:fixed;left:6px;right:6px;top:6px;z-index:99999;background:rgba(120,10,10,.93);color:#fff;font:12px/1.35 monospace;padding:8px 10px;border-radius:8px;white-space:pre-wrap;max-height:45vh;overflow:auto;pointer-events:auto';box.onclick=function(){box.remove();box=null;seen={};n=0};(document.body||document.documentElement).appendChild(box);box.textContent='Erreur du jeu (fais une capture et envoie-la ; touche pour fermer) :\n';}box.textContent+='\n• '+m;}
+window.__showErr=show;
+window.addEventListener('error',function(e){show((e.message||'erreur')+(e.filename?' @ '+e.filename.split('/').slice(-2).join('/')+':'+e.lineno+':'+e.colno:'')+(e.error&&e.error.stack?'\n'+String(e.error.stack).split('\n').slice(0,4).join('\n'):''));},true);
+window.addEventListener('unhandledrejection',function(e){var r=e.reason;show('Promesse : '+(r&&(r.stack||r.message)||r));});
+var ce=console.error;console.error=function(){try{var a=[].slice.call(arguments).map(function(x){return x&&x.stack?x.stack.split('\n').slice(0,4).join('\n'):String(x)}).join(' ');if(/3D|THREE|Shader|WebGL|Error/i.test(a))show(a.slice(0,700));}catch(_){}return ce.apply(console,arguments);};
+document.addEventListener('webglcontextlost',function(){show('Le contexte graphique WebGL a été perdu (mémoire du téléphone).');},true);
+})();
+</script>
 <script src="assets/data.js"></script>
 <script src="js/core.js"></script>
 <script src="js/gfx.js"></script>
