@@ -302,7 +302,7 @@ function updatePlayer(P, dt) {
   if (P.state !== 'dodge') P.z = 0;
   // interaction
   G.near = null;
-  for (const n of G.npcs) if (dist(P.x, P.y, n.x, n.y) < 42) G.near = n;
+  for (const n of G.npcs) if (!n.noTalk && dist(P.x, P.y, n.x, n.y) < 42) G.near = n;
   for (const c of WORLD.props) if (c.def.interact && !c.opened && !c.hidden && dist(P.x, P.y, c.x, c.y) < 34 && (!c.respawnAt || c.respawnAt < G.t)) G.near = c;
   for (const c of WORLD.props) if (c.hidden && !c.opened && (G.reveal > 0 || dist(P.x, P.y, c.x, c.y) < 26) && dist(P.x, P.y, c.x, c.y) < 34) G.near = c;
   if (IN.pressed.interact && G.near) interact(G.near);
