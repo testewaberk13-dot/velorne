@@ -50,6 +50,7 @@ function drawHUD(ctx) {
     for (const c of WORLD.chests) if (!c.opened && (typeof fogSeen !== 'function' || fogSeen(c.x, c.y))) { ctx.fillStyle = '#d9a441'; ctx.fillRect(mx + c.x * sx - 1, my + c.y * sy - 1, 2, 2); }
     ctx.fillStyle = '#fff'; ctx.fillRect(mx + P.x * sx - 1.5, my + P.y * sy - 1.5, 3, 3);
     const q = questText(); if (q) { if (IS_TOUCH) txt(ctx, q, 6, 38 + 40 / SCALE + 10, '#ffe9a0', 8, 'left'); else txt(ctx, q, W - 5, my + mh + 12, '#ffe9a0', 8, 'right'); }
+    const q2 = typeof narrHud === 'function' ? narrHud() : ''; if (q2) { if (IS_TOUCH) txt(ctx, q2, 6, 38 + 40 / SCALE + 21, '#e9d5ff', 7, 'left'); else txt(ctx, q2, W - 5, my + mh + 23, '#e9d5ff', 7, 'right'); }
   }
   // boss
   if (G.boss && !G.boss.dead) {
@@ -74,7 +75,7 @@ function drawHUD(ctx) {
   });
   // invite d'interaction
   if (G.near && G.mode === 'play') {
-    const n = G.near; const label = n.def && n.def.interact ? ({ chest: 'Ouvrir', cache: 'Ouvrir', gather: 'Récolter', spin_weapon: 'Invoquer', spin_exc: 'Invoquer', stash: 'Ouvrir', tomb: 'Examiner' })[n.def.interact] : 'Parler';
+    const n = G.near; const label = n.def && n.def.interact ? ({ chest: 'Ouvrir', cache: 'Ouvrir', gather: 'Récolter', spin_weapon: 'Invoquer', spin_exc: 'Invoquer', stash: 'Ouvrir', tomb: 'Examiner', lore: 'Examiner' })[n.def.interact] : 'Parler';
     const x = n.x - G.cam.x, y = n.y - G.cam.y - (n.def ? Math.min(70, (n.def.r ? n.def.r[3] : 30) + 8) : 64);
     txt(ctx, (IS_TOUCH && !PAD.active ? '' : '[' + actLabel('interact') + '] ') + label + (n.name ? ' · ' + n.name : n.def && n.def.label ? ' · ' + n.def.label : ''), x, y, '#ffe9a0', 8, 'center');
   }

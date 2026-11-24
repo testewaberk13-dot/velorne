@@ -341,15 +341,17 @@ body.padmode .tb:focus{padding-left:26px}
 <script src="js/row5.js"></script>
 <script src="js/metiers.js"></script>
 <script src="js/stats.js"></script>
+<script src="js/aventure_data.js"></script>
+<script src="js/aventure.js"></script>
 <script>
 // application installable : hors ligne + mises à jour automatiques
 const IS_APP = window.matchMedia('(display-mode: fullscreen)').matches || window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 if (IS_APP) document.body.classList.add('installed');
-if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) window.addEventListener('load', () => {
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) window.addEventListener('load', () => { try {
   navigator.serviceWorker.register('sw.js').then(reg => { setInterval(() => reg.update(), 30 * 60 * 1000); }).catch(() => {});
   let refreshing = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => { if (refreshing) return; refreshing = true; if (typeof G !== 'undefined' && G.mode === 'play') { saveGame(); toast('Nouvelle version téléchargée : elle sera utilisée au prochain lancement.', '#9fe3ff'); } else location.reload(); });
-});
+} catch (e) { /* hébergement sans service worker (ex. aperçu Claude) : le jeu fonctionne en ligne */ } });
 </script>
 </body>
 </html>
