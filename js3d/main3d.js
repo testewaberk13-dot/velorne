@@ -28,9 +28,10 @@ DAY.speed = 24 / 480; // un jour complet en 8 minutes de jeu (comme le village p
 // ---------------- réglages 3D (conservés avec les paramètres du jeu) ----------------
 // CAMÉRA OBLIQUE (24/11, direction visuelle « personnages 2D + monde 3D ») : derrière le héros et au-dessus de lui, inclinée
 // vers le terrain (34° par défaut au lieu de 49°), plus proche (10,5 m), regard porté devant le héros pour voir le chemin et
-// l'horizon, et qui se replace doucement derrière lui quand il avance. Les anciens réglages sont migrés une fois (v: 2).
-const PMIN = 18 * Math.PI / 180, PMAX = 69 * Math.PI / 180, DMIN = 6, DMAX = 26, PDEF = 0.6, DDEF = 10.5;
-const C3 = () => { if (!SET.c3d) SET.c3d = {}; const c = SET.c3d; if (c.v !== 2) { c.v = 2; c.pitch = PDEF; c.dist = DDEF; c.follow = true; } if (c.follow == null) c.follow = true; if (c.pitch == null) c.pitch = PDEF; if (c.yaw == null) c.yaw = 0; if (c.dist == null) c.dist = DDEF; if (c.slow == null) c.slow = true; if (c.day == null) c.day = true; if (c.btns == null) c.btns = true; if (c.wx == null) c.wx = true; return c; };
+// l'horizon, et qui se replace doucement derrière lui quand il avance. Les anciens réglages sont migrés une fois (v: 3).
+const PMIN = 18 * Math.PI / 180, PMAX = 69 * Math.PI / 180, DMIN = 6, DMAX = 26, PDEF = 0.46, DDEF = 8.6;
+const C3 = () => { if (!SET.c3d) SET.c3d = {}; const c = SET.c3d; if (c.v !== 3) { c.v = 3; c.pitch = PDEF; c.dist = DDEF; c.follow = true; } if (c.follow == null) c.follow = true; if (c.pitch == null) c.pitch = PDEF; if (c.yaw == null) c.yaw = 0; if (c.dist == null) c.dist = DDEF; if (c.slow == null) c.slow = true; if (c.day == null) c.day = true; if (c.btns == null) c.btns = true; if (c.wx == null) c.wx = true; return c; };
+camera.fov = 46; camera.updateProjectionMatrix();
 let setDirty = 0; const markSet = () => { setDirty = performance.now(); };
 B.cam3d = {
   rot(d) { CAM.yawT += d; C3().yaw = CAM.yawT; CAM.manualT = performance.now(); markSet(); },

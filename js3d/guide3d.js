@@ -16,7 +16,24 @@ const npcBy = f => G.npcs.find(f) || WORLD.npcs.find(f);
 function zoneCenter(zid) { const z = WORLD.zones.find(z => z.id === zid); return z ? { x: (z.x0 + z.x1) / 2 * T, y: (z.y0 + z.y1) / 2 * T, zone: z } : null; }
 function inZone(P, z) { const tx = P.x / T, ty = P.y / T; return z && tx >= z.x0 && tx < z.x1 && ty >= z.y0 && ty < z.y1; }
 function nearestEnemy(P, kinds, maxT = 70) { let b = null, bd = 1e9; for (const e of G.enemies) { if (e.dead || !kinds.includes(e.kind || e.type || (e.def && e.def.id))) continue; const d = Math.hypot(e.x - P.x, e.y - P.y); if (d < bd && d < maxT * T) { bd = d; b = e; } } return b; }
-function mainTarget(P) { try { const t = typeof objectiveTarget === 'function' ? objectiveTarget() : null; return t ? { x: t.x, y: t.y, l: t.l, k: 'main' } : null; } catch (e) { return null; } }
+// objectifs du début de partie (Théobald, Orvael, Kaelen, mannequins, maîtres de style) : le guide du jeu 2D ne les connaît pas
+function introTarget(P) {
+  const Q = G.quests, tile = (o, l) => o ? { x: (o.tx + 0.5) * T, y: (o.ty + 0.5) * T, l } : null, elder = () => { const n = WORLD.npcs.find(n => n.role === 'quest'); return n ? { x: n.x, y: n.y, l: 'Théobald' } : null; };
+  const master = st => { const M = typeof MASTERS !== 'undefined' && MASTERS[st]; return M ? tile(M, M.name.split(',')[0]) : null; };
+  const dummy = () => { let b = null, bd = 1e9; for (const e of G.enemies) { if (e.dead || !e.def || !e.def.dummy) continue; const d = Math.hypot(e.x - P.x, e.y - P.y); if (d < bd) { bd = d; b = { x: e.x, y: e.y, l: 'Mannequin' }; } } return b; };
+  if (!P.magic) return (Q.intro || 0) === 0 ? elder() : tile(typeof ARCHMAGE !== 'undefined' && ARCHMAGE, 'Orvael');
+  if (P.trial) return P.trial.left > 0 ? dummy() : master(P.trial.style);
+  if (!hasStyle(P)) return master('epee');
+  if (Q.main === 0) return elder();
+  return null;
+}
+function mainTarget(P) {
+  try {
+    let t = typeof objectiveTarget === 'function' ? objectiveTarget() : null;
+    if (!t && G.quests && typeof introText === 'function' && introText()) t = introTarget(P);
+    return t ? { x: t.x, y: t.y, l: t.l, k: 'main' } : null;
+  } catch (e) { return null; }
+}
 function narrTarget(P) {
   try {
     const N = G.flags && G.flags.narr; if (!N || !N.track || typeof MISSIONS === 'undefined') return null; const m0 = narrM(N.track); if (!m0 || m0.st !== 1) return null;
@@ -63,7 +80,7 @@ function makeTrail(col) {
   const pos = new Float32Array(NP * 3), al = new Float32Array(NP), g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('aA', new THREE.BufferAttribute(al, 1));
   const mat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: { uC: { value: new THREE.Color(col) }, uS: { value: 300 } },
-    vertexShader: 'attribute float aA; varying float vA; uniform float uS; void main(){ vA = aA; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = max(2.0, 0.22 * uS / -mv.z); gl_Position = projectionMatrix * mv; }',
+    vertexShader: 'attribute float aA; varying float vA; uniform float uS; void main(){ vA = aA; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = clamp(0.15 * uS / -mv.z, 2.0, 22.0); gl_Position = projectionMatrix * mv; }',
     fragmentShader: 'uniform vec3 uC; varying float vA; void main(){ float d = length(gl_PointCoord - 0.5); float a = (1.0 - smoothstep(0.1, 0.5, d)) * vA; if (a < 0.02) discard; gl_FragColor = vec4(uC * a * 1.6 + vec3(a * 0.25), 1.0); }' });
   const pts = new THREE.Points(g, mat); pts.frustumCulled = false; pts.renderOrder = 7; scene.add(pts);
   const colm = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.6, 1, 14, 1, true).translate(0, 0.5, 0), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, toneMapped: false }));
@@ -96,7 +113,7 @@ export function updateGuide3D(dt, P, px, pz) {
     const show = Math.min(tr.len, 30), step = show / NP;
     for (let i = 0; i < NP; i++) { const d = (i + tr.flow / 1.2) * step, q = at(tr, d); const j = i * 3; if (!q) { tr.al[i] = 0; continue; }
       const wob = Math.sin(i * 1.7 + now * 0.004) * 0.08; tr.pos[j] = q[0] + wob; tr.pos[j + 2] = q[1] - wob; tr.pos[j + 1] = groundH(q[0], q[1]) + 0.18 + Math.sin(i * 0.9 - now * 0.006) * 0.06;
-      const u = d / show; tr.al[i] = (u < 0.06 ? u / 0.06 : 1) * (1 - Math.max(0, u - 0.7) / 0.3) * (0.55 + 0.45 * Math.sin(i * 0.55 - now * 0.012)); }
+      const u = d / show; tr.al[i] = 0.7 * (u < 0.06 ? u / 0.06 : 1) * (1 - Math.max(0, u - 0.7) / 0.3) * (0.55 + 0.45 * Math.sin(i * 0.55 - now * 0.012)); }
     tr.g.attributes.position.needsUpdate = true; tr.g.attributes.aA.needsUpdate = true; tr.pts.visible = true; tr.mat.uniforms.uS.value = innerHeight;
     // colonne de lumière sur la cible quand elle est assez proche pour être vue
     const tx = m(t.x), tz = m(t.y), vis = dT < 40 && !t.vague;
