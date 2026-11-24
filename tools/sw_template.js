@@ -14,7 +14,7 @@ self.addEventListener('fetch', e => {
   if (code) {
     // réseau d'abord (dernière version), cache si hors ligne
     e.respondWith(Promise.race([fetch(req).then(r => { if (r.ok) { const cp = r.clone(); caches.open(VERSION).then(c => c.put(req, cp)); } return r; }), new Promise((_, rej) => setTimeout(rej, 3500))])
-      .catch(() => caches.match(req, { ignoreSearch: true }).then(r => r || caches.match('index.html'))));
+      .catch(() => caches.match(req, { ignoreSearch: true }).then(r => r || caches.match(new URL(req.url).pathname.endsWith('jeu-2d.html') ? 'jeu-2d.html' : 'index.html'))));
   } else {
     // images : cache d'abord
     e.respondWith(caches.match(req, { ignoreSearch: true }).then(r => r || fetch(req).then(res => { if (res.ok) { const cp = res.clone(); caches.open(VERSION).then(c => c.put(req, cp)); } return res; })));

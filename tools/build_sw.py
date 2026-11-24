@@ -1,7 +1,7 @@
 """Génère sw.js : liste de tous les fichiers du jeu + version (empreinte) pour le hors ligne."""
 import os, hashlib, json
 ROOT = os.path.join(os.path.dirname(__file__), '..')
-files = ['./', 'index.html', 'manifest.webmanifest']
+files = ['./', 'index.html', 'jeu-2d.html', 'manifest.webmanifest']
 for d in ['js', 'icons', 'assets/env', 'assets/fx', 'assets/items', 'assets/looks', 'assets/mon', 'assets/ui']:
     for f in sorted(os.listdir(os.path.join(ROOT, d))): files.append(d + '/' + f)
 files.append('assets/data.js')
