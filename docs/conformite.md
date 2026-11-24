@@ -77,7 +77,7 @@
 | C4 | Secrets, coffres, récompenses d'exploration | C2 | 🔷 | Les coffres et les 13 lieux secrets du jeu fonctionnent (coffres en 3D avec couvercle). Les 7 secrets du village pilote ne sont pas encore dans `jeu3d`. | `narr2` : 72 lieux sur 72 accessibles |
 | C5 | Montures | C2 | 🟨 | Logique du jeu reprise ; le cheval est affiché sous le héros en 3D. Les capacités d'accès aux zones restent à étendre (à compléter, même en 2D). | `t3d_feat` : cheval monté, déplacement, descente |
 | C6 | 27 familles, Magic Spin | C2 | ✅ | — | A2, A3 |
-| C7 | 270 compétences et ultimes | C2 | ✅ | Effets dessinés en deux couches : au sol et en volume face à la caméra. Les effets 3D natifs famille par famille restent à faire (G2). | `t3d_270.py` |
+| C7 | 270 compétences et ultimes | C2 | ✅ | Effets du jeu en deux couches (au sol, en volume), plus effets 3D natifs propres à chaque famille. | `t3d_270.py` |
 | C8 | Combat, combos, réactions élémentaires | C2 | ✅ | — | `tcombo` : brûlure, glace, poison, malédiction, entrave ; réaction ×1,6 |
 | C9 | Bestiaire, boss (4 Gardiens, Malvorak, Grakhul, 21 régionaux) | C2 | ✅ | Logique reprise ; IA de boss qui ne répète pas la même attaque plus de 2 fois (déjà dans le jeu) | `gs5` : boss des mines, de la lave et du temple |
 | C10 | Quêtes, arcs, histoire | C2 | ✅ | 44 missions sur 44, 8 arcs terminés | `narr`, `narr2` |
@@ -93,7 +93,7 @@
 | C20 | Interface et menus | C2 | ✅ | HUD et menus du jeu par-dessus la 3D. La mini-carte reste orientée au nord ; un cône indique désormais la direction de la caméra. | Captures |
 | C21 | Tactile, clavier et souris, manette PS5 | C2 | ✅ | Testés en émulation seulement | `t7_pad`, `tm3d` |
 | C22 | Sauvegarde | C2 | ✅ | — | `camp`, `narr2` : rechargements |
-| C23 | Effets visuels, météo, lumière | C2 | ✅ | Pluie et neige rétablies ; cycle jour/nuit ; lumières des torches et des sorts ; lanterne du héros la nuit | Section F |
+| C23 | Effets visuels, météo, lumière | C2 | ✅ | Atmosphère de chacune des 25 régions (`js3d/regions3d.js`) : brouillard, ciel, lumière, exposition, particules d'ambiance. Le volcan et les cavernes de lave sont éclaircis, avec braises, cendres et lueur de lave. Pluie et neige rétablies ; cycle jour/nuit ; lumières des torches et des sorts ; lanterne du héros la nuit | Section F |
 | C24 | Performances mobiles | C2 | 🟨 | Qualité automatique liée au réglage du jeu ; panneaux redessinés seulement si nécessaire ; couches d'effets vides ignorées ; nombre de lumières selon la qualité. **Pas de mesure sur un vrai téléphone.** | Mesures (section F) |
 
 ## D. Partie 5 — armes, équipements, Spins
@@ -139,12 +139,12 @@ Remarque : deux tests (`t7_pad`, `camp`) ont échoué une fois lorsqu'ils tourna
 | F3 | 8 directions | ✅ | Voir B4 | `c1_diag` |
 | F4 | Caméra réglable et rotation, commandes tournées | ✅ | Voir B5 | `g3d3`, `tm3d` |
 | F5 | Visée 3D | ✅ | Voir B6 | Arc et visée tactile maintenue : zoom progressif de 0,3 à 0,97 en 4 s, ralenti à 55 %. La réserve de 2,5 s se vide, puis se recharge après la visée. Elle est désormais comptée en temps réel. |
-| F6 | Effets des compétences | 🔷 | Avant : tout était aplati au sol. Désormais : télégraphes, cercles et ondes au sol ; coups, impacts, particules, éclairs, tornades et piliers sur un plan face à la caméra, avec la même présence que les personnages. Les effets 3D natifs restent à faire (G2). | `t3d_270` |
+| F6 | Effets des compétences | ✅ | Avant : tout était aplati au sol. Désormais : télégraphes, cercles et ondes au sol ; coups, impacts, particules, éclairs, tornades et piliers sur un plan face à la caméra, avec la même présence que les personnages. **Effets 3D natifs pour les 27 familles** (`js3d/magic3d.js`) : particules en volume avec un mouvement propre à chaque famille, cercles d'incantation, colonnes d'ultime, éclairs (foudre), traînées de projectiles, éclats d'impact, éclats de lumière. Les bords des couches 2D sont fondus. | `t3d_270` ; `t3d_mag` : 6 familles en captures, sorts et ultimes |
 | F7 | Cycle jour/nuit continu | ✅ | Avant : l'heure était figée. Désormais, un jour dure 8 minutes, comme dans le village pilote. L'heure est sauvegardée avec la partie. Les zones sombres du jeu assombrissent la lumière. Fenêtres allumées et lanterne du héros la nuit. Désactivable. | Capture `c4_night` |
 | F8 | Météo | ✅ | Pluie (perdue en v4) rétablie ; neige dans les régions froides ; aucune précipitation sous terre. Désactivable. | Pluie au village et neige aux Pics de Givrenuit, visibles (captures `w_rain`, `w_snow`) |
 | F9 | Mini-carte et caméra tournée | 🔷 | Cône de vue sur la mini-carte | Capture |
 | F10 | Qualité graphique | ✅ | Le réglage « Qualité graphique » du jeu pilote maintenant la 3D (auto, haute, moyenne, basse) | — |
-| F11 | Fluidité | 🟨 | Mesure par image (`V3D.PROF`). Panneaux des PNJ et du butin redessinés seulement quand l'image change ; ennemis éloignés à 15 images/s ; couches d'effets vides ignorées ; 2, 4 ou 6 lumières selon la qualité. | Rendu logiciel, qualité basse : 20 images/s (contre 3 avant), temps JS ≈ 3 ms par image |
+| F11 | Fluidité | 🟨 | Mesure par image (`V3D.PROF`). Panneaux des PNJ et du butin redessinés seulement quand l'image change ; ennemis éloignés à 15 images/s ; couches d'effets vides ignorées ; 2, 4 ou 6 lumières selon la qualité. | **Correction d'une erreur de mesure :** les « 20 images/s » annoncés le 24/11 au matin étaient faux, car la mesure plafonnait. En temps réel, sur la machine de test sans carte graphique : 3,7 images/s, puis 7 après optimisation (triangles par image : 1,13 M → 0,41 M). Optimisations : lumières partagées, tri hors champ par quart de bloc, feuillages et herbe allégés en qualité basse. Ce chiffre ne représente pas un téléphone, qui dispose d'un processeur graphique. |
 | F12 | Brumeval v4 dans `jeu3d` | ❌ | Voir G1 | — |
 | F13 | Intérieurs en coupe | ❌ | Le jeu 2D n'a pas d'intérieurs ; ils viendront avec Brumeval v4 (G1) | — |
 | F14 | Animaux du village pilote | ❌ | Viendront avec Brumeval v4 (G1) | — |
@@ -162,8 +162,8 @@ Remarque : deux tests (`t7_pad`, `camp`) ont échoué une fois lorsqu'ils tourna
    - les intérieurs au système de collision.
 
    Choix technique pris par défaut : adapter le village pilote à l'emprise du jeu, sans toucher au monde d'origine.
-2. **G2 — Effets 3D natifs, famille par famille (moyenne).** Ajouter volumes, lumières et particules 3D aux 270 compétences, sans en retirer.
-3. **G3 — Finitions par région (moyenne).** Les rochers pâles et la fontaine du village (un disque blanc) sont corrigés le 24/11 (commit 195e083). Restent le volcan, très sombre, et l'identité visuelle propre à chaque région.
+2. **G2 — Effets 3D natifs : fait le 24/11** pour les 27 familles. Reste un raffinement possible, compétence par compétence : des formes 3D propres (lion de feu, piliers de glace…) en plus des particules.
+3. **G3 — Finitions par région (moyenne).** Les rochers pâles et la fontaine du village (un disque blanc) sont corrigés le 24/11 (commit 195e083). Atmosphère des 25 régions faite le 24/11, en commençant par le volcan. Restent, région par région, des décors 3D plus propres à chacune : coulées et cheminées volcaniques, pilotis du marais, dunes, etc.
 4. **G4 — Vérification sur un vrai téléphone et une vraie manette (élevée, extérieure).** Impossible depuis l'environnement de test.
 5. **G5 — Éléments « À COMPLÉTER » des bibles, même en 2D (faible à moyenne, conception) :**
    - apprentissage des autres familles (grimoires, sanctuaires) ;
@@ -194,3 +194,23 @@ Remarque : deux tests (`t7_pad`, `camp`) ont échoué une fois lorsqu'ils tourna
 - Jeu 3D (version officielle en construction) : https://raw.githack.com/testewaberk13-dot/velorne/main/jeu3d.html
 - Village pilote (accueil actuel) : https://raw.githack.com/testewaberk13-dot/velorne/main/index.html
 - Ancien jeu 2D : https://raw.githack.com/testewaberk13-dot/velorne/main/jeu-2d.html
+
+## I. Essais physiques à faire par toi (impossibles ici)
+
+Ce qui est déjà testé ici, en simulation : tactile en 844 × 390 (stick, boutons, caméra, absence de chevauchement), manette simulée (création, menus, combat, visée, vibrations, libellés PS5).
+
+**Sur téléphone (paysage), ouvrir `jeu3d.html` :**
+1. **Fluidité.** Images par seconde en forêt, au village et pendant un ultime. Le menu Paramètres affiche « Qualité graphique : auto (…) » : note le niveau choisi.
+2. **Lisibilité.** HUD, mini-carte, textes de dialogue, taille des boutons. Utilise au besoin « Boutons plus grands ».
+3. **Stick et caméra.** Le stick va dans le bon sens après une rotation de caméra (⟲ ⟳). Les boutons ⤒ ⤓ changent l'angle.
+4. **Visée tactile.** Glisser depuis un bouton de sort ou d'attaque, avec l'arc : trajectoire, zoom et ralenti.
+5. **Chaleur et batterie** après 15 minutes.
+6. **Sauvegarde.** Fermer l'onglet, rouvrir, « Continuer » : position, heure du jour et compagnon conservés.
+7. **Encoches et coins arrondis.** Les boutons de caméra et du HUD ne sont pas masqués.
+
+**Manette PS5 réelle (Bluetooth ou USB, sur PC ou téléphone) :**
+1. Détection : Paramètres > Manette affiche son nom.
+2. Toutes les touches : ✕ attaque/interagir, ○ esquive, □ technique, △ ultime, L1 parade, R1 sort 3, L2/R2 sorts 1 et 2, croix (sort 4, potion, aptitude raciale, relique), L3 éveil, R3 sort 5, stick droit visée, Options menu, Créer inventaire.
+3. Vibrations à l'impact et réglage de la zone morte.
+4. Navigation complète des menus et de la création à la manette.
+5. Caméra : pas de touche libre sur la manette ; la rotation se fait par Paramètres > Caméra 3D.
