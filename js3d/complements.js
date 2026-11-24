@@ -91,3 +91,66 @@ setInterval(() => { try { if (G.mode === 'play') ensureNestNpc(); } catch (e) { 
     return it0(n); }; }
 // objet de quête
 if (typeof REG !== 'undefined' && !REG.oeuf_dragon) { const o = { id: 'oeuf_dragon', name: 'Œuf de dragon', kind: 'quest', stack: 1, rarity: 4, icon: 'KeySkull', price: 0, tradeRules: 'quest', desc: 'Une coquille rouge, brûlante, qui bat doucement. À couver dans la forge d\'Ulrik Braisefer.' }; REG.oeuf_dragon = C(o); }
+
+// ---------------------------------------------------------------------
+//  2. EFFETS DE LA RÉPUTATION — 7 rangs conservés (décision du 23/11 §4) : « dialogues, quêtes réservées, récompenses de rang ».
+//     Montants, bonus et contrats : PROPOSITIONS d'équilibrage.
+// ---------------------------------------------------------------------
+const REP_REWARD = [null, { gold: 50 }, { gold: 120, items: [['potion', 2]] }, { gold: 250, items: [['cristal_magique', 2]] }, { gold: 500, contract: true }, { gold: 1000, items: [['mithril', 3], ['fragment_runique', 2]] }, { gold: 2500, title: true }];
+// bonus concrets propres à chaque faction, croissants avec le rang (en plus des réductions des Artisans et du voyage des Cartographes)
+const REP_BONUS = {
+  garde: { d: 'Or ramassé +3 % par rang', k: 0.03 }, vivant: { d: 'Soins des potions +4 % par rang', k: 0.04 }, archives: { d: 'Expérience +2 % par rang', k: 0.02 },
+  cendre: { d: 'Dégâts de feu subis −4 % par rang', k: 0.04 }, pacte: { d: 'Dégâts de glace et de vent subis −4 % par rang', k: 0.04 }, voile: { d: 'Dégâts contre les boss +2 % par rang', k: 0.02 },
+  navigateurs: { d: 'Vitesse sur une monture aquatique +4 % par rang', k: 0.04 }, artisans: { d: 'Réduction chez les marchands (déjà active)' }, cartographes: { d: 'Voyage rapide moins cher (déjà actif)' },
+};
+const rk = f => (typeof repRank === 'function' && G.flags && G.flags.rep && G.flags.rep[f] !== undefined) ? repRank(f) : 0;
+{ const rg0 = repGain; repGain = function (f, n) {
+    const R = repData(), before = R[f] === undefined ? -1 : repRank(f); rg0(f, n); const after = repRank(f);
+    if (before >= 0 && after > before) for (let r = before + 1; r <= after; r++) { const W = REP_REWARD[r]; if (!W) continue; const P = G.player; if (!P) continue;
+      if (W.gold) P.gold += W.gold; for (const [id, q] of W.items || []) try { giveItem(P, id, q, 'Récompense : ' + FACTIONS[f].n); } catch (e) { }
+      if (W.title) { const id = 'rep_' + f; if (!TITLES.some(t => t.id === id)) TITLES.push({ id, n: 'Légende de la ' + FACTIONS[f].n.replace(/^(La |Le |Les )/, ''), r: 3, d: 'Atteindre le rang Légendaire auprès de : ' + FACTIONS[f].n + '.', ok: () => repRank(f) >= 6 }); }
+      toast(FACTIONS[f].n + ' — récompense de rang « ' + REP_RANKS[r] + ' »' + (W.gold ? ' : ' + W.gold + ' or' : '') + (W.contract ? ' · contrats de faction disponibles au panneau de Brumeval' : ''), '#ffe27a'); } }; }
+// titres de légende déjà mérités (anciennes sauvegardes)
+setInterval(() => { try { if (G.mode === 'play' && G.flags.rep) for (const f in FACTIONS) if (rk(f) >= 6 && !TITLES.some(t => t.id === 'rep_' + f)) TITLES.push({ id: 'rep_' + f, n: 'Légende de la ' + FACTIONS[f].n.replace(/^(La |Le |Les )/, ''), r: 3, d: 'Atteindre le rang Légendaire auprès de : ' + FACTIONS[f].n + '.', ok: () => repRank(f) >= 6 }); } catch (e) { } }, 3000);
+// application des bonus
+{ const gx0 = gainXp; gainXp = function (n) { return gx0(Math.round(n * (1 + REP_BONUS.archives.k * rk('archives')))); }; }
+{ const hp0 = hurtPlayer; hurtPlayer = function (P, dmg, sx, sy, src, el) { let m = 1; if (el === 'feu' || el === 'lave') m -= REP_BONUS.cendre.k * rk('cendre'); if (el === 'glace' || el === 'vent') m -= REP_BONUS.pacte.k * rk('pacte'); return hp0(P, dmg * Math.max(0.7, m), sx, sy, src, el); }; }
+{ const de0 = damageEnemy; damageEnemy = function (e, dmg, ...rest) { if (e && e.def && e.def.boss) dmg *= 1 + REP_BONUS.voile.k * rk('voile'); return de0(e, dmg, ...rest); }; }
+if (typeof MOUNTS !== 'undefined') { const raie = MOUNTS.raie; const base = raie.spd; Object.defineProperty(raie, 'spd', { get: () => base * (1 + REP_BONUS.navigateurs.k * rk('navigateurs')), configurable: true }); }
+// l'or ramassé et les potions passent par des fonctions du jeu dont les noms sont vérifiés à l'exécution
+{ const co0 = collect; collect = function (d) { if (d && d.kind === 'gold' && !d.repB) { d.repB = 1; d.n = Math.round(d.n * (1 + REP_BONUS.garde.k * rk('garde'))); } return co0(d); }; }
+{ const up0 = usePotion; usePotion = function (P) { const c0 = countItem(P, 'potion'); const r = up0(P); if (countItem(P, 'potion') < c0 && P.healRate) P.healRate *= 1 + REP_BONUS.vivant.k * rk('vivant'); return r; }; }
+// dialogues : les membres et proches d'une faction saluent selon le rang
+const REP_NPC = [[/Orlan|cartograph/i, 'cartographes'], [/Borin|forgeron|Ulrik|Dorgan|artisan/i, 'artisans'], [/Garde|Hugues|Bram/i, 'garde'], [/Édran|archiv|Séraphine/i, 'archives'], [/Liora|herbor|Lysa/i, 'vivant'], [/Selyne|voyante|Orvael/i, 'voile']];
+const REP_LINE = ['', 'On m\'a parlé de toi.', 'Ton nom revient souvent chez nous.', 'Toujours un plaisir de te voir.', 'Tu as notre respect.', 'Nos portes te sont grandes ouvertes, ami.', 'Une légende parmi nous !'];
+const repSaid = {};
+{ const it0 = interact; interact = function (n) {
+    const r = it0(n);
+    try { if (n && n.name) for (const [re, f] of REP_NPC) if (re.test(n.name)) { const k = rk(f); if (k >= 1 && (!repSaid[n.name] || G.t - repSaid[n.name] > 90)) { repSaid[n.name] = G.t; toast(n.name.split(',')[0] + ' (' + FACTIONS[f].n + ', ' + REP_RANKS[k] + ') : « ' + REP_LINE[k] + ' »', '#c4b5fd'); } break; } } catch (e) { }
+    return r; }; }
+// quêtes réservées : contrats de faction, au rang Respecté, au panneau de Brumeval
+const CONTRACTS = {
+  garde: { n: 'Routes sûres', d: 'Vaincre 20 monstres hors des villages.', need: 20, test: e => true },
+  artisans: { n: 'Commande du Cercle', d: 'Rapporter 5 acier et 3 mithril.', items: [['acier', 5], ['mithril', 3]] },
+  cartographes: { n: 'Relevés lointains', d: 'Vaincre 15 monstres dans une région de niveau 14 ou plus.', need: 15, test: e => { const z = zoneAt(e.x, e.y); return z && /neige|volcan|citadelle|cristal|aether|ombres|corrompues|lave|temple/.test(z.id); } },
+  vivant: { n: 'Purger les marais', d: 'Vaincre 15 créatures du Marais de Grisebrume.', need: 15, test: e => { const z = zoneAt(e.x, e.y); return z && z.id === 'marais'; } },
+  navigateurs: { n: 'Écumeurs des côtes', d: 'Vaincre 15 monstres sur la côte ou dans l\'archipel.', need: 15, test: e => { const z = zoneAt(e.x, e.y); return z && /cote|archipel|fjord/.test(z.id); } },
+  archives: { n: 'Pages manquantes', d: 'Rapporter 4 fragments runiques.', items: [['fragment_runique', 4]] },
+  cendre: { n: 'Braises vivantes', d: 'Vaincre 15 créatures du Cratère de Cendrefeu ou des cavernes de lave.', need: 15, test: e => { const z = zoneAt(e.x, e.y); return z && /volcan|lave/.test(z.id); } },
+  pacte: { n: 'Serment des peuples', d: 'Vaincre 15 monstres du désert ou des Pics.', need: 15, test: e => { const z = zoneAt(e.x, e.y); return z && /desert|neige|monts|hurlevents/.test(z.id); } },
+  voile: { n: 'Échos de Nyx', d: 'Vaincre 10 monstres de la Citadelle ou des Terres de l\'Ombre.', need: 10, test: e => { const z = zoneAt(e.x, e.y); return z && /citadelle|ombres|corrompues/.test(z.id); } },
+};
+function contracts() { if (!G.flags.contracts) G.flags.contracts = {}; return G.flags.contracts; }
+{ const ke0 = killEnemy; killEnemy = function (e) { const r = ke0(e); try { const C = contracts(); for (const f in C) { const c = C[f], D = CONTRACTS[f]; if (c.active && D.need && D.test(e)) { c.n = (c.n || 0) + 1; if (c.n === D.need) toast('Contrat « ' + D.n + ' » rempli : retourne au panneau de Brumeval', '#ffe27a'); } } } catch (er) { } return r; }; }
+function openFactionBoard() {
+  const P = G.player, C = contracts(), opts = []; let h = '<p>Contrats réservés aux membres respectés des factions (rang « Respecté » ou plus).</p><ul>';
+  for (const f in CONTRACTS) { const D = CONTRACTS[f], k = rk(f), c = C[f] || {}; const done = D.need ? (c.n || 0) >= D.need : (D.items || []).every(([id, q]) => countItem(P, id) >= q);
+    h += `<li><b>${FACTIONS[f].n}</b> (${REP_RANKS[k]}) — ${D.n} : ${D.d}${c.active ? (D.need ? ` <i>${Math.min(c.n || 0, D.need)}/${D.need}</i>` : '') : ''}${c.times ? ` · rempli ${c.times} fois` : ''}</li>`;
+    if (k < 4) continue;
+    if (!c.active) opts.push(['Accepter : ' + D.n, () => { C[f] = Object.assign(c, { active: true, n: 0 }); toast('Contrat accepté : ' + D.n, '#ffe27a'); saveGame(); closePanel(); }]);
+    else if (done) opts.push(['Rendre : ' + D.n, () => { for (const [id, q] of D.items || []) takeItem(P, id, q); c.active = false; c.times = (c.times || 0) + 1; P.gold += 400 + 150 * k; repGain(f, 60); try { gainXp(300 + 100 * k); } catch (e) { } toast('Contrat rendu : ' + (400 + 150 * k) + ' or', '#ffe27a'); saveGame(); closePanel(); }]);
+  }
+  h += '</ul><p><small>Bonus de faction : ' + Object.keys(REP_BONUS).map(f => FACTIONS[f].n + ' — ' + REP_BONUS[f].d).join(' · ') + '</small></p>';
+  opts.push(['Fermer', closePanel]); dialog('Panneau des contrats de Brumeval', h, opts);
+}
+window.openFactionBoard = openFactionBoard;

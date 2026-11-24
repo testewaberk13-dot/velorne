@@ -196,7 +196,7 @@ async function doAction() {
   switch (id) {
     case 'initiales': await say(null, S.found.initiales ? TEXT.initiales_re : TEXT.initiales); discover('initiales'); break;
     case 'puits': await say(null, TEXT.puits); break;
-    case 'panneau': await say(null, TEXT.panneau); break;
+    case 'panneau': await say(null, TEXT.panneau); if (typeof openFactionBoard === 'function') openFactionBoard(); break;
     case 'note_edran': await say(null, TEXT.note_edran); S.flags.note = 1; S.flags.hint_bibliotheque = 1; break;
     case 'livres': { const liv0 = a.it;
       if (S.found.bibliotheque || V.bookcase.target) { await say(null, ["La bibliothèque reste écartée. Derrière, la petite pièce d'Édran."]); break; }
