@@ -418,7 +418,8 @@ B.title3d = function () {
   if (!TT.built) { TT.built = true; forceBuildAround(cx, cz); }
   const yaw = 0.6 + TT.t * 0.04, pitch = 0.5 + Math.sin(TT.t * 0.07) * 0.04, dist = 27 + Math.sin(TT.t * 0.05) * 2.5;
   const gy = groundH(cx, cz); TT.look.set(cx + Math.sin(TT.t * 0.11) * 1.5, gy + 2.2, cz + Math.cos(TT.t * 0.09) * 1.5);
-  updateWorld(cx - Math.sin(yaw) * 10, cz - Math.cos(yaw) * 10, time.value);
+  // pas encore de héros à l'écran titre : position fictive le temps de l'appel (le jeu reste sûr même si un autre fichier est d'une version antérieure)
+  { const had = G.player; if (!had) G.player = { x: -1e9, y: -1e9 }; try { updateWorld(cx - Math.sin(yaw) * 10, cz - Math.cos(yaw) * 10, time.value); } finally { if (!had) G.player = had; } }
   try { updateBrumeval(dt, { x: (cx + 40) * T, y: cz * T }, TT.look); } catch (e) { }
   const hd = Math.cos(pitch) * dist; camera.position.set(TT.look.x + Math.sin(yaw) * hd, TT.look.y + Math.sin(pitch) * dist, TT.look.z + Math.cos(yaw) * hd);
   camera.position.y = Math.max(camera.position.y, groundH(camera.position.x, camera.position.z) + 2); camera.lookAt(TT.look); camera.updateMatrixWorld();
