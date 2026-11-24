@@ -474,7 +474,7 @@ const J_TABS = [['recit', 'Récit'], ['missions', 'Missions'], ['arcs', 'Arcs'],
 function jbox(title, body) { return `<div class="q"><b>${title}</b><p>${body}</p></div>`; }
 function journalHTML() {
   const N = NS();
-  let h = `<div class="jtabs" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">${J_TABS.map(([k, n]) => `<button data-jtab="${k}" class="${k === jTab ? 'on' : ''}" style="padding:4px 10px;border-radius:6px;${k === jTab ? 'background:#c9a45a;color:#1a120a' : ''}">${n}</button>`).join('')}</div><div class="quests jour">`;
+  let h = `<div class="jtabs" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">${J_TABS.map(([k, n]) => `<button data-jtab="${k}" class="${k === jTab ? 'on' : ''}" style="padding:4px 10px;border-radius:6px;border:1px solid #c9a45a66;${k === jTab ? 'background:#c9a45a;color:#1a120a' : 'background:#2a2030;color:#f3ead2'}">${n}</button>`).join('')}</div><div class="quests jour">`;
   if (jTab === 'recit') {
     const L = N.log.slice().reverse();
     h += L.length ? L.slice(0, 120).map(e => `<div class="q" style="padding:4px 8px"><p style="margin:0">${LOG_ICON[e.k] || '•'} ${e.txt}<br><small style="opacity:.6">${e.r || ''}${e.lv ? ' · niveau ' + e.lv : ''}</small></p></div>`).join('') : '<p class="dim">Ton voyage commence à peine. Ce que tu vivras s\'écrira ici.</p>';
