@@ -77,6 +77,7 @@ function updateActors(px, pz) {
     a.mesh.position.set(ox, groundH(ox, oz) + (kind === 'proj' ? 0.6 : 0), oz); a.mesh.quaternion.copy(yawQ); a.mesh.visible = true;
   }
   PROF.nAct = n;
+  for (const g of G.npcs) if (g.glow3d && near(g) && Math.random() < 0.5) MAGIC3D.emit('amb', m(g.x) + (Math.random() - 0.5) * 0.4, groundH(m(g.x), m(g.y)) + 0.3, m(g.y) + (Math.random() - 0.5) * 0.4, { S: { g: -1.2, sp: 0.4, sz: 0.12, life: 1.2, col2: '#ffe08a', flick: 1 }, col: g.glow3d });
   for (const [o, a] of ACT) if (a.seen !== frameId) { scene.remove(a.mesh); a.tex.dispose(); a.mesh.material.dispose(); a.mesh.geometry.dispose(); ACT.delete(o); }
 }
 

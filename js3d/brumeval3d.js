@@ -65,7 +65,7 @@ function nearestFree(lx, lz, r = 0.32) {
 const rb0 = window.rectBlocked;
 window.rectBlocked = function (x, y, w, h) {
   const cx = (x + w / 2) / 32, cz = (y + h / 2) / 32;
-  if (inWorld(cx, cz)) return !!blocked(cx - OX, cz - OZ, Math.max(w, h) / 64);
+  if (inWorld(cx, cz)) { const k = blocked(cx - OX, cz - OZ, Math.max(w, h) / 64); if (k === 'eau' && G._pmove && G.player && /^(raie|dragon|griffon)$/.test(G.player.mount || '')) return false; return !!k; }
   return rb0(x, y, w, h);
 };
 // le village du jeu est agrandi à l'emprise du village pilote (zone sûre, musique, garde de l'introduction)
