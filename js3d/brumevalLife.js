@@ -277,9 +277,10 @@ let nearestAction0 = null;
 const interact0 = window.interact;
 window.interact = function (n) {
   if (n && n.bru) { try { G.player.dir = dirOf(n.x - G.player.x, n.y - G.player.y); } catch (e) { } bruAction(n); return; }
-  // habitant réuni : quelques mots de sa vie au village (indices des secrets), puis son rôle habituel dans le jeu
-  if (n && n.bruN && !n.bruTalked) { const v = n.bruN; n.bruTalked = true; setTimeout(() => n.bruTalked = false, 20000); v.talking = true; const lines = talk(v, ctxTalk()); markHints(v);
-    return say(`${n.name}`, lines).then(() => { v.talking = false; checkEvolution(); interact0(n); }); }
+  // habitant réuni : son rôle du jeu d'abord (missions, commerce, forge…), avec en plus « la vie au village » (indices des secrets)
+  if (n && n.bruN) { const r = interact0(n); try { const v = n.bruN, box = document.querySelector('.panel.show .dopts'); if (G.dlg && box && !box.querySelector('[data-bru]')) {
+      const k = G.dlg.length; G.dlg.push(['« Et la vie au village ? »', () => { v.talking = true; const lines = talk(v, ctxTalk()); markHints(v); say(n.name, lines).then(() => { v.talking = false; checkEvolution(); }); }]);
+      const b = document.createElement('button'); b.dataset.dlg = k; b.dataset.bru = 1; b.textContent = '« Et la vie au village ? »'; box.appendChild(b); } } catch (e) { } return r; }
   return interact0(n);
 };
 // bulles des habitants et des animaux (dessinées dans l'interface du jeu)

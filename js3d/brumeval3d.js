@@ -70,8 +70,10 @@ window.rectBlocked = function (x, y, w, h) {
 };
 // le village du jeu est agrandi à l'emprise du village pilote (zone sûre, musique, garde de l'introduction)
 function enlargeVillage() {
-  const z = WORLD.zones.find(z => z.id === 'village'); if (z) { z.x0 = 21; z.y0 = 31; z.x1 = 65; z.y1 = 72; }
-  if (typeof VILLAGE_BOUNDS !== 'undefined') Object.assign(VILLAGE_BOUNDS, { x0: 21, y0: 31, x1: 65, y1: 72 });
+  const z = WORLD.zones.find(z => z.id === 'village'); if (z && !z.bru) { z.bru = true; z.x0 = 21; z.y0 = 31; z.x1 = 65; z.y1 = 72;
+    // l'ancienne partie est du village (ruelles, lanterne du chemin de l'est) reste au village, sans empiéter sur le camp gobelin
+    WORLD.zones.splice(WORLD.zones.indexOf(z) + 1, 0, Object.assign({}, z, { x0: 65, y0: 46, x1: 72, y1: 72, bru2: true })); }
+  if (typeof VILLAGE_BOUNDS !== 'undefined') Object.assign(VILLAGE_BOUNDS, { x0: 21, y0: 31, x1: 72, y1: 72 });
 }
 // habitants du jeu au village : postes de travail placés dans le village pilote (Borin à sa forge, la marchande à l'étal…)
 const POSTS = { 'Ancien Théobald': [-2.5, 2.2], 'Borin le forgeron': [11, -3.4], 'Maëlle la marchande': [7.6, 3.6], 'Isolde la mage': [3.2, -12.5], 'Garde Aldric': [0, -25], "Maëlys l'artisane": [14.2, 2.4], "Eldrin l'alchimiste": [-16.5, 1.5], 'Thalor, maître runique': [-5, 4.8], 'Séraphine, spécialiste des reliques': [-6.5, 7.6] };
