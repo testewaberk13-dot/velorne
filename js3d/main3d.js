@@ -287,6 +287,6 @@ B.frame3d = function () {
   if (cbar) cbar.classList.toggle('on', !!c.btns);
   if (info) info.textContent = 'Vélorne 3D · ' + (z ? z.name : '') + ' · ' + String(Math.floor(HOUR)).padStart(2, '0') + ' h ' + String(Math.floor(HOUR % 1 * 60)).padStart(2, '0');
 };
-B.extraOverlay = drawBubbles;
+B.extraOverlay = ctx => { drawBubbles(ctx); const h = window.fishHint && window.fishHint(); if (h) { const P = G.player, s = B.project(P.x, P.y, 2.1); if (s) { ctx.save(); ctx.font = '8px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(Math.round(s.x - 34), Math.round(s.y - 9), 68, 12); ctx.fillStyle = '#9fe3ff'; ctx.fillText('[' + actLabel('interact') + '] ' + h, Math.round(s.x), Math.round(s.y)); ctx.restore(); } } };
 B.on = true;
 window.V3D = { BRULIFE, BRU, MAGIC3D, THREE, scene, camera, renderer, CAM, ACT, PROF, STATE, DAY, hour: () => HOUR, setHour: h => { HOUR = h; } };

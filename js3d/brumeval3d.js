@@ -118,3 +118,6 @@ export const BRU = { OX, OZ, V, ROOT, inLocal, inWorld, insideNow: () => inside,
 if (typeof WORLD !== 'undefined' && WORLD.npcs && WORLD.npcs.length) settleWorld();
 { const g0 = window.genWorld; window.genWorld = function (...a) { const r = g0.apply(this, a); settleWorld(); return r; }; }
 { const s0 = window.startGame; window.startGame = function (...a) { const r = s0.apply(this, a); try { const P = G.player, lx = P.x / 32 - OX, lz = P.y / 32 - OZ; if (inLocal(lx, lz)) { const [x, z] = nearestFree(lx, lz); P.x = (x + OX) * 32; P.y = (z + OZ) * 32; } settleNpcs(); settleEnemies(); } catch (e) { console.warn('brumeval', e); } return r; }; }
+
+// eau du village pilote (rivière, étang) : pour la pêche
+window.bruWaterNear = (x, y) => { const lx = x / 32 - OX, lz = y / 32 - OZ; if (!inLocal(lx, lz)) return false; for (const r of [0.9, 1.5, 2.1]) for (let a = 0; a < 8; a++) { const k = blocked(lx + Math.cos(a * 0.785) * r, lz + Math.sin(a * 0.785) * r, 0.1); if (k === 'eau') return true; } return false; };

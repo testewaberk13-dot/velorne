@@ -154,3 +154,70 @@ function openFactionBoard() {
   opts.push(['Fermer', closePanel]); dialog('Panneau des contrats de Brumeval', h, opts);
 }
 window.openFactionBoard = openFactionBoard;
+
+// ---------------------------------------------------------------------
+//  3. MÉTIERS — bible V1.2 §6 « À COMPLÉTER : forgeron, joaillier, alchimiste, enchanteur, pêcheur, cartographe ».
+//     Forgeron et alchimiste existaient comme stations d'artisanat (niveaux 1 à 10) : ils reçoivent leurs avantages de métier.
+//     Joaillier, enchanteur, pêcheur et cartographe sont ajoutés (niveaux 1 à 10). Avantages et valeurs : PROPOSITIONS.
+// ---------------------------------------------------------------------
+const PROF = {
+  joaillier: { n: 'Joaillier', d: 'Fabrique les bijoux et accessoires chez l\'artisan. +2 % de chances par niveau d\'en fabriquer un second.' },
+  enchanteur: { n: 'Enchanteur', d: 'Progresse à chaque enchantement. Rembourse 3 % de l\'or des enchantements par niveau.' },
+  pecheur: { n: 'Pêcheur', d: 'Pêche au bord de l\'eau (touche d\'action). Poissons plus rares et plus nombreux avec le niveau ; pêche dans la lave au niveau 6.' },
+  cartographe: { n: 'Cartographe', d: 'Progresse en découvrant régions et lieux. Voyage rapide moins cher (−1 or par niveau).' },
+};
+const PROF_PERK = { forge: 'Amélioration des armes −3 % d\'or par niveau.', alchimie: '+5 % de chances par niveau de préparer une potion de plus.' };
+function profLvl(P, k) { const c = P.craft[k] || (P.craft[k] = { lvl: 1, xp: 0 }); return c.lvl; }
+function profXp(P, k, n) { profLvl(P, k); const c = P.craft[k]; c.xp += n; let up = false; while (c.lvl < 10 && c.xp >= CRAFT_XP(c.lvl)) { c.xp -= CRAFT_XP(c.lvl); c.lvl++; up = true; } if (up) toast((PROF[k] || { n: STATIONS[k] }).n + ' : niveau ' + c.lvl, '#9be7a8'); }
+{ const dc0 = doCraft; doCraft = function (P, r) { const why = dc0(P, r); if (why) return why; const it = REG[r.result[0]] || {};
+    if (it.kind === 'accessory') { profXp(P, 'joaillier', 4 + r.lvl * 2); if (Math.random() < 0.02 * profLvl(P, 'joaillier')) { giveItem(P, r.result[0], 1, 'Joaillier'); toast('Joaillier : un bijou de plus !', '#9be7a8'); } }
+    if (r.station === 'alchimie' && Math.random() < 0.05 * profLvl(P, 'alchimie')) { giveItem(P, r.result[0], r.result[1], 'Alchimiste'); toast('Alchimiste : une préparation de plus !', '#9be7a8'); }
+    return null; }; }
+{ const uc0 = upgradeCost; upgradeCost = function (inst) { const c = uc0(inst); try { const k = 1 - 0.03 * profLvl(G.player, 'forge'); return Object.assign({}, c, { gold: Math.round(c.gold * k) }); } catch (e) { return c; } }; }
+{ const de0 = doEnchant; doEnchant = function (P, inst, key) { const why = de0(P, inst, key); if (why) return why; profXp(P, 'enchanteur', 8); const back = Math.round(ENCHANTS[key].cost.gold * 0.03 * profLvl(P, 'enchanteur')); if (back) { P.gold += back; toast('Enchanteur : ' + back + ' or économisés', '#9be7a8'); } return null; }; }
+{ const ca0 = codexAdd; codexAdd = function (cat, key, label) { const r = ca0(cat, key, label); if (r && G.player && (cat === 'r' || cat === 'm')) profXp(G.player, 'cartographe', cat === 'r' ? 12 : 3); return r; }; }
+{ const tc0 = travelCost; travelCost = function () { let c = tc0(); try { c -= profLvl(G.player, 'cartographe') - 1; } catch (e) { } return Math.max(5, c); }; }
+// carte révélée : un peu d'expérience de cartographe toutes les 2 % de carte découverte
+setInterval(() => { try { if (G.mode !== 'play' || !G.player) return; const f = Math.floor(fogRatio() * 50); const P = G.player; if (P.cartoFog == null) P.cartoFog = f; if (f > P.cartoFog) { profXp(P, 'cartographe', 5 * (f - P.cartoFog)); P.cartoFog = f; } } catch (e) { } }, 4000);
+
+// pêche : poissons par région (objets nouveaux, vendables, et un repas du pêcheur au camp)
+const FISH = [
+  { id: 'p_truite', name: 'Truite de Sylvemousse', z: /forest|village|ruins|camp|plaines|oasis/, lvl: 1, price: 12, r: 2 },
+  { id: 'p_carpe', name: 'Carpe des brumes', z: /marais|jungle|corrompues/, lvl: 1, price: 16, r: 2 },
+  { id: 'p_saumon', name: 'Saumon du fjord', z: /fjord|neige|monts|hurlevents/, lvl: 3, price: 30, r: 3 },
+  { id: 'p_lune', name: 'Poisson-lune de l\'archipel', z: /cote|archipel/, lvl: 3, price: 34, r: 3 },
+  { id: 'p_braise', name: 'Poisson-braise', z: /volcan|lave/, lvl: 6, price: 80, r: 4 },
+  { id: 'p_ombre', name: 'Anguille d\'ombre', z: /ombres|citadelle|temple|mines/, lvl: 5, price: 60, r: 4 },
+  { id: 'p_cristal', name: 'Poisson de cristal', z: /cristal|aether/, lvl: 7, price: 120, r: 4 },
+  { id: 'p_or', name: 'Poisson d\'or', z: /./, lvl: 4, price: 300, r: 5, rare: 0.03 },
+];
+for (const f of FISH) if (!REG[f.id]) REG[f.id] = C({ id: f.id, name: f.name, kind: 'material', stack: 30, rarity: f.r, icon: 'Fish', price: f.price, desc: 'Poisson pêché. Se vend, ou se cuisine au camp (Grillade du pêcheur).' });
+if (typeof MEALS !== 'undefined' && !MEALS.some(m => m.id === 'grillade')) MEALS.push({ id: 'grillade', n: 'Grillade du pêcheur', need: [['p_truite', 2], ['herbe', 1]], alt: true, buff: { maxhp: 1.12, regenHp: 2 }, dur: 360, d: '+12 % de PV max. et +2 PV/s pendant 6 min (PROPOSITION).' });
+function waterNear(P) { if (window.bruWaterNear && window.bruWaterNear(P.x, P.y)) return { lava: false }; const tx = Math.floor(P.x / TILE), ty = Math.floor((P.y - 4) / TILE); for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const t = vget(tx + dx, ty + dy); if (t === T_WATER || (typeof T_LAVA !== 'undefined' && t === T_LAVA)) return { lava: t !== T_WATER }; } return null; }
+let FISHING = null;
+function startFishing(P, w) {
+  const z = zoneAt(P.x, P.y), lv = profLvl(P, 'pecheur');
+  if (w.lava && lv < 6) { toast('Pêcher dans la lave demande le niveau 6 de pêcheur', '#ffb36b'); return; }
+  FISHING = { t0: G.t, bite: 1.2 + Math.random() * 2.8, done: false };
+  const finish = (ok) => { if (!FISHING || FISHING.done) return; FISHING.done = true; closePanel();
+    if (!ok) { toast('Le poisson s\'est échappé…', '#aaa'); FISHING = null; return; }
+    const pool = FISH.filter(f => f.z.test(z ? z.id : 'forest') && f.lvl <= lv && !f.rare); let f = pool[Math.floor(Math.random() * pool.length)] || FISH[0];
+    if (Math.random() < FISH[7].rare * (1 + lv * 0.2) && lv >= FISH[7].lvl) f = FISH[7];
+    const n = 1 + (Math.random() < lv * 0.06 ? 1 : 0); giveItem(P, f.id, n, 'Pêche'); toast('Pêche : ' + f.name + (n > 1 ? ' ×' + n : ''), '#9fe3ff'); profXp(P, 'pecheur', 4 + f.r * 2); try { repGain('navigateurs', 2); } catch (e) { } FISHING = null; };
+  const wait = () => dialog('Pêche', '<p>La ligne est lancée… Attends que le bouchon plonge, puis ferre !</p>', [['Ferrer', () => finish(false)], ['Ranger la ligne', () => { FISHING.done = true; FISHING = null; closePanel(); }]]);
+  wait();
+  setTimeout(() => { if (!FISHING || FISHING.done) return; dialog('Pêche', '<p><b>Le bouchon plonge !</b></p>', [['Ferrer !', () => finish(true)], ['Ranger la ligne', () => { FISHING.done = true; FISHING = null; closePanel(); }]]); setTimeout(() => { if (FISHING && !FISHING.done) finish(false); }, 1300 + 120 * lv); }, FISHING.bite * 1000);
+}
+{ const up0 = updatePlayer; updatePlayer = function (P, dt) {
+    if (IN.pressed.interact && !P.mount && P.state !== 'dead' && !G.npcs.some(n => !n.noTalk && dist(P.x, P.y, n.x, n.y) < 42) && !WORLD.props.some(c => c.def && c.def.interact && !c.opened && dist(P.x, P.y, c.x, c.y) < 34)) { const w = waterNear(P); if (w) { IN.pressed.interact = false; startFishing(P, w); } }
+    return up0(P, dt); }; }
+window.fishHint = () => { try { const P = G.player; return P && !P.mount && !G.near && waterNear(P) ? 'Pêcher' : null; } catch (e) { return null; } };
+// métiers dans l'onglet Codex (liste complète)
+{ const ch0 = codexHTML; codexHTML = function (P) {
+    let h = ch0(P); const rows = Object.keys(PROF).map(k => { const c = P.craft[k]; return `<div>${PROF[k].n} : <b>niveau ${c ? c.lvl : 1}</b>${c && c.lvl < 10 ? ` <small>(${c.xp}/${CRAFT_XP(c.lvl)})</small>` : ''} — <small>${PROF[k].d}</small></div>`; }).join('') + Object.keys(PROF_PERK).map(k => `<div><small>${STATIONS[k]} : ${PROF_PERK[k]}</small></div>`).join('');
+    return h.replace('<small>Récolteur', rows + '<small>Récolteur'); }; }
+
+// ---------------------------------------------------------------------
+//  CORRECTION — le titre « le Légendaire » (rareté 4) faisait planter l'onglet Codex : rareté 4 ajoutée (défaut aussi présent en 2D).
+// ---------------------------------------------------------------------
+if (typeof TITLE_RAR !== 'undefined' && !TITLE_RAR[4]) TITLE_RAR[4] = ['Légendaire', '#ff7ad9'];
