@@ -50,7 +50,7 @@
 | B6 | Visée : zoom progressif, ralenti maîtrisé, cadrage naturel | U 23/11 | ✅ | Dans `jeu3d`, le réticule et la trajectoire n'étaient plus dessinés, et il n'y avait ni zoom ni ralenti. | Trajectoire posée dans le monde et réticule (mêmes règles que le jeu). Zoom progressif (−20 %), cadrage décalé vers la visée, ralenti à 55 % limité à 2,5 s par visée. Le ralenti est désactivable : c'était une PROPOSITION dans la bible. | F5 |
 | B7 | Vérifier ombres, collisions, hauteurs, masquage | U 23/11 | ✅ | — | Masquage étendu aux maisons, rochers, cristaux et images de secours | Captures |
 | B8 | Prototype séparé jusqu'à validation, puis version plus aboutie sans perte | U 23/11 | ✅ | — | — | v1 à v4 conservées |
-| B9 | Qualité visuelle de jeu commercial | U 24/11 | 🟨 | `jeu3d` reste moins beau que le village pilote : maisons simplifiées, rochers pâles. | Maisons refaites dans le style du village pilote : soubassement de pierre, enduit, pans de bois, 4 types de toits, fenêtres allumées la nuit, volets, cheminée. Météo rétablie. Effets en volume. | Captures |
+| B9 | Qualité visuelle de jeu commercial | U 24/11 | 🟨 | `jeu3d` reste moins beau que le village pilote : maisons simplifiées, rochers pâles. | Maisons refaites dans le style du village pilote : soubassement de pierre, enduit, pans de bois, 4 types de toits, fenêtres allumées la nuit, volets, cheminée. Météo rétablie. Effets en volume. Rochers moins pâles, fontaine en pierre taillée avec eau. | Captures `zones`, `x_f` |
 | B10 | La 3D est la version officielle : tout doit y exister | U 24/11 | 🔷 | Toute la logique y est. Manquent : le contenu du village pilote v4 (intérieurs, routines, animaux, secrets) et les effets 3D natifs par famille. | Voir les sections E et F | Section E |
 | B11 | Brumeval v4 comme fondation | U 24/11 | 🔷 | Le moteur v4 sert de base : rendu, végétation, eau, ciel, et désormais matériaux des maisons. **Le contenu du village pilote n'est pas encore dans `jeu3d`.** | Plan au §G1 | — |
 | B12 | Hébergement sur GitHub (liens githack) | U 24/11 | ✅ | — | — | Liens en fin de document |
@@ -163,7 +163,7 @@ Remarque : deux tests (`t7_pad`, `camp`) ont échoué une fois lorsqu'ils tourna
 
    Choix technique pris par défaut : adapter le village pilote à l'emprise du jeu, sans toucher au monde d'origine.
 2. **G2 — Effets 3D natifs, famille par famille (moyenne).** Ajouter volumes, lumières et particules 3D aux 270 compétences, sans en retirer.
-3. **G3 — Rochers trop pâles, volcan sombre : finitions par région (moyenne).**
+3. **G3 — Finitions par région (moyenne).** Les rochers pâles et la fontaine du village (un disque blanc) sont corrigés le 24/11 (commit 195e083). Restent le volcan, très sombre, et l'identité visuelle propre à chaque région.
 4. **G4 — Vérification sur un vrai téléphone et une vraie manette (élevée, extérieure).** Impossible depuis l'environnement de test.
 5. **G5 — Éléments « À COMPLÉTER » des bibles, même en 2D (faible à moyenne, conception) :**
    - apprentissage des autres familles (grimoires, sanctuaires) ;
