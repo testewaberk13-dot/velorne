@@ -276,6 +276,7 @@ async function bruAction(n) {
 let nearestAction0 = null;
 const interact0 = window.interact;
 window.interact = function (n) {
+  if (n && n.bru && window.bruNpcHook && !n.bruSkipHook && window.bruNpcHook(n)) return;
   if (n && n.bru) { try { G.player.dir = dirOf(n.x - G.player.x, n.y - G.player.y); } catch (e) { } bruAction(n); return; }
   // habitant réuni : son rôle du jeu d'abord (missions, commerce, forge…), avec en plus « la vie au village » (indices des secrets)
   if (n && n.bruN) { const r = interact0(n); try { const v = n.bruN, box = document.querySelector('.panel.show .dopts'); if (G.dlg && box && !box.querySelector('[data-bru]')) {
@@ -334,3 +335,5 @@ export const BRULIFE = { S: () => SB, NPCS, CRIT: () => CRIT, SECRETS, discover:
 
 // journal du jeu : section « Brumeval » (secrets, indices, objets, évolution du village)
 { const j0 = window.journalHTML; if (typeof j0 === 'function') window.journalHTML = function () { let h = j0(); try { if (ready) h += '<h4>Brumeval — secrets du village</h4>' + bruJournal() + (SB.repair === 2 ? '<p>La maison des Vey est réparée.</p>' : SB.repair === 1 ? '<p>Torven répare la maison des Vey.</p>' : '') + (SB.fete ? '<p>La fête de Brumeval a lieu chaque soir sur la place.</p>' : ''); } catch (e) { } return h; }; }
+
+window.bruTalk = n => bruAction(n);

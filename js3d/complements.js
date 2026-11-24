@@ -286,3 +286,49 @@ function sanctuaryChoose(P) {
     return it0(n); }; }
 // grimoires épiques et légendaires : sur les boss régionaux (une chance par victoire) et dans les coffres
 { const ke0 = killEnemy; killEnemy = function (e) { const r = ke0(e); try { if (e && e.def && e.def.boss) { const pool = MAGIC_KEYS.filter(f => MAGIC_DATA[f].tier >= 4 && f !== G.player.magic && !learnedFams(G.player).includes(f)); if (pool.length && Math.random() < 0.35) { const f = pool[Math.floor(Math.random() * pool.length)]; G.drops.push({ kind: 'item', id: 'gf_' + f, n: 1, x: e.x, y: e.y, vx: 0, vy: 0, vz: 110, z: 4, t: 0 }); toast('Un grimoire rare est tombé : ' + MAGIC_DATA[f].n, MAGIC_DATA[f].col); } } } catch (er) { } return r; }; }
+
+// ---------------------------------------------------------------------
+//  6. AMÉNAGEMENTS DU CAMP ET HABITATION — bible V1.2 §8 (camp existant) ; plan §3 « aménagements et stockage à étendre ».
+//     Camp : 4 aménagements achetés avec des matériaux. Habitation : chambre à l'auberge du Chêne Tranquille, chez Gwenna.
+//     On y trouve un lit (repos complet et passage de la nuit), la réserve et un établi, et elle s'agrandit.
+//     Coûts et effets : PROPOSITIONS.
+// ---------------------------------------------------------------------
+const CAMP_UP = {
+  tente: { n: 'Tente renforcée', d: 'Délai entre deux repos : 2 min → 1 min.', cost: [['cuir', 4], ['bois_ancien', 3]], gold: 300 },
+  marmite: { n: 'Marmite de fonte', d: 'Les repas durent 25 % plus longtemps.', cost: [['fer', 4], ['acier', 1]], gold: 400 },
+  feu: { n: 'Feu de camp runique', d: 'Le repos donne aussi 2 min de régénération de mana renforcée (+3 mana/s).', cost: [['fragment_runique', 2], ['cristal_magique', 2]], gold: 800 },
+  coffre: { n: 'Coffre de voyage', d: 'Accès à la réserve depuis le camp.', cost: [['bois_ancien', 4], ['fer', 3]], gold: 600 },
+};
+function campUp() { const C = CS(); if (!C.up) C.up = {}; return C.up; }
+function canPay(P, cost, gold) { return P.gold >= gold && cost.every(([id, q]) => countItem(P, id) >= q); }
+function pay(P, cost, gold) { P.gold -= gold; for (const [id, q] of cost) takeItem(P, id, q); }
+// rendu : section « Aménagements » ajoutée à l'onglet Camp
+{ const om0 = openMenu; openMenu = function (tab) { const r = om0(tab); try { if (menuTab === 'camp') { const body = document.querySelector('.panel.show .pbody .quests'); if (body && !body.querySelector('[data-campup]')) { const U = campUp(), P = G.player;
+    let h = '<div class="q"><b>Aménagements du camp</b>'; for (const k in CAMP_UP) { const A = CAMP_UP[k]; h += `<p><b>${A.n}</b> — ${A.d}<br><small>${A.cost.map(([id, q]) => `${q} × ${REG[id] ? REG[id].name : id} (${countItem(P, id)})`).join(', ')}, ${A.gold} or</small> ${U[k] ? '<i>installé</i>' : `<button data-campup="${k}" ${canPay(P, A.cost, A.gold) ? '' : 'disabled'}>Installer</button>`}</p>`; }
+    if (U.coffre) h += '<p><button data-campup="stash">Ouvrir la réserve</button></p>';
+    h += '</div>'; body.insertAdjacentHTML('beforeend', h); } } } catch (e) { } return r; }; }
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-campup]'); if (!b) return; e.stopPropagation(); const k = b.dataset.campup, P = G.player, U = campUp();
+  if (k === 'stash') { openStash(); return; } const A = CAMP_UP[k]; if (!A || U[k] || !canPay(P, A.cost, A.gold)) return; pay(P, A.cost, A.gold); U[k] = 1; toast('Camp : ' + A.n + ' installé', '#9fe3ff'); saveGame(); openMenu('camp'); }, true);
+// effets : délai de repos, durée des repas, mana après repos
+setInterval(() => { try { const C = G.flags && G.flags.camp; if (!C || G.mode !== 'play') return; const U = C.up || {}; if (U.tente && C.restLeft > 60 && !C.restCut) { C.restLeft = 60; C.restCut = true; } if (!(C.restLeft > 0)) C.restCut = false;
+  if (U.marmite && C.buff && C.buff.left && !C.buff.marm) { C.buff.left *= 1.25; C.buff.marm = 1; }
+  if (U.feu && C.restLeft > 55 && !C.manaB) { C.manaB = G.t + 120; } if (C.manaB && G.t < C.manaB && G.player) G.player.mp = Math.min(G.player.st8.maxmp, G.player.mp + 3); if (C.manaB && G.t >= C.manaB) C.manaB = 0; } catch (e) { } }, 1000);
+
+// habitation : chambre à l'auberge (Gwenna)
+function home() { if (!G.flags.home) G.flags.home = { owned: false, lvl: 0 }; return G.flags.home; }
+const HOME_UP = [{ n: 'Coffre agrandi', d: 'Réserve +20 places.', gold: 1500 }, { n: 'Établi', d: 'Forge, artisanat et alchimie depuis ta chambre.', gold: 3000 }, { n: 'Râtelier d\'honneur', d: 'Tes trophées de boss exposés : +3 % d\'expérience.', gold: 5000 }];
+function openHome() {
+  const H = home(), P = G.player, opts = [['Dormir jusqu\'au matin (repos complet)', () => { P.hp = P.st8.maxhp; P.mp = P.st8.maxmp; P.sta = P.st8.maxsta; try { const h = V3D.hour(); if (h > 6.5) { if (G.flags.bru) G.flags.bru.day = (G.flags.bru.day || 1) + 1; } V3D.setHour(7); } catch (e) { } toast('Tu as bien dormi. Le jour se lève sur Brumeval.', '#9fe3ff'); saveGame(); closePanel(); }], ['Ouvrir la réserve', () => { closePanel(); openStash(); }]];
+  if (H.lvl >= 2) opts.push(['Établi : forge', () => { closePanel(); openCraftNpc('forge', { name: 'Établi' }); }], ['Établi : artisanat', () => { closePanel(); openCraftNpc('artisan', { name: 'Établi' }); }], ['Établi : alchimie', () => { closePanel(); openCraftNpc('alchimie', { name: 'Établi' }); }]);
+  const nx = HOME_UP[H.lvl]; if (nx) opts.push([`Aménager : ${nx.n} (${nx.gold} or)`, () => { if (P.gold < nx.gold) return toast('Pas assez d\'or', '#ffb36b'); P.gold -= nx.gold; H.lvl++; toast('Chambre : ' + nx.n, '#ffe9a0'); saveGame(); closePanel(); openHome(); }]);
+  opts.push(['Fermer', closePanel]);
+  dialog('Ta chambre au Chêne Tranquille', `<p>Une chambre sous les poutres, un lit, un coffre.${H.lvl ? ' Aménagements : ' + HOME_UP.slice(0, H.lvl).map(u => u.n).join(', ') + '.' : ''}</p>`, opts);
+}
+window.bruNpcHook = function (n) {
+  if (!/^Gwenna/.test(n.name || '')) return false; const H = home(), P = G.player, talk = () => { closePanel(); if (window.bruTalk) window.bruTalk(n); };
+  if (!H.owned) dialog(n.name, "Tu passes souvent par ici… Une chambre se libère sous les toits : un lit, un coffre, et la paix. 2 000 or, et elle est à toi pour de bon.", [['Prendre la chambre (2 000 or)', () => { if (P.gold < 2000) return toast('Pas assez d\'or', '#ffb36b'); P.gold -= 2000; H.owned = true; toast('Tu as maintenant ta chambre au Chêne Tranquille', '#ffe9a0'); saveGame(); closePanel(); }], ['Parler', talk], ['Plus tard', closePanel]]);
+  else dialog(n.name, 'Ta chambre est prête, comme toujours.', [['Aller dans ma chambre', () => { closePanel(); openHome(); }], ['Parler', talk], ['Au revoir', closePanel]]);
+  return true;
+};
+{ const base = CONFIG.stashCapacity; Object.defineProperty(CONFIG, 'stashCapacity', { get: () => base + (G.flags && G.flags.home && G.flags.home.lvl >= 1 ? 20 : 0), configurable: true }); }
+{ const gx0 = gainXp; gainXp = function (n) { return gx0(G.flags && G.flags.home && G.flags.home.lvl >= 3 ? Math.round(n * 1.03) : n); }; }
