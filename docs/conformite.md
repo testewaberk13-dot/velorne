@@ -240,6 +240,8 @@ Ce qui est déjà testé ici, en simulation : tactile en 844 × 390 (stick, bout
 
 **Corrigé le 24/11 (21 h 45) — nouvelle partie bloquée sur iPhone :** Safari interdisait la lecture des images des personnages (« SecurityError: The operation is insecure », puis « texSubImage2D … tainted canvas ») : il les considérait comme venant d'un autre site (comportement de l'hébergement githack). Les images sont maintenant chargées en mode partage autorisé (`crossOrigin = 'anonymous'`), avec nouvel essai normal en cas d'échec. Reproduit ici avec des images servies par un autre domaine : l'ancienne version restait bloquée sur la création avec les mêmes erreurs, la nouvelle lance la partie sans erreur. Un cadre rouge affiche désormais à l'écran toute erreur du jeu. Non-régression : `gs5`, `t3d_bru2`, nouvelle partie au toucher.
 
+**Corrigé le 24/11 (22 h) — manette non détectée sur iPhone :** Safari peut renvoyer une liste de manettes vide alors que la manette est connectée ; le jeu savait qu'elle était là mais ne lisait aucun bouton. Il garde désormais la manette reçue à la connexion et s'en sert en secours, préfère le schéma standard, et un bandeau « 🎮 Manette détectée » s'affiche dès l'écran titre. Reproduit ici (liste vide + connexion) : l'ancienne version ne réagissait pas, la nouvelle navigue dans le menu. Non-régression : `t7_pad`, `gst`, `gq`, `tcombo`, `camp`, `narr2` 44/44, `tm3d`, `t3d_trail`, `t_camstick`.
+
 **Prochaines tâches :**
 1. Accueil du site passé sur `jeu3d` (fait le 24/11). Reste ta vérification sur téléphone et manette (section I).
 
