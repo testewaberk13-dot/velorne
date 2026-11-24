@@ -145,14 +145,14 @@ Remarque : deux tests (`t7_pad`, `camp`) ont échoué une fois lorsqu'ils tourna
 | F9 | Mini-carte et caméra tournée | 🔷 | Cône de vue sur la mini-carte | Capture |
 | F10 | Qualité graphique | ✅ | Le réglage « Qualité graphique » du jeu pilote maintenant la 3D (auto, haute, moyenne, basse) | — |
 | F11 | Fluidité | 🟨 | Mesure par image (`V3D.PROF`). Panneaux des PNJ et du butin redessinés seulement quand l'image change ; ennemis éloignés à 15 images/s ; couches d'effets vides ignorées ; 2, 4 ou 6 lumières selon la qualité. | **Correction d'une erreur de mesure :** les « 20 images/s » annoncés le 24/11 au matin étaient faux, car la mesure plafonnait. En temps réel, sur la machine de test sans carte graphique : 3,7 images/s, puis 7 après optimisation (triangles par image : 1,13 M → 0,41 M). Optimisations : lumières partagées, tri hors champ par quart de bloc, feuillages et herbe allégés en qualité basse. Ce chiffre ne représente pas un téléphone, qui dispose d'un processeur graphique. |
-| F12 | Brumeval v4 dans `jeu3d` | ❌ | Voir G1 | — |
-| F13 | Intérieurs en coupe | ❌ | Le jeu 2D n'a pas d'intérieurs ; ils viendront avec Brumeval v4 (G1) | — |
-| F14 | Animaux du village pilote | ❌ | Viendront avec Brumeval v4 (G1) | — |
+| F12 | Brumeval v4 dans `jeu3d` | ✅ | Construit à l'emplacement du village, zone agrandie (21–72 × 31–72). Camp gobelin, cimetière et clairière du chef intacts. Terrain, rivière, pont, étang, cascade, grotte, 6 bâtiments, végétation, collisions, portes fermées la nuit (`js3d/brumeval3d.js`). | `t3d_bru` : place, auberge, étang, pont ; `narr2` 44/44, `gs5`, `t7_pad`, `camp` |
+| F13 | Intérieurs en coupe | ✅ | Toit et étage masqués quand on entre ; caméra plus proche et plus plongeante en intérieur | `t3d_bru` : dans l'auberge |
+| F14 | Habitants, routines, animaux, secrets du village pilote | ✅ | Code du village pilote repris (`js3d/brumevalLife.js`) : 8 habitants à routines horaires, 25 animaux, 7 secrets, maison des Vey, fête. Borin, Maëlle, Édran, Torven et Liora sont les mêmes personnes que dans le jeu, avec leurs missions ; Hugues, Gwenna et Anselme deviennent des PNJ du jeu. État sauvegardé dans la partie ; section Brumeval dans le journal. | `t3d_bru2` : 8 habitants, 25 animaux, dialogue de Gwenna, secret « initiales » découvert |
 | F15 | Mobile : boutons, stick, rotation | ✅ | Boutons de caméra placés sans chevauchement | `tm3d` : aucun chevauchement en 844 × 390 |
 
 ## G. Restes à faire (par priorité)
 
-1. **G1 — Brumeval v4 dans `jeu3d` (élevée).** Le village du jeu (zone de 46 × 24 m) est plus petit que le village pilote (environ 60 × 60 m, avec rivière et pont). Les deux voies :
+1. **G1 — Brumeval v4 dans `jeu3d` : fait le 24/11** (F12 à F14). Décision de l'utilisateur appliquée : zone agrandie plutôt que contenu réduit. Correction de nommage : la marchande est Maëlle (nom du jeu), Maëlys reste l'artisane ; le père Vey devient Aldwin, car Aldric est le garde du jeu. Ancien texte : Le village du jeu (zone de 46 × 24 m) est plus petit que le village pilote (environ 60 × 60 m, avec rivière et pont). Les deux voies :
    - agrandir la zone du village dans la carte, ce qui modifie le monde d'origine et sa vérification ;
    - adapter le village pilote à l'emprise du jeu.
 
@@ -163,7 +163,7 @@ Remarque : deux tests (`t7_pad`, `camp`) ont échoué une fois lorsqu'ils tourna
 
    Choix technique pris par défaut : adapter le village pilote à l'emprise du jeu, sans toucher au monde d'origine.
 2. **G2 — Effets 3D natifs : fait le 24/11** pour les 27 familles. Reste un raffinement possible, compétence par compétence : des formes 3D propres (lion de feu, piliers de glace…) en plus des particules.
-3. **G3 — Finitions par région (moyenne).** Les rochers pâles et la fontaine du village (un disque blanc) sont corrigés le 24/11 (commit 195e083). Atmosphère des 25 régions faite le 24/11, en commençant par le volcan. Restent, région par région, des décors 3D plus propres à chacune : coulées et cheminées volcaniques, pilotis du marais, dunes, etc.
+3. **G3 — Décors propres à chaque région : faits le 24/11** (`js3d/regionDecor3d.js`) pour 22 régions, en commençant par le volcan : coulées aux fissures rougeoyantes, cheminées fumantes, basalte, obsidienne, arbres calcinés, fumerolles ; puis dunes, pilotis, congères, fougères géantes, cristaux, épines, colonnes brisées, îlots flottants. Ancien texte : Les rochers pâles et la fontaine du village (un disque blanc) sont corrigés le 24/11 (commit 195e083). Atmosphère des 25 régions faite le 24/11, en commençant par le volcan. Restent, région par région, des décors 3D plus propres à chacune : coulées et cheminées volcaniques, pilotis du marais, dunes, etc.
 4. **G4 — Vérification sur un vrai téléphone et une vraie manette (élevée, extérieure).** Impossible depuis l'environnement de test.
 5. **G5 — Éléments « À COMPLÉTER » des bibles, même en 2D (faible à moyenne, conception) :**
    - apprentissage des autres familles (grimoires, sanctuaires) ;
@@ -214,3 +214,19 @@ Ce qui est déjà testé ici, en simulation : tactile en 844 × 390 (stick, bout
 3. Vibrations à l'impact et réglage de la zone morte.
 4. Navigation complète des menus et de la création à la manette.
 5. Caméra : pas de touche libre sur la manette ; la rotation se fait par Paramètres > Caméra 3D.
+
+## J. Suivi du développement continu (mis à jour à chaque reprise)
+
+**Fait le 24/11 (après-midi) :** Brumeval complet (F12 à F14), décors des régions (G3), effets 3D des magies (G2), atmosphère des régions, mesure de fluidité corrigée et optimisations. Non-régression : `narr2` 44/44, `gs5`, `t7_pad`, `camp`, `t3d_270`.
+
+**Prochaines tâches, dans l'ordre des dépendances :**
+1. Montures restantes : Destrier des Plaines (3 000 or), monture rare régionale (8 000 or), Dragon (récompense de quête). Prix et principe déjà validés (décisions du 23/11).
+2. Effets de la réputation : dialogues, quêtes réservées, récompenses de rang, pour les 7 rangs.
+3. Métiers au-delà du récolteur.
+4. Économie régionale : spécialités et prix par région.
+5. Aménagements du camp et habitation.
+6. Apprentissage des autres familles de magie : grimoires, sanctuaires.
+7. PNJ manquants (60 nommés au cahier) et quêtes restantes.
+8. Post-game et activités permanentes.
+
+Le contenu narratif nouveau sera marqué PROPOSITION.
