@@ -249,3 +249,40 @@ function isForeignSpec(zid, id) { if (isSpec(zid, id)) return false; for (const 
     const sp = SHOP.special; SHOP.special = sp.concat(spec.filter(id => !sp.includes(id)));
     try { os0(n, tab); } finally { SHOP.special = sp; }
     try { const body = document.querySelector('.panel.show .pbody'); if (body && (tab || 'buy') === 'buy') { const el = document.createElement('p'); el.className = 'hint'; el.innerHTML = `Économie de la région « ${z ? z.name : 'Brumeval'} » : prix ×${REGION_ECO[zid].f.toFixed(2)} ; spécialités locales −20 % (${spec.map(id => REG[id].name).join(', ')}) ; les spécialités d'autres régions se revendent ici +35 %.`; body.prepend(el); } } catch (e) { } }; }
+
+// ---------------------------------------------------------------------
+//  5. APPRENTISSAGE DES AUTRES FAMILLES — décisions du 23/11 §3 : « n'empêche pas d'utiliser d'autres familles ;
+//     apprentissage complet À COMPLÉTER (grimoires, sanctuaires…) » ; cahier général §14 : « il apprend ensuite la magie
+//     du feu grâce à un grimoire ». La magie innée reste celle du Magic Spin (taux jamais touchés).
+//     Chaque famille a son grimoire. Le lire apprend la famille ; elle occupe l'emplacement de seconde magie (m2) et se maîtrise
+//     comme les autres. Un sanctuaire permet de changer de seconde magie parmi les familles apprises.
+//     Familles communes, inhabituelles et rares : grimoires chez Isolde la mage. Épiques et légendaires : sur les boss
+//     régionaux et dans les coffres. Prix et chances : PROPOSITIONS.
+// ---------------------------------------------------------------------
+const GRIM_PRICE = { 1: 1500, 2: 3500, 3: 8000 };
+for (const f of MAGIC_KEYS) { const id = 'gf_' + f, T = MAGIC_DATA[f].tier; if (!REG[id]) REG[id] = C({ id, name: 'Grimoire de ' + MAGIC_DATA[f].n, kind: 'grimoire', stack: 1, rarity: Math.min(5, T + 1), icon: 'Scroll0003', price: GRIM_PRICE[T] || 0, tradeRules: T >= 4 ? 'bound' : 'tradable', learnFam: f, desc: 'Apprend la famille ' + MAGIC_DATA[f].n + ' (' + MAGIC_TIERS[T].n + '). Elle devient ta seconde magie et se maîtrise comme les autres.' }); }
+function learnedFams(P) { if (!P.learnedFams) P.learnedFams = []; return P.learnedFams; }
+function learnFamily(P, f) {
+  const L = learnedFams(P); if (f === P.magic || L.includes(f)) { toast('Famille déjà connue : ' + MAGIC_DATA[f].n, '#aaa'); return false; }
+  L.push(f); if (!P.magic2) { P.magic2 = f; P.spells.m2 = 1; } P.mastery = P.mastery || {}; P.mastery[f] = P.mastery[f] || 0;
+  try { rebuildPlayer(P); } catch (e) { } toast('Nouvelle famille apprise : ' + MAGIC_DATA[f].n + (P.magic2 === f ? ' (seconde magie active)' : ' — change de seconde magie dans un sanctuaire'), MAGIC_DATA[f].col); try { codexAdd('m', 'fam_' + f, MAGIC_DATA[f].n); } catch (e) { } return true;
+}
+// lecture des grimoires de famille (les grimoires de sorts secrets gardent leur fonctionnement)
+{ const ui0 = useConsumable; useConsumable = function (P, inst, ...r) { const d = REG[inst && inst.id]; if (d && d.learnFam) { if (learnFamily(P, d.learnFam)) removeUid(P, inst.uid); return true; } return ui0(P, inst, ...r); }; }
+// ancienne double magie : comptée comme apprise
+setInterval(() => { try { const P = G.player; if (G.mode === 'play' && P && P.magic2 && !learnedFams(P).includes(P.magic2)) learnedFams(P).push(P.magic2); } catch (e) { } }, 2000);
+// sanctuaires : changer de seconde magie
+function sanctuaryChoose(P) {
+  const L = learnedFams(P); if (!L.length) return dialog('Sanctuaire', '<p>Le sanctuaire vibre doucement. Tu ne connais encore aucune autre famille que ta magie innée : lis un grimoire de famille pour en apprendre une.</p>', [['Fermer', closePanel]]);
+  dialog('Sanctuaire', '<p>Choisis la famille qui occupera ta <b>seconde magie</b> (emplacement 6). Ta magie innée ne change pas.</p>', L.map(f => [(P.magic2 === f ? '✔ ' : '') + MAGIC_DATA[f].n + ' (maîtrise ' + magLevel(P, f) + ')', () => { P.magic2 = f; P.spells.m2 = 1; delete (P.eqM || {}).m2; try { rebuildPlayer(P); } catch (e) { } toast('Seconde magie : ' + MAGIC_DATA[f].n, MAGIC_DATA[f].col); saveGame(); closePanel(); }]).concat([['Fermer', closePanel]]));
+}
+{ const it0 = interact; interact = function (n) {
+    const P = G.player;
+    if (n && n.type === 'sanctuary') return sanctuaryChoose(P);
+    if (n && n.role === 'mage') { const sell = MAGIC_KEYS.filter(f => MAGIC_DATA[f].tier <= 3 && f !== P.magic && !learnedFams(P).includes(f));
+      return dialog(n.name, (P.magic ? 'Ta magie innée est <b>' + MAGIC_DATA[P.magic].n + '</b>. ' : '') + 'Je tiens la bibliothèque des grimoires de familles : apprendre une autre famille ne retire rien à ta magie innée. Les grimoires épiques et légendaires, eux, dorment chez les grands boss de Vélorne.', [
+        ['Bibliothèque des grimoires', () => { closePanel(); const opts = sell.slice(0, 12).map(f => { const d = REG['gf_' + f], pr = buyPrice(d); return [d.name + ' — ' + pr + ' or', () => { if (P.gold < pr) return toast('Pas assez d\'or', '#ffb36b'); if (!canReceive(P, [[d.id, 1]])) return toast('Inventaire plein', '#ffb36b'); P.gold -= pr; giveItem(P, d.id, 1, 'Bibliothèque d\'Isolde'); saveGame(); closePanel(); }]; }); G.shopNpc = n; dialog(n.name + ' — grimoires', '<p>Familles communes, inhabituelles et rares.</p>', opts.concat([['Fermer', closePanel]])); }],
+        ['Ses autres conseils', () => { closePanel(); it0(n); }], ['Au revoir', closePanel]]); }
+    return it0(n); }; }
+// grimoires épiques et légendaires : sur les boss régionaux (une chance par victoire) et dans les coffres
+{ const ke0 = killEnemy; killEnemy = function (e) { const r = ke0(e); try { if (e && e.def && e.def.boss) { const pool = MAGIC_KEYS.filter(f => MAGIC_DATA[f].tier >= 4 && f !== G.player.magic && !learnedFams(G.player).includes(f)); if (pool.length && Math.random() < 0.35) { const f = pool[Math.floor(Math.random() * pool.length)]; G.drops.push({ kind: 'item', id: 'gf_' + f, n: 1, x: e.x, y: e.y, vx: 0, vy: 0, vz: 110, z: 4, t: 0 }); toast('Un grimoire rare est tombé : ' + MAGIC_DATA[f].n, MAGIC_DATA[f].col); } } } catch (er) { } return r; }; }
