@@ -343,6 +343,16 @@ document.addEventListener('webglcontextlost',function(){show('Le contexte graphi
 <script src="assets/data.js"></script>
 <script src="js/core.js"></script>
 <script src="js/gfx.js"></script>
+<script>
+// Safari (iPhone) : images chargées en mode partage autorisé, sinon Safari peut les considérer comme venant d'un autre site
+// et interdire leur lecture (« The operation is insecure ») : création du héros et textures 3D bloquées. En cas d'échec, nouvel essai normal.
+loadImage = function (path) {
+  if (IMG[path]) return IMG[path].p;
+  const im = new Image(); im.crossOrigin = 'anonymous';
+  const p = new Promise(res => { im.onload = () => res(im); im.onerror = () => { const im2 = new Image(); im2.onload = () => { IMG[path].im = im2; res(im2); }; im2.onerror = () => { console.warn('img fail', path); res(im2); }; im2.src = 'assets/' + path; }; });
+  im.src = 'assets/' + path; IMG[path] = { im, p }; return p;
+};
+</script>
 <script src="js/data.js"></script>
 <script src="js/world.js"></script>
 <script src="js/fx.js"></script>

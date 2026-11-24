@@ -14,7 +14,7 @@ function build8(img) {
   }
   const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; t.colorSpace = THREE.SRGBColorSpace; t.repeat.set(1 / cols, 1 / 8); return { t, cols };
 }
-const loadImg = src => new Promise((r, j) => { const i = new Image(); i.onload = () => r(i); i.onerror = j; i.src = src; });
+const loadImg = src => new Promise((r, j) => { const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => r(i); i.onerror = () => { const k = new Image(); k.onload = () => r(k); k.onerror = j; k.src = src; }; i.src = src; }); // partage autorisé (Safari iPhone)
 export const SHEETS = {};
 export async function loadSheets(names) { await Promise.all(names.map(async n => { SHEETS[n] = build8(await loadImg('assets/demo/' + n + '.png')); })); }
 

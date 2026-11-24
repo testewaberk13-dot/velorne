@@ -238,6 +238,8 @@ Ce qui est déjà testé ici, en simulation : tactile en 844 × 390 (stick, bout
 
 **Fait le 24/11 (nuit, écran titre) :** écran titre refait sur le monde 3D (B28). Non-régression : `gs5`, `t7_pad`.
 
+**Corrigé le 24/11 (21 h 45) — nouvelle partie bloquée sur iPhone :** Safari interdisait la lecture des images des personnages (« SecurityError: The operation is insecure », puis « texSubImage2D … tainted canvas ») : il les considérait comme venant d'un autre site (comportement de l'hébergement githack). Les images sont maintenant chargées en mode partage autorisé (`crossOrigin = 'anonymous'`), avec nouvel essai normal en cas d'échec. Reproduit ici avec des images servies par un autre domaine : l'ancienne version restait bloquée sur la création avec les mêmes erreurs, la nouvelle lance la partie sans erreur. Un cadre rouge affiche désormais à l'écran toute erreur du jeu. Non-régression : `gs5`, `t3d_bru2`, nouvelle partie au toucher.
+
 **Prochaines tâches :**
 1. Accueil du site passé sur `jeu3d` (fait le 24/11). Reste ta vérification sur téléphone et manette (section I).
 
