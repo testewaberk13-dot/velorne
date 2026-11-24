@@ -527,3 +527,153 @@ CTX_LINES.push(
   { id: 'neroth_mer', who: 'Neroth le pêcheur de perles', when: () => narrWs('mer_silencieuse'), txt: 'Je plonge de nouveau sans boucher mes oreilles. Les perles sont plus belles quand on entend son propre cœur.' },
   { id: 'nymea_fortune', who: 'Nyméa, capitaine du port', when: () => narrDone('q023'), txt: 'Morne a ouvert une caisse qui ne lui appartenait pas. Ça ne l\'excuse pas. Mais je dormirai mieux en sachant pourquoi.' }
 );
+
+// =====================================================================
+//  ARCS 4, 5, 7 et 8 — missions de conclusion et histoires personnelles — PROPOSITION
+//  Les quêtes existantes de chaque arc (Q025–Q030, Q033–Q034, Q049–Q052) restent inchangées et comptent dans la progression.
+// =====================================================================
+PLACES.push(
+  { id: 'p_peage', n: 'Le col du péage', z: 'monts', tx: 236, ty: 262, prop: 'lore_pillar', req: () => narrStep('q032') >= 0 || narrDone('q032'),
+    txt: 'Une barrière de rondins barre le col. Une pancarte clouée : « Péage — par ordre du Collecteur ». Aucun sceau de Haldor dessus.',
+    after: { when: () => narrDone('q032'), txt: 'La barrière a été abattue. Les caravanes passent de nouveau, en saluant au passage.' } },
+  { id: 'p_crypte', n: 'La crypte du dernier bastion', z: 'corrompues', tx: 268, ty: 418, prop: 'lore_grave', req: () => narrStep('q054') >= 0 || narrDone('q054'),
+    txt: 'Une crypte creusée sous le bastion. Sur chaque tombe, le même nom a été gratté au couteau. Au fond, une odeur de cire chaude.',
+    after: { when: () => narrDone('q054'), txt: 'La crypte est froide. Sur la dernière tombe, quelqu\'un a regravé un nom : le tien, suivi d\'un point d\'interrogation.' } }
+);
+Object.assign(MISSIONS, {
+  // ---- Arc 4 : Routes commerciales et peuples ----
+  q031: { arc: 'a4', num: 31, type: 'Région', n: 'La route du sel', giver: 'Kharim le caravanier', lvl: 34,
+    req: () => sideDoneId('q027') && sideDoneId('q026'),
+    ctx: 'Le sel de l\'oasis, le blé des plaines et le fer des monts voyagent sur la même route. Depuis peu, les convois arrivent incomplets.',
+    trig: 'Kharim compte ses sacs de sel pour la troisième fois.',
+    intro: 'Il manque un sac sur cinq à chaque convoi. Pas de pillards, pas de traces. Va au <b>puits de sel</b>, puis au <b>moulin brûlé</b> des Plaines d\'Or, et demande à <b>Samir</b> ce qui arrive à ses convois. Moi, je ne quitte pas mes chameaux.',
+    goal: 'Remonter la route du sel, de l\'oasis aux Plaines d\'Or.',
+    steps: [
+      { t: 'read', place: 'p_puitssel', hint: 'Examiner le puits de sel de l\'oasis', found: 'Des traces de roues récentes, et un jeton de bois gravé « Péage — 1 sac ».', clue: ['peage', 'Quelqu\'un prélève un « péage » d\'un sac par convoi sur la route du sel.'] },
+      { t: 'read', place: 'p_moulin', hint: 'Examiner le moulin brûlé des Plaines d\'Or', found: 'Un autre jeton, identique, cloué sous la couronne de paille de Bralok.' },
+      { t: 'talk', who: 'Samir, intendant des Blés', hint: 'Interroger Samir, au Hameau des Blés', say: 'Ces jetons ? Nos convoyeurs en reçoivent au <b>col des Monts de Fer</b>. Un certain « Collecteur » y a dressé une barrière. Il prétend agir au nom de Haldor. Je n\'y crois pas une seconde.' }
+    ],
+    disc: 'Un faux péage, au nom de Haldor, ponctionne toute la route commerciale.', events: 'Voyage entre trois régions.',
+    outro: 'La piste mène au col des Monts de Fer.', cons: 'Haldor propose « Le péage de fer ».', link: 'Relie l\'oasis, les plaines et les monts par la route commerciale.',
+    reward: { gold: 2000, xp: 5200, items: [['potion', 4]], rel: ['Kharim le caravanier', 60], rep: ['garde', 100] } },
+  q032: { arc: 'a4', num: 32, type: 'Choix', n: 'Le péage de fer', giver: 'Haldor, seigneur de la forteresse', lvl: 38,
+    req: () => narrDone('q031') && sideDoneId('q030'),
+    ctx: 'Un « Collecteur » rançonne les convois au col des Monts de Fer en se réclamant de Haldor.', trig: 'Haldor apprend qu\'on usurpe son nom.',
+    intro: 'Un péage à mon nom ? Je n\'ai jamais rien réclamé à ceux qui nourrissent ma forteresse. Va au <b>col du péage</b> et ramène-moi ce « Collecteur » — ou ce qu\'il en restera.',
+    goal: 'Mettre fin au faux péage du col.',
+    steps: [
+      { t: 'read', place: 'p_peage', hint: 'Trouver la barrière du col du péage', found: 'Derrière la barrière, une montagne de sacs de sel, de blé et de lingots. Un colosse se lève : « Le péage, voyageur. »' },
+      { t: 'kill', kinds: ['collecteur'], c: 1, spawn: { place: 'p_peage', kind: 'collecteur', n: 1 }, hint: 'Vaincre le Collecteur' },
+      { t: 'choice', key: 'peage', who: 'Haldor, seigneur de la forteresse', hint: 'Revenir voir Haldor avec les marchandises volées',
+        q: 'Haldor regarde les sacs que tu as rapportés. « Que faisons-nous de tout cela ? »',
+        opts: [
+          ['Tout rendre aux caravanes', 'rendre', 'Haldor hoche la tête. « Bien. Les routes vivent de confiance. » Kharim, Samir et les convoyeurs récupèrent leur dû, et ton nom fait le tour des relais.'],
+          ['Garder le fer pour la forteresse', 'forteresse', 'Haldor sourit. « Le fer sera mieux employé ici. » Les caravanes récupèrent le sel et le blé, mais grommellent en voyant les lingots partir vers la forteresse.'],
+          ['Créer un vrai péage, juste, pour entretenir la route', 'peage', 'Haldor réfléchit longtemps. « Un péage léger, écrit, et qui paie des gardes… Pourquoi pas. » Les marchands paient désormais un peu, mais voyagent en sécurité.']
+        ] }
+    ],
+    disc: 'Le Collecteur agissait seul, profitant du désordre laissé par Gorvak.', events: 'Combat contre le Collecteur.',
+    outro: 'La route commerciale est rouverte.', cons: 'La barrière disparaît. Ton choix change la réputation (Garde des Routes, Cercle des Artisans, Pacte des Peuples Libres).', link: 'Conclusion de l\'arc 4.',
+    reward: { gold: 3200, xp: 7600, items: [['mithril', 2]], rel: ['Haldor, seigneur de la forteresse', 60],
+      choice: { rendre: { rep: ['pacte', 200], gold: 600 }, forteresse: { rep: ['artisans', 200], items: [['mithril', 3]] }, peage: { rep: ['garde', 200], gold: 1200 } } } },
+  // ---- Arc 5 : Créatures et liens ----
+  q035: { arc: 'a5', num: 35, type: 'Mystère', n: 'La clochette du nid', giver: 'Rhogar l\'herboriste', lvl: 30,
+    req: () => sideDoneId('q033'),
+    ctx: 'Les panthères d\'ombre de Sangvert attaquent sans raison. Rhogar pense qu\'elles n\'ont pas toujours été sauvages.', trig: 'Rhogar soigne une panthère blessée attachée à sa cabane.',
+    intro: 'Regarde cette bête : une marque de collier sur le cou. Quelqu\'un les a apprivoisées, puis abandonnées. Cherche le <b>nid des panthères</b>, au sud-est de la jungle, et l\'<b>idole aux yeux de jade</b>. Puis parle à <b>Vaëlys</b>.',
+    goal: 'Découvrir qui a apprivoisé les panthères d\'ombre.',
+    steps: [
+      { t: 'read', place: 'p_nid', vague: true, hint: 'Trouver le nid des panthères, au sud-est de la jungle', found: 'Le collier à clochette porte une inscription : « Pour Sylva, qui reviendra ».', clue: ['collier', 'Les panthères avaient une gardienne nommée Sylva, qui a promis de revenir.'] },
+      { t: 'read', place: 'p_idole', hint: 'Examiner l\'idole aux yeux de jade', found: 'Sous les écailles glissées dans les orbites, une clochette identique, bouchée à la cire noire.' },
+      { t: 'talk', who: 'Vaëlys, éclaireuse de Sangvert', hint: 'Interroger Vaëlys, au camp de Sangvert', say: 'Sylva… une gardienne du Vivant, partie il y a des années. Les panthères l\'attendent encore. Quelqu\'un a bouché leur clochette : sans son tintement, elles ne reconnaissent plus personne. On peut peut-être les apaiser.' }
+    ],
+    disc: 'Les panthères ont perdu le signal qui les rattachait aux humains.', events: 'Exploration de la jungle.', outro: 'Vaëlys propose de tenter d\'apaiser les panthères.',
+    cons: 'Ouvre « Celle qui attend ».', link: 'Thème de l\'arc : le lien entre les gens et les bêtes.',
+    reward: { gold: 1600, xp: 4400, items: [['potion', 3]], rel: ['Rhogar l\'herboriste', 60], rep: ['vivant', 120] } },
+  q036: { arc: 'a5', num: 36, type: 'Événement', n: 'Celle qui attend', giver: 'Vaëlys, éclaireuse de Sangvert', lvl: 32,
+    req: () => narrDone('q035'),
+    ctx: 'Une clochette nettoyée et des herbes apaisantes pourraient rendre aux panthères leur calme, sans combat.', trig: 'Vaëlys a nettoyé la clochette de Sylva.',
+    intro: 'J\'ai gratté la cire : la clochette tinte de nouveau. Apporte-moi <b>3 herbes médicinales</b> pour l\'encens, puis va au <b>nid</b> et fais-la tinter. Si j\'ai raison, elles viendront à toi — sans griffes.',
+    goal: 'Apaiser les panthères d\'ombre sans les combattre.',
+    steps: [
+      { t: 'item', id: 'herbe', c: 3, take: true, hint: 'Réunir 3 herbes médicinales pour l\'encens' },
+      { t: 'visit', place: 'p_nid', hint: 'Retourner au nid et faire tinter la clochette', found: 'La clochette tinte. Un long silence… puis une panthère sort des fougères, s\'approche, et pose sa tête contre ta main.' },
+      { t: 'talk', who: 'Vaëlys, éclaireuse de Sangvert', hint: 'Revenir voir Vaëlys', say: 'Elles se sont couchées autour du nid, comme avant. Tu viens de faire ce que les Gardiens du Vivant cherchaient depuis des années. Sylva serait fière.' }
+    ],
+    disc: 'Les bêtes de Vélorne peuvent retrouver leur calme.', events: 'Aucun combat : la mission se résout par le lien.',
+    outro: 'Les panthères redeviennent paisibles autour du nid.', cons: 'Fin de l\'arc « Créatures et liens » (première partie).', link: 'Conclusion de l\'arc 5.',
+    reward: { gold: 2400, xp: 6000, items: [['eclat_exception', 1]], rel: ['Vaëlys, éclaireuse de Sangvert', 80], rep: ['vivant', 200], ws: 'pantheres_apaisees' } },
+  // ---- Arc 7 : Ombres et corruption ----
+  q053: { arc: 'a7', num: 53, type: 'Région', n: 'La sève noire', giver: 'Nyra la purificatrice', lvl: 58,
+    req: () => sideDoneId('q051'),
+    ctx: 'L\'arbre qui saigne s\'étend chaque semaine. Des cultistes de Nyx viennent y recueillir la sève.', trig: 'Nyra revient de sa mesure hebdomadaire, le visage fermé.',
+    intro: 'Le cercle de l\'<b>arbre qui saigne</b> a encore grandi. Les cultistes y récoltent la sève. Va voir, chasse-les, et rapporte à <b>Drazek</b> ce qu\'ils disent.',
+    goal: 'Chasser les cultistes de l\'arbre qui saigne.',
+    steps: [
+      { t: 'read', place: 'p_arbre_nyx', hint: 'Examiner l\'arbre qui saigne', found: 'Des fioles pleines de sève noire, alignées, chacune scellée d\'un cercle brisé. Des voix approchent.', clue: ['seve', 'Les cultistes recueillent la sève noire dans des fioles scellées du cercle brisé.'] },
+      { t: 'kill', kinds: ['cultiste_nyx'], c: 3, spawn: { place: 'p_arbre_nyx', kind: 'cultiste_nyx', n: 3 }, hint: 'Chasser les cultistes de l\'arbre' },
+      { t: 'talk', who: 'Drazek, chef du dernier bastion', hint: 'Rapporter les fioles à Drazek', say: 'Ils parlaient du « Sans-Nom » ? C\'est ainsi qu\'ils appellent celui qui leur donne les sceaux. Il passe par notre crypte, la nuit. Nous ne savions pas pourquoi les noms des tombes disparaissaient.' }
+    ],
+    disc: 'Le porteur des sceaux est appelé « le Sans-Nom » par ses fidèles.', events: 'Combat contre les cultistes.', outro: 'Drazek ouvre la crypte du bastion.',
+    cons: 'Ouvre « Le Sans-Nom ».', link: 'Le fil rouge des arcs 1 à 3 se resserre.',
+    reward: { gold: 4000, xp: 9500, items: [['potion', 5]], rel: ['Nyra la purificatrice', 60], rep: ['voile', 150] } },
+  q054: { arc: 'a7', num: 54, type: 'Principale de l\'arc', n: 'Le Sans-Nom', giver: 'Drazek, chef du dernier bastion', lvl: 62,
+    req: () => narrDone('q053') && narrDone('q016'),
+    ctx: 'Le Sans-Nom passe par la crypte du dernier bastion. Les Veilleuses ont vu ses échos ; personne ne l\'a jamais vu, lui.', trig: 'Drazek te confie la clé de la crypte.',
+    intro: 'Descends dans la <b>crypte du bastion</b>. S\'il y est, tu le sauras. S\'il n\'y est pas… il y aura laissé quelque chose. Il laisse toujours quelque chose.',
+    goal: 'Affronter ce qui attend dans la crypte.',
+    steps: [
+      { t: 'read', place: 'p_crypte', hint: 'Descendre dans la crypte du dernier bastion', found: 'Une silhouette sans visage se retourne. Elle ne porte pas de couronne : elle porte des sceaux, des dizaines, cousus sur son manteau. « Tu as fait taire mes échos. Je vais devoir en réveiller d\'autres. »' },
+      { t: 'kill', kinds: ['ombre_sans_nom'], c: 1, spawn: { place: 'p_crypte', kind: 'ombre_sans_nom', n: 1 }, hint: 'Vaincre l\'Ombre du Sans-Nom' },
+      { t: 'talk', who: 'Drazek, chef du dernier bastion', hint: 'Revenir voir Drazek', say: 'Une ombre, seulement ? Alors il n\'était pas là. Il t\'a parlé à travers elle. Il sait qui tu es, maintenant. Les Veilleuses doivent l\'apprendre.' }
+    ],
+    disc: 'Le Sans-Nom agit à distance, par des ombres. Il connaît désormais le héros.', events: 'Combat contre l\'Ombre du Sans-Nom.',
+    outro: 'Le Sans-Nom s\'est retiré.', cons: 'Fin de l\'arc « Ombres et corruption » (première partie). Le Sans-Nom reste à trouver (suite à écrire).', link: 'Conclusion de l\'arc 7 et ouverture vers la suite.',
+    reward: { gold: 6000, xp: 14000, items: [['eclat_exception', 2]], rel: ['Drazek, chef du dernier bastion', 70], rep: ['voile', 250], ws: 'sans_nom' } },
+  // ---- Arc 8 : Destinées personnelles ----
+  q057: { arc: 'a8', num: 57, type: 'Personnage', n: 'Les rubans du chêne', giver: 'liora', lvl: 8,
+    req: () => narrDone('q008') && narrDone('q003') && narrDone('q004'),
+    ctx: 'Le registre de Brumeval le disait : en l\'an 201, le mariage de Torven et Liora a été reporté à cause de la brume. La brume n\'est plus.',
+    trig: 'Liora te parle avec un sourire inhabituel.',
+    intro: 'Tu te souviens de la page du registre ? « Mariage reporté : la brume. » Eh bien… la brume est partie. Torven n\'ose pas le dire, alors je le dis : nous voulons nous marier au <b>Chêne des serments</b>. Va lui parler, puis demande à <b>Édran</b> d\'apporter le registre.',
+    goal: 'Préparer le mariage de Torven et Liora au Chêne des serments.',
+    steps: [
+      { t: 'talk', who: 'torven', hint: 'Parler à Torven', say: 'Elle t\'a demandé de venir me chercher, hein ? Trente ans que j\'attends ce jour. Je ne vais pas reculer devant un arbre.' },
+      { t: 'talk', who: 'edran', hint: 'Demander à Édran d\'apporter le registre', say: 'Une page heureuse ! Il était temps. J\'apporte le registre et ma plus belle plume.' },
+      { t: 'visit', place: 'p_chene', hint: 'Se rendre au Chêne des serments', found: 'Le village entier est là. Torven et Liora nouent un ruban neuf aux racines du chêne. Édran écrit : « An 214 — Torven et Liora se promettent l\'un à l\'autre. Mariage célébré. » Puis il te tend la plume : « Signe comme témoin. »' }
+    ],
+    disc: 'Les promesses suspendues par la brume reprennent.', events: 'Cérémonie au Chêne des serments.', outro: 'Torven et Liora sont mariés.',
+    cons: 'Le registre de Brumeval porte ta signature. Le village réagit.', link: 'Destinée personnelle de deux habitants rencontrés dans l\'arc 1.',
+    reward: { gold: 300, xp: 800, items: [['potion', 3]], rel: ['liora', 80], rep: ['archives', 80], ws: 'mariage' } },
+  q058: { arc: 'a8', num: 58, type: 'Choix', n: 'Le médaillon de Bérick', giver: 'berick2', lvl: 10,
+    req: () => narrDone('q005') && narrDone('q006'),
+    ctx: 'Le médaillon de Bérick porte la couronne fendue de la tombe sans nom. Sa famille gardait une tombe à Brumeval.',
+    trig: 'Bérick a appris ce que tu as découvert au cimetière.',
+    intro: 'On m\'a raconté, pour la tombe sans nom. Ma mère gardait quelque chose, et je n\'ai jamais su quoi. Je n\'ose pas y retourner. Emporte le médaillon à <b>Néria</b>, à Brumeval : elle connaît chaque tombe. Décidez ensemble de ce qu\'il faut en faire.',
+    goal: 'Rapporter le médaillon de Bérick au cimetière de Brumeval.',
+    steps: [
+      { t: 'read', place: 'p_tombe', hint: 'Poser le médaillon sur la tombe sans nom', found: 'La couronne du médaillon s\'emboîte exactement dans celle gravée sur la pierre. Un déclic : une petite niche s\'ouvre, vide, couverte de poussière.' },
+      { t: 'choice', key: 'medaillon', who: 'neria', hint: 'Raconter à Néria ce que tu as trouvé',
+        q: 'Néria écoute, les yeux brillants. « La famille de Bérick gardait la clé de cette tombe. Que faisons-nous du médaillon ? »',
+        opts: [
+          ['Le laisser dans la niche, sur la tombe', 'tombe', 'Néria referme doucement la niche. « Les gardiens ont fini leur garde. » Bérick, quand il l\'apprendra, pleurera un peu, puis rira beaucoup.'],
+          ['Le rapporter à Bérick', 'berick', 'Néria acquiesce. « C\'est son histoire. » Bérick portera désormais le médaillon au cou, en racontant à ses clients qu\'il descend d\'une lignée de gardiens.'],
+          ['Le confier à Séraphine, la spécialiste des reliques', 'relique', 'Néria hésite, puis accepte. « Séraphine saura ce qu\'il vaut. » Séraphine découvre que la couronne fendue est une clé d\'Aether, et te remercie par un présent.']
+        ] }
+    ],
+    disc: 'La couronne fendue est aussi une clé : la tombe sans nom avait des gardiens.', events: 'Retour au cimetière oublié.', outro: 'L\'histoire de la famille de Bérick est connue.',
+    cons: 'Selon ton choix, le médaillon reste sur la tombe, revient à Bérick ou devient une relique étudiée.', link: 'Destinée personnelle de Bérick (arc 1).',
+    reward: { gold: 500, xp: 1200, rel: ['berick2', 60], rep: ['archives', 60],
+      choice: { tombe: { rep: ['voile', 80] }, berick: { rel: ['berick2', 80], gold: 300 }, relique: { items: [['eclat_exception', 1]] } } } }
+});
+CTX_LINES.push(
+  { id: 'kharim_route', who: 'Kharim le caravanier', when: () => narrDone('q032'), txt: () => 'Les convois arrivent complets. Cinq sacs sur cinq ! Je n\'avais pas compté jusqu\'à cinq depuis des mois.' },
+  { id: 'samir_peage', who: 'Samir, intendant des Blés', when: () => narrWs('choix_peage') && NS().ws.choix_peage === 'peage', txt: 'Le péage de Haldor est léger et les gardes sont honnêtes. Je n\'aurais jamais cru dire ça d\'un péage.' },
+  { id: 'rhogar_panth', who: 'Rhogar l\'herboriste', when: () => narrWs('pantheres_apaisees'), txt: 'La panthère que je soignais est repartie vers le nid. Elle s\'est retournée deux fois. Je crois qu\'elle me disait merci.' },
+  { id: 'nyra_sansnom', who: 'Nyra la purificatrice', when: () => narrWs('sans_nom'), txt: 'Le cercle de l\'arbre ne grandit plus. Pour la première fois, ma mesure est la même que la semaine dernière.' },
+  { id: 'ysold_sansnom', who: 'Ysold, gardienne du refuge', when: () => narrWs('sans_nom'), txt: 'Drazek m\'a écrit. Le Sans-Nom te connaît, maintenant. Ne voyage plus jamais en pensant que personne ne te regarde.' },
+  { id: 'torven_mariage', who: 'torven', when: () => narrWs('mariage'), txt: 'Marié ! À mon âge ! Liora dit que j\'ai pleuré pendant la cérémonie. C\'est faux. C\'était la sève du chêne.' },
+  { id: 'liora_mariage', who: 'liora', when: () => narrWs('mariage'), txt: 'Merci d\'avoir été notre témoin. Ton nom est dans le registre, à côté des nôtres. Pour toujours.' },
+  { id: 'edran_mariage', who: 'edran', when: () => narrWs('mariage'), txt: 'J\'ai relu la page du mariage dix fois. C\'est la plus belle que j\'aie écrite.' },
+  { id: 'seraphine_medaillon', who: 'Séraphine, spécialiste des reliques', when: () => NS().ws.choix_medaillon === 'relique', txt: 'Ce médaillon n\'est pas un bijou : c\'est une clé d\'Aether. Je n\'ai pas encore trouvé la serrure. Mais je la trouverai.' }
+);
