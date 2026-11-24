@@ -213,19 +213,19 @@ button{font-family:inherit;cursor:pointer}
 
 /* ===== Écran titre refait (24/11) : monde 3D en travelling, blason, logo animé, menu centré ===== */
 body.t3d #cam3d,body.t3d #v3dinfo,body.t3d #touch{display:none!important}
-#title{justify-content:center;align-items:center;flex-direction:column;background:none}
+#title{justify-content:center;align-items:center;flex-direction:column;background:none;-webkit-transform:translateZ(0);transform:translateZ(0)}
+#creator{-webkit-transform:translateZ(0);transform:translateZ(0)}
 #title .tvig{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 75% 70% at 50% 45%,rgba(0,0,0,0) 40%,rgba(6,3,14,.55) 80%,rgba(6,3,14,.9)),linear-gradient(rgba(6,3,14,.65),rgba(6,3,14,0) 18%,rgba(6,3,14,0) 70%,rgba(6,3,14,.8))}
 body:not(.t3d) #title .tvig{background:radial-gradient(ellipse at center,rgba(12,10,20,.35),rgba(12,10,20,.9))}
-#title .trays{position:absolute;inset:-20%;pointer-events:none;background:repeating-conic-gradient(from 0deg at 50% 0%,rgba(255,214,140,.07) 0deg 4deg,rgba(255,214,140,0) 4deg 11deg);mix-blend-mode:screen;animation:rays 24s linear infinite;opacity:.35;filter:blur(6px)}
-@keyframes rays{to{transform:rotate(6deg)}}
+#title .trays{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 60% 55% at 50% -5%,rgba(255,214,140,.22),rgba(255,214,140,0) 70%)} /* rayons légers : aucun calque géant, flou ni mélange (Safari iPhone) */
 #title .tleft{position:relative;height:auto;width:min(560px,92vw);padding:0;gap:clamp(8px,2.6vh,22px);align-items:center;animation:none}
 #title .logo{position:relative;display:flex;flex-direction:column;align-items:center;animation:logoin 1.6s cubic-bezier(.2,.8,.2,1) both}
 #title .logo::before{content:'';position:absolute;left:-30%;right:-30%;top:-10%;bottom:-25%;z-index:-1;background:radial-gradient(ellipse at center,rgba(8,4,16,.72),rgba(8,4,16,.35) 50%,rgba(8,4,16,0) 72%)}
-@keyframes logoin{from{opacity:0;transform:scale(1.12);filter:blur(6px)}}
-#title .crest{width:clamp(44px,11vh,92px);height:auto;filter:drop-shadow(0 0 10px rgba(255,200,110,.5));margin-bottom:-2px}
+@keyframes logoin{from{opacity:0;transform:scale(1.08)}}
+#title .crest{width:clamp(44px,11vh,92px);height:auto;margin-bottom:-2px}
 #title .crest .ring{transform-origin:60px 60px;animation:spin 40s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-#title .logo h1{position:relative;font-size:clamp(34px,10.5vh,92px);letter-spacing:.16em;padding-left:.16em;background:linear-gradient(100deg,#a8701e 0%,#f1c96a 25%,#fff8e0 45%,#f1c96a 55%,#a8701e 80%,#ffe7a3 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 6s ease-in-out infinite,glowt 4s ease-in-out infinite}
+#title .logo h1{position:relative;font-size:clamp(34px,10.5vh,92px);letter-spacing:.16em;padding-left:.16em;background:linear-gradient(100deg,#a8701e 0%,#f1c96a 25%,#fff8e0 45%,#f1c96a 55%,#a8701e 80%,#ffe7a3 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:#f1c96a;text-shadow:none;animation:shine 6s ease-in-out infinite}
 @keyframes shine{0%,100%{background-position:100% 0}50%{background-position:0% 0}}
 #title .logo h3{display:flex;align-items:center;gap:12px;font-size:clamp(12px,3.6vh,20px);letter-spacing:.28em;color:#f0dcae;text-shadow:0 2px 6px #000;margin-top:2px}
 #title .logo h3 i{display:block;width:clamp(30px,8vw,80px);height:1px;background:linear-gradient(90deg,transparent,#e8c070,transparent)}

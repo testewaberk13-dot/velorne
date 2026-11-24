@@ -127,7 +127,7 @@ const B2D_render0 = render;
 render = function () {
   const live = B2D.on && G.mode === 'play' && B2D.frame3d;
   // écran titre : le monde 3D filmé en travelling derrière le menu (au lieu de l'ancien fond 2D)
-  const tl = B2D.on && (G.mode === 'title' || G.mode === 'creator') && B2D.title3d && !(SET.c3d && SET.c3d.title3d === false);
+  const tl = B2D.on && (G.mode === 'title' || G.mode === 'creator') && B2D.title3d && !(SET.c3d && SET.c3d.title3d === false) && !/titre2d/.test(location.search);
   document.body.classList.toggle('v3d', !!live || !!tl); document.body.classList.toggle('t3d', !!tl);
   if (tl) { try { B2D.title3d(); } catch (e) { console.error('3D titre', e); B2D.titleFail = (B2D.titleFail || 0) + 1; if (B2D.titleFail > 3) { B2D.title3d = null; document.body.classList.remove('v3d', 't3d'); return B2D_render0(); } } const cv = document.getElementById('game'), x = cv.getContext('2d'); x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, cv.width, cv.height); return; }
   if (!live) return B2D_render0();
