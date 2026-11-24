@@ -385,3 +385,107 @@ const TRAVELER_LINES = [
   'On raconte qu\'il y a un lieu oublié vers le {dir}. Moi, je n\'y suis jamais allé. Personne n\'y va.',
   'Vers le {dir}, j\'ai senti un drôle de froid, comme si l\'endroit se souvenait de quelque chose.'
 ];
+
+// =====================================================================
+//  ARC 2 — LES QUATRE VEILLEURS (Q011–Q016) — PROPOSITION
+//  Lecture retenue : les « Quatre Veilleurs » sont quatre gardiennes déjà présentes dans le jeu et dont le titre
+//  contient déjà ce rôle : Ysold (Hurlevents, Q009–Q010 existantes), Orélia « veilleuse des cimes », Morwen
+//  « veilleuse du Voile » et Iska « gardienne des cavernes ». Aucun nouveau personnage n'est inventé.
+//  À VALIDER par l'utilisateur (identité des Veilleurs, rôle des « échos » de Nyx).
+// =====================================================================
+PLACES.push(
+  { id: 'p_cime', n: 'Le belvédère des cimes', z: 'neige', tx: 246, ty: 10, prop: 'lore_pillar', req: () => narrStep('q012') >= 0 || narrDone('q012'),
+    txt: 'Un promontoire balayé par le vent. La neige y forme un cercle parfait, comme si quelque chose y tournait sans cesse.',
+    after: { when: () => narrDone('q012'), txt: 'Le cercle de neige s\'est effondré. Le vent souffle enfin dans une seule direction.' } },
+  { id: 'p_fournaise', n: 'La fournaise endormie', z: 'lave', tx: 122, ty: 490, prop: 'lore_obsidian', req: () => narrStep('q016') >= 0 || narrDone('q016'),
+    txt: 'Une cheminée de lave refroidie. Dans l\'obsidienne, la même couronne fendue que sur la tombe sans nom de Brumeval.',
+    after: { when: () => narrDone('q016'), txt: 'La cheminée est froide et silencieuse. La couronne fendue s\'est effacée de la pierre.' } }
+);
+Object.assign(MISSIONS, {
+  q011: { arc: 'a2', num: 11, type: 'Personnage', n: 'Le message de Selyne', giver: 'Ysold, gardienne du refuge', lvl: 14,
+    req: () => narrDone('q008'),
+    ctx: 'Selyne a envoyé le héros aux Hurlevents. Ysold y garde le premier des quatre lieux où un souffle de Nyx s\'est accroché au monde.',
+    trig: 'Ysold reconnaît le nom de Selyne.',
+    intro: 'Les Quatre Veilleurs. C\'est ainsi que les anciens nous appelaient : quatre gardiennes, quatre lieux où Nyx a laissé un souffle. Moi, le vent. <b>Orélia</b>, les cimes. <b>Morwen</b>, le Voile. <b>Iska</b>, le cœur de la montagne. Si l\'écho de Brumeval s\'est réveillé, les autres aussi. Commence par Orélia, aux Pics de Givrenuit : elle te parlera de la sentinelle prise dans la glace.',
+    goal: 'Rejoindre Orélia et retrouver la sentinelle prise dans la glace.',
+    steps: [
+      { t: 'talk', who: 'Orélia, veilleuse des cimes', hint: 'Parler à Orélia, au village des Pics de Givrenuit', say: 'Ysold t\'envoie ? Alors c\'est grave. Il y a, au nord-est des cimes, un soldat de la Couronne d\'Aube pris dans la glace depuis l\'Éclipse. Il montre le sud du doigt. Va le voir : ce qu\'il montre a changé.' },
+      { t: 'read', place: 'p_glace', vague: true, hint: 'Trouver la sentinelle prise dans la glace, tout au nord-est des cimes', found: 'La main tendue de la sentinelle ne montre plus le sud : elle montre le sommet, au nord.', clue: ['sentinelle', 'La sentinelle de la Couronne d\'Aube montre désormais le sommet des cimes.'] },
+      { t: 'talk', who: 'Orélia, veilleuse des cimes', hint: 'Revenir voir Orélia', say: 'Le sommet… Le belvédère. C\'est là que le souffle des cimes dort. S\'il s\'est éveillé, il faudra le faire taire.' }
+    ],
+    disc: 'Les quatre Veilleuses existent et se connaissent ; la sentinelle des cimes « montre » le souffle.', events: 'Aucun combat obligatoire.',
+    outro: 'Orélia accepte de guider le héros jusqu\'au belvédère.', cons: 'Orélia propose « L\'écho des cimes ».', link: 'Ouvre l\'arc des Quatre Veilleurs.',
+    reward: { gold: 600, xp: 1800, items: [['potion', 3]], rel: ['Ysold, gardienne du refuge', 50], rep: ['voile', 60] } },
+  q012: { arc: 'a2', num: 12, type: 'Lieu', n: 'L\'écho des cimes', giver: 'Orélia, veilleuse des cimes', lvl: 16,
+    req: () => narrDone('q011'),
+    ctx: 'Un souffle de Nyx dort au belvédère des cimes, au-dessus du village d\'Orélia.', trig: 'Orélia a compris ce que montrait la sentinelle.',
+    intro: 'Le <b>belvédère</b> est au nord des cimes, sur le promontoire le plus haut. Quand tu y seras, l\'écho prendra forme — comme à Brumeval. Couvre-toi. Le froid de là-haut n\'est pas seulement le froid.',
+    goal: 'Faire taire l\'écho du belvédère des cimes.',
+    steps: [
+      { t: 'read', place: 'p_cime', vague: true, hint: 'Atteindre le belvédère, au nord des cimes', found: 'Le cercle de neige se soulève. Une silhouette de givre se dresse, couronne brisée sur la tête…' },
+      { t: 'kill', kinds: ['echo_givre'], c: 1, spawn: { place: 'p_cime', kind: 'echo_givre', n: 1 }, hint: 'Vaincre l\'Écho du givre' },
+      { t: 'talk', who: 'Orélia, veilleuse des cimes', hint: 'Revenir voir Orélia', say: 'Il portait la couronne fendue ? Alors ce n\'est pas un hasard. Quelqu\'un réveille les échos, un par un, et signe son travail. Morwen, dans la Vallée des Ombres, en saura plus. Elle garde des noms que nous avons oubliés.' }
+    ],
+    disc: 'Les échos portent tous la couronne fendue : quelqu\'un les réveille volontairement.', events: 'Combat contre l\'Écho du givre.',
+    outro: 'Le vent des cimes se calme.', cons: 'Le belvédère change d\'aspect. Morwen devient l\'étape suivante (niveau 40 conseillé).', link: 'Deuxième Veilleuse ; le mystère de la couronne fendue s\'étend.',
+    reward: { gold: 900, xp: 2600, items: [['eclat_exception', 1]], rel: ['Orélia, veilleuse des cimes', 70], rep: ['pacte', 80], ws: 'cimes_apaisees' } },
+  q013: { arc: 'a2', num: 13, type: 'Mystère', n: 'Les noms sur la borne', giver: 'Morwen, veilleuse du Voile', lvl: 46,
+    req: () => narrDone('q012') && G.player.lvl >= 40,
+    ctx: 'Morwen garde la Vallée des Ombres, la cicatrice laissée par Nyx. Sur la borne du Voile sont gravés les noms de ceux qui l\'ont franchie.',
+    trig: 'Orélia t\'a envoyé vers Morwen.',
+    intro: 'Une couronne fendue ? Je connais ce signe. Va lire les noms sur la <b>borne du Voile</b>, puis cherche l\'<b>autel renversé</b>, au fond de la vallée, vers le sud-est. Ensuite, reviens.',
+    goal: 'Lire la borne du Voile et trouver l\'autel renversé.',
+    steps: [
+      { t: 'read', place: 'p_voile', hint: 'Lire la borne du Voile, à l\'ouest de la vallée', found: 'Parmi les noms, un seul a été gratté au couteau — comme le mot « Arkhan » sur la borne de Brumeval.', clue: ['nom_gratte', 'Un nom a été effacé de la borne du Voile, de la même façon que sur la borne de Brumeval.'] },
+      { t: 'read', place: 'p_autel_nyx', vague: true, hint: 'Trouver l\'autel renversé, au fond de la vallée (sud-est)', found: 'Sous l\'autel, une empreinte de sceau noir dans la cire, encore fraîche.', clue: ['autel', 'Un sceau noir a été apposé récemment sur l\'autel renversé de la Vallée des Ombres.'] },
+      { t: 'talk', who: 'Morwen, veilleuse du Voile', hint: 'Revenir voir Morwen', say: 'Une empreinte fraîche… Celui qui porte les sceaux est passé ici. Avant de le suivre, il faut faire taire ce que son passage a réveillé. Prépare-toi.' }
+    ],
+    disc: 'Le porteur des sceaux noirs efface les noms et laisse son sceau sur les lieux qu\'il réveille.', events: 'La vallée est dangereuse.',
+    outro: 'Morwen décide d\'agir.', cons: 'Ouvre « Ce qui reste de l\'Éclipse ».', link: 'Relie le porteur des sceaux à l\'« étranger au sceau noir » du registre de Brumeval.',
+    reward: { gold: 2400, xp: 6000, items: [['eclat_exception', 1]], rel: ['Morwen, veilleuse du Voile', 60], rep: ['voile', 120] } },
+  q014: { arc: 'a2', num: 14, type: 'Principale de l\'arc', n: 'Ce qui reste de l\'Éclipse', giver: 'Morwen, veilleuse du Voile', lvl: 48,
+    req: () => narrDone('q013'),
+    ctx: 'L\'autel renversé est le lieu où l\'Éclipse des Cent Nuits a commencé. Un écho y attend.', trig: 'Morwen te charge de faire taire l\'écho de l\'autel.',
+    intro: 'Retourne à l\'<b>autel renversé</b>. L\'écho de l\'Éclipse s\'y lèvera. Il est plus fort que ceux que tu as vus : c\'est ici que tout a commencé.',
+    goal: 'Vaincre l\'écho de l\'Éclipse.',
+    steps: [
+      { t: 'kill', kinds: ['echo_ombre'], c: 1, spawn: { place: 'p_autel_nyx', kind: 'echo_ombre', n: 1 }, hint: 'Vaincre l\'Écho de l\'Éclipse, à l\'autel renversé' },
+      { t: 'talk', who: 'Morwen, veilleuse du Voile', hint: 'Revenir voir Morwen', say: 'La vallée respire. Pour la première fois depuis mille ans, la borne ne murmure plus. Il reste Iska, sous la terre, dans les Cavernes de Lave. Le dernier souffle est le plus profond.' }
+    ],
+    disc: 'L\'Éclipse des Cent Nuits a laissé l\'écho le plus puissant.', events: 'Combat contre l\'Écho de l\'Éclipse.',
+    outro: 'La Vallée des Ombres s\'apaise un peu.', cons: 'Iska devient l\'étape suivante (niveau 66 conseillé).', link: 'Troisième Veilleuse.',
+    reward: { gold: 4200, xp: 9000, items: [['mithril', 2]], rel: ['Morwen, veilleuse du Voile', 80], rep: ['voile', 150], ws: 'voile_apaise' } },
+  q015: { arc: 'a2', num: 15, type: 'Région', n: 'Le cœur qui bat trop vite', giver: 'Iska, gardienne des cavernes', lvl: 70,
+    req: () => narrDone('q014') && G.player.lvl >= 66,
+    ctx: 'Iska garde le cœur battant de la montagne. Depuis peu, il bat trop vite, et des braises vivantes en sortent.', trig: 'Morwen t\'a envoyé vers Iska.',
+    intro: 'Tu sens la chaleur ? Le <b>cœur battant</b> s\'emballe. Des braises vivantes en sortent et brûlent mes galeries. Calme-les, et regarde le cœur de près : quelque chose le pousse.',
+    goal: 'Examiner le cœur battant et éteindre les braises vivantes.',
+    steps: [
+      { t: 'read', place: 'p_coeur', hint: 'Examiner le cœur battant des Cavernes de Lave', found: 'Une coulée de cire noire fige une veine du cœur. Des braises s\'en détachent.', clue: ['coeur', 'Un sceau noir accélère le cœur de la montagne.'] },
+      { t: 'kill', kinds: ['braise_vive'], c: 4, spawn: { place: 'p_coeur', kind: 'braise_vive', n: 4 }, hint: 'Éteindre les braises vivantes' },
+      { t: 'talk', who: 'Iska, gardienne des cavernes', hint: 'Revenir voir Iska', say: 'Le cœur ralentit. Mais le sceau n\'était qu\'une goutte : la source est plus bas, à la <b>fournaise endormie</b>, à l\'ouest des cavernes. C\'est là que dort le dernier souffle.' }
+    ],
+    disc: 'Le porteur des sceaux a scellé le cœur de la montagne.', events: 'Des braises vivantes jaillissent du cœur.',
+    outro: 'Le cœur de la montagne retrouve son rythme.', cons: 'Ouvre « Le dernier Veilleur ».', link: 'Quatrième Veilleuse.',
+    reward: { gold: 5200, xp: 12000, items: [['mithril', 3]], rel: ['Iska, gardienne des cavernes', 60], rep: ['cendre', 120] } },
+  q016: { arc: 'a2', num: 16, type: 'Principale de l\'arc', n: 'Le dernier Veilleur', giver: 'Iska, gardienne des cavernes', lvl: 74,
+    req: () => narrDone('q015'),
+    ctx: 'Le dernier souffle de Nyx dort à la fournaise endormie, sous les îles d\'Aether.', trig: 'Iska sait où se trouve le dernier écho.',
+    intro: 'Va à la <b>fournaise endormie</b>. L\'écho qui s\'y lèvera porte la couronne fendue, comme les autres. Quand il sera tombé, retourne voir Ysold : c\'est elle qui a commencé, c\'est à elle de finir.',
+    goal: 'Vaincre l\'écho de la fournaise, puis retourner voir Ysold.',
+    steps: [
+      { t: 'read', place: 'p_fournaise', vague: true, hint: 'Trouver la fournaise endormie, à l\'ouest des Cavernes de Lave', found: 'L\'obsidienne se fissure. Un colosse de magma se dresse, une couronne brisée enfoncée dans le crâne.' },
+      { t: 'kill', kinds: ['echo_magma'], c: 1, spawn: { place: 'p_fournaise', kind: 'echo_magma', n: 1 }, hint: 'Vaincre l\'Écho de la fournaise' },
+      { t: 'talk', who: 'Ysold, gardienne du refuge', hint: 'Retourner voir Ysold, au Refuge des Vents', say: 'Les quatre souffles se taisent. Le vent, les cimes, le Voile, la montagne… Tu as fait ce que quatre Veilleuses n\'ont pas pu faire en mille ans. Mais écoute-moi bien : celui qui les a réveillés porte encore ses sceaux. Il efface son nom partout où il passe. Un jour, tu le trouveras. Ce jour-là, souviens-toi de Brumeval.' }
+    ],
+    disc: 'Les quatre souffles sont apaisés ; le porteur des sceaux reste libre.', events: 'Combat contre l\'Écho de la fournaise.',
+    outro: 'Les Quatre Veilleuses se réunissent pour la première fois depuis l\'Éclipse.', cons: 'Titre « l\'Ami des Veilleurs » ; fin de l\'arc 2 ; le porteur des sceaux devient le fil rouge (arc « Ombres et corruption », à écrire).',
+    link: 'Conclusion de l\'arc 2.',
+    reward: { gold: 8000, xp: 20000, items: [['eclat_exception', 2]], rel: ['Iska, gardienne des cavernes', 80], rep: ['voile', 200], ws: 'veilleurs' } }
+});
+CTX_LINES.push(
+  { id: 'tavik_cimes', who: 'Tavik le colporteur', when: () => narrWs('cimes_apaisees'), txt: 'Le vent du sommet s\'est calmé d\'un coup. Les éclaireurs disent qu\'on voit maintenant jusqu\'à la mer. Toi, tu sais pourquoi, hein ?' },
+  { id: 'selka_voile', who: 'Selka la receleuse', when: () => narrWs('voile_apaise'), txt: 'Les Veilleurs du Voile sourient. C\'est mauvais pour mes affaires : les gens heureux achètent moins de talismans.' },
+  { id: 'ulrik_coeur', who: 'Ulrik Braisefer, forgeron du magma', when: () => narrDone('q015'), txt: 'Le cœur bat de nouveau au bon rythme. Ma forge aussi. Le métal coule comme il faut.' },
+  { id: 'orelia_veilleurs', who: 'Orélia, veilleuse des cimes', when: () => narrWs('veilleurs'), txt: 'Les quatre souffles se taisent. Ysold m\'a écrit. Elle n\'écrit jamais.' }
+);
