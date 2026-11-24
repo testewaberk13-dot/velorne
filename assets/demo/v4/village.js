@@ -283,8 +283,8 @@ export function buildVillage(waterMat) {
       { const [x, z] = L2W(b, -0.2, -0.2); addCircle(x, z, 0.4, 'enclume'); } { const [x, z] = L2W(b, 0.8, 1.4); addCircle(x, z, 0.35, 'tonneau'); }
       poi('forge_enclume', b, -0.2, 0.55, Math.PI);
     } });
-  // 3. Échoppe de Maëlle
-  building({ id: 'echoppe', name: 'Échoppe de Maëlle', x: 10.5, z: 7, rot: R(10.5, 7), w: 5, d: 4.4, h: 2.6, roof: 'tile', roofTint: '#e8d0c0', enter: true, shutter: '#8a3a3a', inside: (P, b) => {
+  // 3. Échoppe de Maëlys
+  building({ id: 'echoppe', name: 'Échoppe de Maëlys', x: 10.5, z: 7, rot: R(10.5, 7), w: 5, d: 4.4, h: 2.6, roof: 'tile', roofTint: '#e8d0c0', enter: true, shutter: '#8a3a3a', inside: (P, b) => {
     F.counter(P, 0, -0.4, 0, 2.4); F.shelf(P, -1.4, -1.95, 0, 1.6, false); F.shelf(P, 1.0, -1.95, 0, 1.6, false); F.sack(P, -2.0, 1.4); F.sack(P, -1.6, 1.6); F.barrel(P, 1.9, 1.2, 0.8); F.crate(P, 1.9, 0.3, 0.5);
     for (let i = 0; i < 4; i++) { const [x, z] = L2W(b, -0.9 + i * 0.6, -0.4); addCircle(x, z, 0.3, 'comptoir'); } { const [x, z] = L2W(b, 1.9, 0.75); addCircle(x, z, 0.6, 'tonneau'); }
     for (let i = 0; i < 5; i++) F.plate(P, -0.9 + i * 0.45, 1.03, -0.4, ['#c84a3a', '#e8b030', '#8ab040', '#a050a0', '#e07030'][i]);
@@ -309,8 +309,8 @@ export function buildVillage(waterMat) {
     const [cx, cz] = L2W(b, -2.4, -1.7); interact('coffre_edran', cx, cz, 1.0, 'Ouvrir le coffre', { inside: 'edran', need: 'livres' });
     const [nx, nz] = L2W(b, 1.0, -0.2); interact('note_edran', nx, nz, 1.5, 'Lire la note', { inside: 'edran' });
   }, walls: null });
-  // 5. Maison de Liora et Torven
-  building({ id: 'liora', name: 'Maison de Liora et Torven', x: -21, z: -2.5, rot: facing(-21, -2.5, -14, 3), w: 5.6, d: 5, h: 2.6, roof: 'moss', enter: true, chimney: -1, shutter: '#6a8a3a', inside: (P, b) => {
+  // 5. Maison de Liora (Torven travaille à l'établi devant)
+  building({ id: 'liora', name: 'Maison de Liora', x: -21, z: -2.5, rot: facing(-21, -2.5, -14, 3), w: 5.6, d: 5, h: 2.6, roof: 'moss', enter: true, chimney: -1, shutter: '#6a8a3a', inside: (P, b) => {
     F.table(P, 1.4, -1.6, 0, 1.2); for (let i = 0; i < 5; i++) P.wood.push(C(0.07, 0.06, 0.2, 0.9 + i * 0.25, 0.78, -1.6, ['#7fd0a0', '#d07fa0', '#a0a0ff', '#f0d060', '#80c0e0'][i], 7)); P.wood.push(C(0.22, 0.3, 0.4, 2.0, 0.0, -0.3, '#2a2a2a', 10));
     for (let i = 0; i < 6; i++) P.wood.push(S(0.14, -2.2 + i * 0.6, 2.25, -1.2, ['#6a9a3a', '#8aaa4a', '#a08a3a'][i % 3], 1.5));
     P.wood.push(B(4.4, 0.05, 0.05, 0, 2.4, -1.2, WOOD)); F.bed(P, -1.8, 1.0, Math.PI / 2, '#3a6a4a'); F.bed(P, -1.8, -0.4, Math.PI / 2, '#8a6a3a'); F.pot(P, 2.2, 1.8); F.shelf(P, 2.4, 0.6, -Math.PI / 2, 1.2, false);

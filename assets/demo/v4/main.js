@@ -36,7 +36,7 @@ const PATROL = ['place_n', 'chapelle_porte', 'place_e', 'pont', 'place_s', 'edra
 const NPC_DEFS = [
   { id: 'edran', name: 'Édran', title: "l'archiviste", sheet: 'npc_elder_walk', home: 'edran', start: [-8, 7], speed: 1.0,
     sched: [[0, 'edran_lit', 'sleep'], [7, 'edran_bureau', 'work'], [11, 'banc_chene', 'sit'], [13, 'aub_t1', 'sit'], [14.5, 'edran_bureau', 'work'], [17, 'fontaine_0', 'chat'], [19, 'aub_t1', 'sit'], [21.5, 'edran_lit', 'sleep']] },
-  { id: 'maelle', name: 'Maëlle', title: 'la marchande', sheet: 'npc_merchant_walk', home: 'echoppe', start: [6, 4],
+  { id: 'maelys', name: 'Maëlys', title: 'la marchande', sheet: 'npc_merchant_walk', home: 'echoppe', start: [6, 4],
     sched: [[0, 'echoppe_lit', 'sleep'], [7, 'etal_maelle', 'work'], [12, 'aub_t2', 'sit'], [13.5, 'etal_maelle', 'work'], [17.5, 'echoppe_comptoir', 'work'], [19, 'fontaine_1', 'chat'], [21, 'echoppe_lit', 'sleep']] },
   { id: 'borin', name: 'Borin', title: 'le forgeron', sheet: 'npc_smith_walk', home: 'auberge', start: [8, -5],
     sched: [[0, 'aub_lit', 'sleep'], [6.5, 'forge_enclume', 'work'], [12, 'aub_t3', 'sit'], [13, 'forge_enclume', 'work'], [18, 'aub_t3', 'sit'], [22, 'aub_lit', 'sleep']] },
@@ -44,9 +44,9 @@ const NPC_DEFS = [
     sched: [[0, 'pont', 'guard'], [6, 'place_n', 'work'], [7, 'place_n', 'patrol', PATROL], [12, 'aub_t4', 'sit'], [13, 'place_n', 'patrol', PATROL], [19, 'fontaine_2', 'chat'], [20.5, 'pont', 'guard']] },
   { id: 'liora', name: 'Liora', title: "l'herboriste", sheet: 'npc_alchemist_walk', home: 'liora', start: [-15, -4],
     sched: [[0, 'liora_lit', 'sleep'], [6, 'lisiere', 'gather', 3.5], [9, 'potager', 'gather', 1.2], [11, 'liora_table', 'work'], [13.5, 'aub_t2', 'sit'], [14.5, 'cascade', 'gather', 2.2], [16.5, 'liora_table', 'work'], [18.5, 'chap_banc', 'sit'], [19.5, 'fontaine_3', 'chat'], [21, 'liora_lit', 'sleep']] },
-  { id: 'torven', name: 'Torven', title: 'le menuisier', sheet: 'npc_artisan_walk', home: 'liora', start: [-15, 1],
-    sched: [[0, 'torven_lit', 'sleep'], [7, 'torven_etabli', 'work'], [12, 'aub_feu', 'sit'], [13, 'torven_etabli', 'work'], [17, 'place_e', 'chat'], [18, 'aub_feu', 'sit'], [21.5, 'torven_lit', 'sleep']] },
-  { id: 'ysolde', name: 'Ysolde', title: "l'aubergiste", sheet: 'npc_relic_walk', home: 'auberge', start: [-8, -5],
+  { id: 'torven', name: 'Torven', title: 'le bûcheron', sheet: 'npc_artisan_walk', home: 'auberge', start: [-15, 1],
+    sched: [[0, 'aub_lit', 'sleep'], [7, 'torven_etabli', 'work'], [12, 'aub_feu', 'sit'], [13, 'torven_etabli', 'work'], [17, 'place_e', 'chat'], [18, 'aub_feu', 'sit'], [21.5, 'aub_lit', 'sleep']] },
+  { id: 'gwenna', name: 'Gwenna', title: "l'aubergiste", sheet: 'npc_relic_walk', home: 'auberge', start: [-8, -5],
     sched: [[0, 'aub_lit', 'sleep'], [6.5, 'aub_comptoir', 'work'], [23, 'aub_lit', 'sleep']] },
   { id: 'anselme', name: 'Frère Anselme', title: 'le chapelain', sheet: 'npc_runemaster_walk', home: 'chapelle', start: [0, -12], speed: 1.0,
     sched: [[0, 'chap_autel', 'sleep'], [6, 'chap_autel', 'pray'], [9, 'place_c', 'wander', 3], [11, 'chap_autel', 'pray'], [13.5, 'banc_chene2', 'sit'], [16, 'chap_autel', 'pray'], [19, 'place_o', 'chat'], [21, 'chap_autel', 'sleep']] }
@@ -55,7 +55,7 @@ const NPC_DEFS = [
 function schedFor(d) {
   let s = d.sched;
   if (d.id === 'torven' && S.repair >= 1 && S.repair < 2) s = s.map(e => e[2] === 'work' ? [e[0], 'ab_atelier', 'work'] : e);
-  if (S.fete) s = s.map(e => (e[0] >= 17 && e[0] < 21 && e[2] !== 'sleep' && d.id !== 'ysolde') ? [e[0], ['fontaine_0', 'fontaine_1', 'fontaine_2', 'fontaine_3', 'place_e', 'place_o', 'place_c', 'place_s'][NPC_DEFS.indexOf(d)], 'chat'] : e);
+  if (S.fete) s = s.map(e => (e[0] >= 17 && e[0] < 21 && e[2] !== 'sleep' && d.id !== 'gwenna') ? [e[0], ['fontaine_0', 'fontaine_1', 'fontaine_2', 'fontaine_3', 'place_e', 'place_o', 'place_c', 'place_s'][NPC_DEFS.indexOf(d)], 'chat'] : e);
   return s;
 }
 
@@ -237,7 +237,7 @@ async function doAction() {
   save(); updHud();
 }
 function ctxTalk() { return { h: DAY.h, found: S.found, items: S.items, flags: S.flags, repair: S.repair, fete: S.fete }; }
-function markHints(n) { const map = { edran: 'initiales', ysolde: 'chat', liora: 'grotte', anselme: 'grenouille', hugues: 'renard' }; if (map[n.id]) S.flags['hint_' + map[n.id]] = 1; if (n.id === 'ysolde') S.flags.hint_bibliotheque = 1; }
+function markHints(n) { const map = { edran: 'initiales', gwenna: 'chat', liora: 'grotte', anselme: 'grenouille', hugues: 'renard' }; if (map[n.id]) S.flags['hint_' + map[n.id]] = 1; if (n.id === 'gwenna') S.flags.hint_bibliotheque = 1; }
 
 // ---------------- évolution du village ----------------
 function checkEvolution() {

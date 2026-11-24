@@ -6,9 +6,9 @@ export const VILLAGE_NAME = 'Brumeval';
 // secrets : 5 niveaux (1 facile à manquer · 2 exploration · 3 complexe · 4 rare · 5 narratif)
 export const SECRETS = {
   initiales: { lvl: 1, name: 'Les initiales du vieux chêne', hint: "Édran dit que le vieux chêne « en a vu, des amoureux »." },
-  chat: { lvl: 1, name: 'Mousse, le chat de l’auberge', hint: "Ysolde parle d'un chat qui dort au soleil près de l'auberge." },
+  chat: { lvl: 1, name: 'Mousse, le chat de l’auberge', hint: "Gwenna, l'aubergiste, parle d'un chat qui dort au soleil près de l'auberge." },
   grotte: { lvl: 2, name: 'La crevasse derrière la cascade', hint: "Liora dit qu'on peut passer derrière la cascade « de pierre en pierre »." },
-  bibliotheque: { lvl: 3, name: "L'alcôve d'Édran", hint: "Ysolde : Édran parle toujours du soleil quand il range ses livres." },
+  bibliotheque: { lvl: 3, name: "L'alcôve d'Édran", hint: "Gwenna : Édran parle toujours du soleil quand il range ses livres." },
   grenouille: { lvl: 4, name: "La grenouille de l'aube", hint: "Frère Anselme : la statue de la cascade « ne s'éveille qu'à l'aube »." },
   renard: { lvl: 4, name: 'Le renard blanc', hint: "Hugues : la nuit, de l'autre côté du pont, un renard blanc guide ceux qui le suivent." },
   maison: { lvl: 5, name: 'La famille Vey', hint: "La maison abandonnée, au bout de la ruelle, raconte une histoire à qui sait regarder." }
@@ -16,15 +16,15 @@ export const SECRETS = {
 export const LEVELS = ['', 'Facile à manquer', 'Exploration', 'Complexe', 'Rare', 'Narratif'];
 
 export const TEXT = {
-  initiales: ["Dans l'écorce, à hauteur d'épaule, deux initiales entourées d'un cœur maladroit : « A + M ». Juste en dessous, plus récent, quelqu'un a gravé « I ».", "A comme Aldric ? Le cœur est vieux d'au moins vingt hivers."],
-  initiales_re: ["« A + M », et ce petit « I » gravé plus tard."],
+  initiales: ["Dans l'écorce, à hauteur d'épaule, deux initiales entourées d'un cœur maladroit : « A + H ». Juste en dessous, plus récent, quelqu'un a gravé « I ».", "A comme Aldric ? Le cœur est vieux d'au moins vingt hivers."],
+  initiales_re: ["« A + H », et ce petit « I » gravé plus tard."],
   puits: ["L'eau est très bas. Une odeur de pierre mouillée. Tout au fond, on croit voir briller une pièce… trop loin pour l'atteindre."],
   panneau: ["« BRUMEVAL » — en dessous, une flèche vers l'est : « Pont de la Vire, route de Vélmaré ». Une autre, griffonnée : « Auberge : soupe chaude ! »"],
   note_edran: ["Une note de la main d'Édran, pliée sous la bougie :", "« Pour retrouver ce que j'ai caché, suis le soleil : il naît, il règne, il s'endort. »"],
   livres_intro: ["Une haute bibliothèque. Cinq gros volumes ont le dos plus usé que les autres. Ils semblent pouvoir s'enfoncer."],
   livres_ok: ["Un déclic sourd. La bibliothèque glisse lentement sur le côté… une petite pièce apparaît derrière."],
   livres_ko: ["Les livres reviennent d'eux-mêmes à leur place. Rien ne s'est passé."],
-  coffre_edran: ["Dans le coffre : un épais registre relié de cuir. « Registre de Brumeval — naissances et départs ».", "Une page est marquée d'un ruban : « Famille Vey : Aldric, Maëlis et la petite Ilya. Partis vers Vélmaré l'hiver de la Grande Brume. Jamais arrivés. »", "En marge, d'une écriture tremblée : « J'ai promis de garder la maison. Je n'ai pas su. — É. »"],
+  coffre_edran: ["Dans le coffre : un épais registre relié de cuir. « Registre de Brumeval — naissances et départs ».", "Une page est marquée d'un ruban : « Famille Vey : Aldric, Héloïse et la petite Ilya. Partis vers Vélmaré l'hiver de la Grande Brume. Jamais arrivés. »", "En marge, d'une écriture tremblée : « J'ai promis de garder la maison. Je n'ai pas su. — É. »"],
   grotte_runes: ["Des signes anciens, gravés profondément, luisent d'un bleu froid. Vous en reconnaissez un : le symbole des Veilleurs, qui « retenaient la brume ».", "Ce lieu est bien plus ancien que le village."],
   grotte_coffre: ["Un coffre de pierre, couvert de mousse. À l'intérieur, enveloppé de cuir huilé : un fragment de carte.", "On y voit Brumeval, la cascade… et, au nord de la falaise, un cercle tracé à l'encre rouge que personne au village n'a jamais mentionné."],
   grotte_vide: ["Le coffre est vide maintenant."],
@@ -50,15 +50,15 @@ export const TEXT = {
 
 // bulles échangées entre habitants (conversations entre eux)
 export const CHAT = {
-  any: ["Tu as vu la brume ce matin ?", "Le pain d'Ysolde est meilleur que jamais.", "Borin a encore tapé jusqu'à la nuit.", "Il paraît qu'une caravane passera bientôt.", "Les moutons de Gaspard se sont encore échappés.", "Belle soirée, pour une fois.", "Tu crois que l'hiver sera rude ?", "Les cloches de la chapelle ont sonné tôt.", "Il fait doux, ce soir."],
+  any: ["Tu as vu la brume ce matin ?", "Le pain de Gwenna est meilleur que jamais.", "Borin a encore tapé jusqu'à la nuit.", "Il paraît qu'une caravane passera bientôt.", "Les moutons de Gaspard se sont encore échappés.", "Belle soirée, pour une fois.", "Tu crois que l'hiver sera rude ?", "Les cloches de la chapelle ont sonné tôt.", "Il fait doux, ce soir."],
   edran: ["J'ai retrouvé une vieille carte dans les archives.", "Les registres ne mentent jamais, eux."],
-  maelle: ["J'ai reçu des épices du Sud !", "Les prix du sel montent encore."],
+  maelys: ["J'ai reçu des épices du Sud !", "Les prix du sel montent encore."],
   hugues: ["Rien à signaler au pont.", "J'ai vu des traces de loup près de la rivière."],
   liora: ["La sauge pousse bien cette année.", "Il me faudrait de la mousse de cascade."],
-  torven: ["Je dois finir la charrette de Gaspard.", "Ce bois-là, il chante quand on le travaille."],
+  torven: ["Depuis la souche noire, je ne coupe plus au nord-ouest. Alors je travaille le bois ici.", "Ce bois-là, il chante quand on le travaille."],
   anselme: ["Que l'aube vous garde.", "Il faudrait réparer le vitrail bleu."],
   borin: ["Ma forge a faim de charbon.", "Une bonne lame, ça se mérite."],
-  ysolde: ["Ce soir, ragoût de lapin !", "Encore un voyageur qui n'a pas payé…"],
+  gwenna: ["Ce soir, ragoût de lapin !", "Encore un voyageur qui n'a pas payé…"],
   fete: ["Quelle belle fête !", "On n'avait pas dansé depuis des années.", "Les guirlandes, c'est Torven qui les a faites !"]
 };
 
@@ -75,7 +75,7 @@ export function talk(n, c) {
       else L.push(greet + " Les jours se ressemblent à Brumeval, et c'est très bien ainsi.");
       if (!c.found.bibliotheque) L.push("Mes livres ? Je les range selon le soleil. Une vieille manie.");
       return L;
-    case 'maelle':
+    case 'maelys':
       if (c.fete) return ["La fête ! Tout le monde est sur la place. Prends une pomme, c'est offert."];
       if (n.act === 'work') return [greet + " Pommes, épices, fil de laine — tout ce qu'il faut à Brumeval.", "Si tu passes par la ferme, dis à Gaspard que j'attends ses œufs."];
       return [greet + " Je ferme bientôt. Reviens demain matin."];
@@ -88,7 +88,7 @@ export function talk(n, c) {
       return [greet + " Je fais ma ronde. Brumeval est calme, et je compte bien que ça dure."];
     case 'liora':
       if (n.act === 'gather') return ["Chut, ne marche pas sur la sauge !", c.found.grotte ? "Tu es passé derrière la cascade ? Alors tu as vu les signes des Veilleurs…" : "Derrière la cascade, l'eau chante différemment. Mon père disait qu'on pouvait y passer à pied sec, de pierre en pierre."];
-      if (n.act === 'work') return [greet + " Infusion de menthe des brumes : contre la toux et les mauvais rêves.", "Torven dit que je transforme la maison en jardin. Il n'a pas tort."];
+      if (n.act === 'work') return [greet + " Infusion de menthe des brumes : contre la toux et les mauvais rêves.", "Torven passe ses journées à l'établi devant chez moi. Il dit que c'est pour la lumière… "];
       return [greet + " Belle journée pour cueillir."];
     case 'torven':
       if (c.items.lettre_torven && !c.flags.torven_lettre) { c.flags.torven_lettre = 1; return ["… C'est l'écriture d'Aldric.", "« Si nous ne revenons pas, répare la maison pour Ilya. » Il m'a demandé ça, et moi je lui en voulais d'être parti…", "Demain, je commence. Cette maison aura un toit avant l'hiver. Merci."]; }
@@ -96,7 +96,7 @@ export function talk(n, c) {
       if (c.repair === 2) return ["La maison des Vey est debout. Peut-être qu'un jour, quelqu'un y vivra de nouveau."];
       if (n.act === 'work') return [greet + " Une charrette pour Gaspard. Le chêne, c'est dur, mais ça dure.", "La maison abandonnée ? … Je n'aime pas en parler."];
       return [greet + " Une chope au coin du feu, voilà ce qu'il me faut."];
-    case 'ysolde':
+    case 'gwenna':
       return [greet + " Bienvenue au Chêne Tranquille ! Soupe, pain, et un lit si tu en as besoin.", !c.found.chat ? "Tu as vu Mousse ? Mon chat. Il dort au soleil près de la porte, ce paresseux." : "Mousse t'a adopté, on dirait !", !c.found.bibliotheque ? "Édran ? Il parle toujours du soleil quand il range ses livres. Drôle d'homme." : "Édran a l'air plus léger, ces temps-ci."];
     case 'anselme':
       if (n.act === 'pray') return ["… que l'aube garde Brumeval. — Ah, bienvenue dans la chapelle, voyageur."];
