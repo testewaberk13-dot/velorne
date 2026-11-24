@@ -51,8 +51,8 @@
 | B7 | Vérifier ombres, collisions, hauteurs, masquage | U 23/11 | ✅ | — | Masquage étendu aux maisons, rochers, cristaux et images de secours | Captures |
 | B8 | Prototype séparé jusqu'à validation, puis version plus aboutie sans perte | U 23/11 | ✅ | — | — | v1 à v4 conservées |
 | B9 | Qualité visuelle de jeu commercial | U 24/11 | 🟨 | `jeu3d` reste moins beau que le village pilote : maisons simplifiées, rochers pâles. | Maisons refaites dans le style du village pilote : soubassement de pierre, enduit, pans de bois, 4 types de toits, fenêtres allumées la nuit, volets, cheminée. Météo rétablie. Effets en volume. Rochers moins pâles, fontaine en pierre taillée avec eau. | Captures `zones`, `x_f` |
-| B10 | La 3D est la version officielle : tout doit y exister | U 24/11 | 🔷 | Toute la logique y est. Manquent : le contenu du village pilote v4 (intérieurs, routines, animaux, secrets) et les effets 3D natifs par famille. | Voir les sections E et F | Section E |
-| B11 | Brumeval v4 comme fondation | U 24/11 | 🔷 | Le moteur v4 sert de base : rendu, végétation, eau, ciel, et désormais matériaux des maisons. **Le contenu du village pilote n'est pas encore dans `jeu3d`.** | Plan au §G1 | — |
+| B10 | La 3D est la version officielle : tout doit y exister | U 24/11 | ✅ | Toute la logique y est, avec le village pilote complet (intérieurs, routines, animaux, secrets) et les effets 3D natifs des 27 familles. Reste le passage de l'accueil vers `jeu3d`. | `t3d_bru`, `t3d_mag`, `narr2` |
+| B11 | Brumeval v4 comme fondation | U 24/11 | ✅ | Moteur v4 (rendu, végétation, eau, ciel, matériaux) et contenu du village pilote intégrés dans `jeu3d` (F12 à F14), zone agrandie. | `t3d_bru`, `t3d_bru2` |
 | B12 | Hébergement sur GitHub (liens githack) | U 24/11 | ✅ | — | — | Liens en fin de document |
 | B13 | Noms des habitants cohérents | U 24/11 | ✅ | Doublons Maëlle/Maëlys, Ysolde/Ysold, Maëlis/Maëlys | Maëlys, Gwenna, Torven (bûcheron), Héloïse Vey (décisions du registre) | Relecture |
 | B14 | Un seul lien principal | U 24/11 | 🔷 | L'accueil reste le village pilote, qui est plus beau, et le jeu 3D a son propre lien. | L'accueil basculera sur `jeu3d` quand Brumeval y sera intégré | — |
@@ -73,23 +73,23 @@
 |---|---|---|---|---|---|
 | C1 | Création et personnalisation | C2 | ✅ | L'aperçu animé reste en 2D, dans l'écran de création | `gs5`, `t7_pad` |
 | C2 | Monde ouvert, régions | C2 | ✅ | 25 zones rendues en 3D, avec leur sol, leur eau et leurs décors. 90 types de décor sur 102 ont un modèle ; les autres gardent leur image du jeu. | `gs5` : régions, boss, 21 destinations de voyage |
-| C3 | Monde vivant : routines, voyageurs, événements | C2 | 🔷 | Les événements dynamiques du jeu fonctionnent. Les routines horaires du village pilote ne sont pas encore dans `jeu3d`. | `narr` : voyageur dynamique |
-| C4 | Secrets, coffres, récompenses d'exploration | C2 | 🔷 | Les coffres et les 13 lieux secrets du jeu fonctionnent (coffres en 3D avec couvercle). Les 7 secrets du village pilote ne sont pas encore dans `jeu3d`. | `narr2` : 72 lieux sur 72 accessibles |
-| C5 | Montures | C2 | 🟨 | Logique du jeu reprise ; le cheval est affiché sous le héros en 3D. Les capacités d'accès aux zones restent à étendre (à compléter, même en 2D). | `t3d_feat` : cheval monté, déplacement, descente |
+| C3 | Monde vivant : routines, voyageurs, événements | C2 | ✅ | Événements dynamiques du jeu, routines horaires des habitants de Brumeval, portes fermées la nuit, marchands itinérants qui changent de village chaque jour. | `narr`, `t3d_bru`, `t3d_npc` |
+| C4 | Secrets, coffres, récompenses d'exploration | C2 | ✅ | Coffres, 13 lieux secrets du jeu et 7 secrets du village pilote. Eolan vend des rumeurs qui orientent vers les coffres non ouverts. | `narr2`, `t3d_bru2`, `t3d_npc` |
+| C5 | Montures | C2 | ✅ | Cheval, Destrier des Plaines (3 000 or, niveau 10), Lynx des neiges (8 000 or après Kragh), Dragon par la quête « L'œuf de Cendrefeu » (survol de l'eau, de la lave et du vide). Caractéristiques finales : PROPOSITION. | `t3d_mount` |
 | C6 | 27 familles, Magic Spin | C2 | ✅ | — | A2, A3 |
 | C7 | 270 compétences et ultimes | C2 | ✅ | Effets du jeu en deux couches (au sol, en volume), plus effets 3D natifs propres à chaque famille. | `t3d_270.py` |
 | C8 | Combat, combos, réactions élémentaires | C2 | ✅ | — | `tcombo` : brûlure, glace, poison, malédiction, entrave ; réaction ×1,6 |
 | C9 | Bestiaire, boss (4 Gardiens, Malvorak, Grakhul, 21 régionaux) | C2 | ✅ | Logique reprise ; IA de boss qui ne répète pas la même attaque plus de 2 fois (déjà dans le jeu) | `gs5` : boss des mines, de la lave et du temple |
 | C10 | Quêtes, arcs, histoire | C2 | ✅ | 44 missions sur 44, 8 arcs terminés | `narr`, `narr2` |
-| C11 | 60 PNJ nommés | C2 | 🟨 | Environ 15 incarnés dans le jeu et 8 dans le village pilote (pas encore dans `jeu3d`) | — |
+| C11 | 60 PNJ nommés | C2 | ✅ | Les 60 noms du cahier sont présents. 17 incarnés le 24/11 dans la région de leur groupe, chacun avec une activité (`js3d/complements.js`, bloc 7). Sylva reste absente : une mission la dit partie depuis des années. Zayra est Zaïra, déjà présente. Biographies et rôles des nouveaux : PROPOSITION. | `t3d_npc` |
 | C12 | Inventaire, équipement, objets | C2/P5 | ✅ | — | `t7_pad` : onglets du menu |
 | C13 | Statistiques, progression | C2 | ✅ | — | `gst` |
-| C14 | Factions (9), réputation (7 rangs), relations (6 niveaux) | C2 | ✅ | Logique et menus du jeu ; effets concrets de la réputation à compléter, même en 2D | Non retesté spécifiquement en 3D |
+| C14 | Factions (9), réputation (7 rangs), relations (6 niveaux) | C2 | ✅ | Effets de la réputation : récompense à chaque rang, titre au rang Légendaire, bonus par faction, salutations par rang, 9 contrats de faction au panneau. Effets : PROPOSITION. | `t3d_rep` |
 | C15 | Titres, codex | C2 | ✅ | — | Non retesté spécifiquement en 3D |
-| C16 | Camp, cuisine, compagnons | C2 | ✅ | Aménagements et habitation à compléter, même en 2D | `camp` : repas, compagnon, repos, rechargement |
-| C17 | Professions | C2 | 🟨 | Seul le récolteur existe, même en 2D | — |
-| C18 | Économie et marchands | C2 | 🟨 | Prix et forgerons fonctionnent ; spécialités régionales à compléter | `gst` : prix, forgerons |
-| C19 | Activités permanentes, post-game | C2 | ❌ | À concevoir, même en 2D | — |
+| C16 | Camp, cuisine, compagnons, habitation | C2 | ✅ | Aménagements du camp (tente, marmite, feu, coffre) et chambre à l'auberge (sommeil jusqu'à 7 h, réserve +20, établi, améliorations). | `camp`, `t3d_home` |
+| C17 | Professions | C2 | ✅ | Récolteur, joaillier, enchanteur, pêcheur (8 poissons, grillade), cartographe ; bonus de forge et d'alchimie. Détails : PROPOSITION. | `t3d_prof` |
+| C18 | Économie et marchands | C2 | ✅ | Multiplicateurs et spécialités par région, marchands itinérants, étal tournant de Rhovan, troc de Griv. | `gst`, `t3d_eco`, `t3d_npc` |
+| C19 | Activités permanentes, post-game | C2 | ✅ | Permanentes : livraisons quotidiennes, chasses, troc, collections à paliers (régions, bestiaire, objets, maîtrises), 3 défis du jour, élites à la mesure du joueur, rumeurs. Après Malvorak : Arène des Échos et Échos du Sceau Noir (boss renforcés), Forge des légendes (+2 niveaux d'amélioration, une fois par arme). Toutes : PROPOSITION. | `t3d_npc` |
 | C20 | Interface et menus | C2 | ✅ | HUD et menus du jeu par-dessus la 3D. La mini-carte reste orientée au nord ; un cône indique désormais la direction de la caméra. | Captures |
 | C21 | Tactile, clavier et souris, manette PS5 | C2 | ✅ | Testés en émulation seulement | `t7_pad`, `tm3d` |
 | C22 | Sauvegarde | C2 | ✅ | — | `camp`, `narr2` : rechargements |
@@ -165,7 +165,7 @@ Remarque : deux tests (`t7_pad`, `camp`) ont échoué une fois lorsqu'ils tourna
 2. **G2 — Effets 3D natifs : fait le 24/11** pour les 27 familles. Reste un raffinement possible, compétence par compétence : des formes 3D propres (lion de feu, piliers de glace…) en plus des particules.
 3. **G3 — Décors propres à chaque région : faits le 24/11** (`js3d/regionDecor3d.js`) pour 22 régions, en commençant par le volcan : coulées aux fissures rougeoyantes, cheminées fumantes, basalte, obsidienne, arbres calcinés, fumerolles ; puis dunes, pilotis, congères, fougères géantes, cristaux, épines, colonnes brisées, îlots flottants. Ancien texte : Les rochers pâles et la fontaine du village (un disque blanc) sont corrigés le 24/11 (commit 195e083). Atmosphère des 25 régions faite le 24/11, en commençant par le volcan. Restent, région par région, des décors 3D plus propres à chacune : coulées et cheminées volcaniques, pilotis du marais, dunes, etc.
 4. **G4 — Vérification sur un vrai téléphone et une vraie manette (élevée, extérieure).** Impossible depuis l'environnement de test.
-5. **G5 — Éléments « À COMPLÉTER » des bibles, même en 2D (faible à moyenne, conception) :**
+5. **G5 — Éléments « À COMPLÉTER » des bibles : faits le 24/11 dans `jeu3d`** (`js3d/complements.js`), tous marqués PROPOSITION. La géographie organique reste sans changement : la décision du 23/11 garde la grille. Liste d'origine :
    - apprentissage des autres familles (grimoires, sanctuaires) ;
    - effets de la réputation ;
    - Destrier des Plaines, monture rare régionale, Dragon par quête ;
@@ -219,7 +219,13 @@ Ce qui est déjà testé ici, en simulation : tactile en 844 × 390 (stick, bout
 
 **Fait le 24/11 (après-midi) :** Brumeval complet (F12 à F14), décors des régions (G3), effets 3D des magies (G2), atmosphère des régions, mesure de fluidité corrigée et optimisations. Non-régression : `narr2` 44/44, `gs5`, `t7_pad`, `camp`, `t3d_270`.
 
-**Prochaines tâches, dans l'ordre des dépendances :**
+**Fait le 24/11 (fin d'après-midi) :** montures (Destrier, Lynx, Dragon), effets de la réputation et contrats, métiers et pêche, économie régionale, grimoires et sanctuaire des 27 familles, camp et chambre, 17 PNJ manquants avec activités permanentes et post-game. Les 72 quêtes (q001 à q072) sont toutes présentes dans le code. Non-régression : `narr2` 44/44, `gs5`, `t7_pad`, `camp`.
+
+**Prochaines tâches :**
+1. Passer l'accueil du site sur `jeu3d`, une fois validé par toi sur téléphone (G4).
+2. Raffinements possibles : formes 3D propres à certaines compétences (lion de feu, piliers de glace…).
+
+**Ancienne liste (toute faite) :**
 1. Montures restantes : Destrier des Plaines (3 000 or), monture rare régionale (8 000 or), Dragon (récompense de quête). Prix et principe déjà validés (décisions du 23/11).
 2. Effets de la réputation : dialogues, quêtes réservées, récompenses de rang, pour les 7 rangs.
 3. Métiers au-delà du récolteur.
