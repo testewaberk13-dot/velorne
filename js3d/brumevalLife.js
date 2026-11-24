@@ -330,3 +330,6 @@ export function updateBrumevalLife(dt, camYaw) {
   Object.assign(SB, S); // écrit l'état dans la sauvegarde
 }
 export const BRULIFE = { S: () => SB, NPCS, CRIT: () => CRIT, SECRETS, discover: id => discover(id), ready: () => ready, proxies: PROXY };
+
+// journal du jeu : section « Brumeval » (secrets, indices, objets, évolution du village)
+{ const j0 = window.journalHTML; if (typeof j0 === 'function') window.journalHTML = function () { let h = j0(); try { if (ready) h += '<h4>Brumeval — secrets du village</h4>' + bruJournal() + (SB.repair === 2 ? '<p>La maison des Vey est réparée.</p>' : SB.repair === 1 ? '<p>Torven répare la maison des Vey.</p>' : '') + (SB.fete ? '<p>La fête de Brumeval a lieu chaque soir sur la place.</p>' : ''); } catch (e) { } return h; }; }

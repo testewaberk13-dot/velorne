@@ -54,7 +54,7 @@ function masks(x, z) {
   return [g, w];
 }
 // zones remplacées par un décor 3D complet (Brumeval) : hauteur fournie par ce décor ; sol, herbe et décors 2D masqués
-export const HOOK = { height: null, mask: null, keep: null };
+export const HOOK = { height: null, mask: null, keep: null, decor: null };
 export function groundH(x, z) { if (HOOK.height) { const h = HOOK.height(x, z); if (h != null) return h; } const [, w] = masks(x, z); return -0.95 * sstep(0.25, 0.85, w) + (fbm(x * 0.15, z * 0.15) - 0.5) * 0.18 * (1 - w); }
 
 // ---------------- matériaux du sol et de l'eau ----------------
@@ -124,6 +124,7 @@ function buildChunk(i, j) {
     for (const part of parts) { const im = new THREE.InstancedMesh(part.geo, part.mat, L.length); im.castShadow = part.cast !== false; im.receiveShadow = !part.shadowOnly; if (part.shadowOnly) { im.layers.set(1); im.castShadow = true; }
       L.forEach((pr, k) => { const s = kitScale(pr.type) * (0.88 + h2(pr.y, pr.x) * 0.24), x = pr.x / T, z = pr.y / T; dummy.position.set(x, groundH(x, z) - 0.05, z); dummy.rotation.set(0, h2(pr.x * 3, pr.y) * 6.28, 0); dummy.scale.set(s, s, s); dummy.updateMatrix(); im.setMatrixAt(k, dummy.matrix); });
       im.computeBoundingSphere(); group.add(im); } }
+  if (HOOK.decor) try { HOOK.decor(ch, x0, z0, CH, (x, z) => zoneId(Math.floor(x), Math.floor(z))); } catch (e) { console.warn('décor', e); }
   CHUNKS.set(key, ch);
 }
 // décor sans modèle 3D : image du jeu, debout (ou au sol si le décor est plat)

@@ -13,6 +13,7 @@ startBrumevalLife().catch(e => console.warn('brumeval vie', e));
 import { VM } from '../assets/demo/v4/village.js';
 import { updateMagic3D, MAGIC3D, flashLights } from './magic3d.js';
 import { updateRegion, lavaLight } from './regions3d.js';
+import { updateRegionDecor } from './regionDecor3d.js';
 
 const B = B2D; const T = 32; // pixels par mètre
 const m = v => v / T;
@@ -276,7 +277,7 @@ B.frame3d = function () {
   const k = sstep(0.12, 0.6, darkS); let hEff = HOUR;
   if (k > 0 && HOUR >= 4.5 && HOUR < 21) hEff = lerp(HOUR, HOUR >= 12 ? 23 : 1, k);
   DAY.h = hEff;
-  applyDay(px, 0, pz); updateRegion(dt, z, CAM.look, k); updateLights(k); updateWeather(dt, z, darkS);
+  applyDay(px, 0, pz); updateRegion(dt, z, CAM.look, k); updateRegionDecor(dt, CAM.look); updateLights(k); updateWeather(dt, z, darkS);
   const t3 = performance.now(); render3d(); pm('render', t3);
   pm('frame', now);
   // qualité automatique (mesurée en temps réel)
