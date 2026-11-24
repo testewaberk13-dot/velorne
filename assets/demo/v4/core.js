@@ -85,7 +85,7 @@ export const STATE = { pix: true, qual: MOBILE ? 1 : 2, auto: true };
 export const time = { value: 0 };
 export const U = { // uniforms partagés
   uTime: time, uWind: { value: new THREE.Vector2(1, 0.4) },
-  uPS: { value: new THREE.Vector2(0.5, 0.5) }, uPD: { value: 1 }, uRes: { value: new THREE.Vector2(1, 1) }, uOR: { value: 0.1 },
+  uPS: { value: new THREE.Vector2(0.5, 0.5) }, uPD: { value: 1 }, uRes: { value: new THREE.Vector2(1, 1) }, uOR: { value: 0.1 }, uCutSoft: { value: 0 }, uNearF: { value: 0 }, uHV: { value: new THREE.Vector3() },
   uSunDir: { value: new THREE.Vector3(0.5, 0.8, 0.3) }, uCloud: { value: 1 }
 };
 
@@ -185,10 +185,14 @@ export function patch(mat, o = {}) {
     if (o.soft) sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', 'float faceDirection = 1.0; vec3 normal = normalize(vNormal); vec3 nonPerturbedNormal = normal;');
     if (o.trans) sh.fragmentShader = 'uniform vec3 uSunDir;\n' + sh.fragmentShader.replace('#include <dithering_fragment>', `#include <dithering_fragment>
       { vec3 vdir = normalize(vViewPosition); vec3 sdv = normalize((viewMatrix * vec4(uSunDir, 0.0)).xyz); float bl = pow(max(dot(vdir, sdv), 0.0), 3.0); gl_FragColor.rgb += diffuseColor.rgb * bl * ${o.trans.toFixed(2)}; }`);
-    if (o.cut) sh.fragmentShader = 'uniform vec2 uPS; uniform float uPD; uniform vec2 uRes; uniform float uOR;\n' + sh.fragmentShader.replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
+    if (o.cut) sh.fragmentShader = 'uniform vec2 uPS; uniform float uPD; uniform vec2 uRes; uniform float uOR; uniform float uCutSoft; uniform float uNearF; uniform vec3 uHV;\n' + sh.fragmentShader.replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
       { vec2 q = gl_FragCoord.xy / uRes; vec2 d = (q - uPS) * vec2(uRes.x / uRes.y, 1.0); d.y *= 0.8; float r = length(d);
         float dither = mod(floor(gl_FragCoord.x) + floor(gl_FragCoord.y), 2.0);
-        if (gl_FragCoord.z < uPD - 0.0004 && r < uOR) { if (r < uOR * 0.6 || dither < 0.5) discard; }
+        if (uCutSoft > 0.5) { // jeu : tunnel de visibilité entre la caméra et le héros, fondu par trame ordonnée 4×4 (sans anneau)
+          vec2 f = mod(floor(gl_FragCoord.xy), 4.0); float bay = (mod(f.x + f.y * 2.0, 4.0) * 4.0 + mod(f.y, 2.0) * 2.0 + mod(f.x, 2.0)) / 16.0;
+          vec3 pv = -vViewPosition; float hh = dot(uHV, uHV); float tt = dot(pv, uHV) / max(hh, 1e-3);
+          if (tt > 0.0 && tt < 0.97) { float pd = length(pv - uHV * tt); float R = mix(uNearF, uOR, tt); float k = smoothstep(R * 0.55, R, pd); k = max(k, smoothstep(0.955, 0.995, tt)); if (k < bay * 0.92 + 0.04) discard; } }
+        else if (gl_FragCoord.z < uPD - 0.0004 && r < uOR) { if (r < uOR * 0.6 || dither < 0.5) discard; }
         ${o.near === false ? '' : 'float cd = length(vViewPosition); if (cd < 2.2) discard;'} }`);
   };
   return mat;
@@ -327,8 +331,9 @@ export function buildPost() {
   const sc = new THREE.Scene(), cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1); sc.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat));
   Object.assign(POST, { rt, mat, sc, cam });
 }
+export const RES = { pix: [216, 252, 300] }; // hauteurs de rendu du mode Pixel 3D (le jeu les relève, le village pilote garde les siennes)
 export function resize() {
-  const w = innerWidth, h = innerHeight, asp = h / w; let ih = STATE.pix ? [216, 252, 300][STATE.qual] : Math.min(h * devicePixelRatio, [540, 720, 1000][STATE.qual]); if (STATE.pix && asp > 1) ih = Math.round(ih * Math.min(2, asp * 0.8));
+  const w = innerWidth, h = innerHeight, asp = h / w; let ih = STATE.pix ? RES.pix[STATE.qual] : Math.min(h * devicePixelRatio, [540, 720, 1000][STATE.qual]); if (STATE.pix && asp > 1) ih = Math.round(ih * Math.min(2, asp * 0.8));
   const iw = Math.round(ih * w / h); renderer.setPixelRatio(1); renderer.setSize(iw, ih, false); view.style.width = w + 'px'; view.style.height = h + 'px';
   camera.aspect = w / h; camera.updateProjectionMatrix(); view.style.imageRendering = STATE.pix ? 'pixelated' : 'auto';
   if (POST.rt) { POST.rt.setSize(iw, ih); POST.mat.uniforms.uRes.value.set(iw, ih); POST.rt.texture.magFilter = POST.rt.texture.minFilter = STATE.pix ? THREE.NearestFilter : THREE.LinearFilter; }

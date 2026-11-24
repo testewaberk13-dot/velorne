@@ -4,14 +4,14 @@
 //  caméra réglable (angle 24°–69°, rotation, distance), visée immersive, cycle jour/nuit, qualité automatique.
 //  La logique reste entièrement celle du jeu (voir js3d/bridge2d.js).
 // =====================================================================
-import { THREE, scene, camera, renderer, STATE, U, time, DAY, applyDay, buildPost, resize as resize3d, render as render3d, MOBILE, FOGU, POST, COL } from '../assets/demo/v4/core.js';
+import { THREE, scene, camera, renderer, STATE, U, time, DAY, applyDay, buildPost, resize as resize3d, render as render3d, MOBILE, FOGU, POST, COL, RES } from '../assets/demo/v4/core.js';
 import { updateGuide3D, GUIDE3D } from './guide3d.js';
 import { updateWorld, forceBuildAround, groundH } from './world3d.js';
 import { MAP } from './kit3d.js';
 import { BRU, updateBrumeval, brumevalLights, settleNpcs } from './brumeval3d.js';
 import { startBrumevalLife, updateBrumevalLife, drawBubbles, BRULIFE } from './brumevalLife.js';
 startBrumevalLife().catch(e => console.warn('brumeval vie', e));
-import { VM } from '../assets/demo/v4/village.js';
+import { VM, V as VIL, W2L } from '../assets/demo/v4/village.js';
 import { updateMagic3D, MAGIC3D, flashLights } from './magic3d.js';
 import { updateRegion, lavaLight } from './regions3d.js';
 import { updateRegionDecor } from './regionDecor3d.js';
@@ -21,6 +21,7 @@ const m = v => v / T;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, k) => a + (b - a) * k;
 const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 const angLerp = (a, b, k) => { let d = (b - a) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return a + d * k; };
+RES.pix = [288, 352, 420]; // personnages et décor plus fins, toujours en pixel art
 buildPost(); resize3d(); addEventListener('resize', resize3d);
 STATE.pix = true;
 DAY.speed = 24 / 480; // un jour complet en 8 minutes de jeu (comme le village pilote)
@@ -29,9 +30,9 @@ DAY.speed = 24 / 480; // un jour complet en 8 minutes de jeu (comme le village p
 // CAMÉRA OBLIQUE (24/11, direction visuelle « personnages 2D + monde 3D ») : derrière le héros et au-dessus de lui, inclinée
 // vers le terrain (34° par défaut au lieu de 49°), plus proche (10,5 m), regard porté devant le héros pour voir le chemin et
 // l'horizon, et qui se replace doucement derrière lui quand il avance. Les anciens réglages sont migrés une fois (v: 3).
-const PMIN = 18 * Math.PI / 180, PMAX = 69 * Math.PI / 180, DMIN = 6, DMAX = 26, PDEF = 0.46, DDEF = 8.6;
-const C3 = () => { if (!SET.c3d) SET.c3d = {}; const c = SET.c3d; if (c.v !== 3) { c.v = 3; c.pitch = PDEF; c.dist = DDEF; c.follow = true; } if (c.follow == null) c.follow = true; if (c.pitch == null) c.pitch = PDEF; if (c.yaw == null) c.yaw = 0; if (c.dist == null) c.dist = DDEF; if (c.slow == null) c.slow = true; if (c.day == null) c.day = true; if (c.btns == null) c.btns = true; if (c.wx == null) c.wx = true; if (c.stick == null) c.stick = true; return c; };
-camera.fov = 46; camera.updateProjectionMatrix();
+const PMIN = 22 * Math.PI / 180, PMAX = 70 * Math.PI / 180, DMIN = 8, DMAX = 30, PDEF = 0.64, DDEF = 15;
+const C3 = () => { if (!SET.c3d) SET.c3d = {}; const c = SET.c3d; if (c.v !== 4) { c.v = 4; c.pitch = PDEF; c.dist = DDEF; c.follow = false; } if (c.follow == null) c.follow = false; if (c.pitch == null) c.pitch = PDEF; if (c.yaw == null) c.yaw = 0; if (c.dist == null) c.dist = DDEF; if (c.slow == null) c.slow = true; if (c.day == null) c.day = true; if (c.btns == null) c.btns = true; if (c.wx == null) c.wx = true; if (c.stick == null) c.stick = true; return c; };
+camera.fov = 30; camera.updateProjectionMatrix();
 let setDirty = 0; const markSet = () => { setDirty = performance.now(); };
 B.cam3d = {
   rot(d) { CAM.yawT += d; C3().yaw = CAM.yawT; CAM.manualT = performance.now(); markSet(); },
@@ -53,17 +54,49 @@ const pm = (k, t0) => { PROF[k] = PROF[k] * 0.92 + (performance.now() - t0) * 0.
 
 // ---------------- personnages, ennemis, PNJ, butin : panneaux dessinés par les fonctions du jeu ----------------
 const ACT = new Map();
+// ombre de contact douce sous chaque personnage (ancrage au sol, en plus de l'ombre portée du soleil)
+const BLOB_G = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), BLOB_M = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'); const g = x.createRadialGradient(32, 32, 2, 32, 32, 32); g.addColorStop(0, 'rgba(0,0,0,0.55)'); g.addColorStop(0.55, 'rgba(0,0,0,0.25)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); return new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }); })();
+const _lq = new THREE.Quaternion(), _fw = new THREE.Vector3();
 function actor(o, kind) {
   let a = ACT.get(o); if (a) return a;
   const S = kind === 'enemy' && o.def && o.def.boss ? 288 : kind === 'drop' || kind === 'proj' ? 96 : 192;
   const c = document.createElement('canvas'); c.width = c.height = S; const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false;
   const mat = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.4, side: THREE.DoubleSide, emissive: new THREE.Color(0.2, 0.2, 0.22), emissiveMap: tex });
-  // volume du panneau : normale arrondie (gauche/droite, haut/bas) pour que la lumière du soleil modèle le personnage
-  // au lieu de l'éclairer comme une feuille plate ; un liseré de lumière souligne le bord exposé
-  if (kind !== 'proj' && kind !== 'drop') mat.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n { vec2 q = vMapUv - vec2(0.5, 0.42); normal = normalize(vec3(clamp(q.x * 7.0, -0.8, 0.8), clamp(q.y * 2.0, -0.35, 0.45) + 0.12, 1.0)); }'); };
+  // VOLUME DES PERSONNAGES (refonte du 24/11) : le dessin reste du pixel art 2D, mais chaque pixel reçoit une orientation
+  // calculée sur la carte graphique à partir de la silhouette (distance au bord dans 8 directions : le corps est bombé,
+  // les bords tournés vers l'extérieur) et des nuances du dessin (relief fin des vêtements, cheveux, armes). Le soleil, le ciel
+  // et les lumières du jeu éclairent donc un volume, avec un contre-jour sur le bord opposé à la caméra quand le soleil est derrière.
+  if (kind !== 'proj' && kind !== 'drop') {
+    mat.emissive.setRGB(0.1, 0.1, 0.11);
+    mat.userData.tx = { value: 1 / S };
+    mat.onBeforeCompile = sh => {
+      sh.uniforms.uTx = mat.userData.tx;
+      sh.fragmentShader = sh.fragmentShader.replace('#include <map_pars_fragment>', '#include <map_pars_fragment>\nuniform float uTx; float gEdge = 0.0; vec2 gPQ = vec2(0.0);\nfloat lum3(vec2 u){ vec4 t = texture2D(map, u); return t.a < 0.4 ? 0.0 : dot(t.rgb, vec3(0.3, 0.59, 0.11)); }')
+        .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+        {
+          vec2 pq = vec2(0.0); float ed = 0.0;
+          for (int i = 0; i < 8; i++) { float an = float(i) * 0.7853982; vec2 d = vec2(cos(an), sin(an));
+            for (int j = 0; j < 3; j++) { float r = j == 0 ? 1.5 : (j == 1 ? 3.0 : 5.5); float w = j == 0 ? 1.0 : (j == 1 ? 0.55 : 0.25);
+              if (texture2D(map, vMapUv + d * r * uTx).a < 0.4) { pq += d * w; ed = max(ed, w); } } }
+          pq *= 0.58;
+          vec2 bm = vec2(lum3(vMapUv - vec2(uTx, 0.0)) - lum3(vMapUv + vec2(uTx, 0.0)), lum3(vMapUv - vec2(0.0, uTx)) - lum3(vMapUv + vec2(0.0, uTx)));
+          gEdge = ed; gPQ = pq;
+          normal = normalize(vec3(pq + bm * 0.9 + vec2(0.0, 0.12), 1.0));
+        }`)
+        .replace('#include <opaque_fragment>', `
+        #if NUM_DIR_LIGHTS > 0
+        { vec3 ld = directionalLights[0].direction; float rim = gEdge * max(0.0, dot(normalize(gPQ + 1e-4), normalize(ld.xy + 1e-4))) * (0.25 + 0.75 * clamp(-ld.z + 0.3, 0.0, 1.0));
+          outgoingLight += directionalLights[0].color * diffuseColor.rgb * rim * 0.55; }
+        #endif
+        outgoingLight *= 1.0 - 0.14 * gEdge * (1.0 - max(0.0, normal.y)); // bords et dessous légèrement dans l'ombre : le corps paraît rond
+        #include <opaque_fragment>`);
+    };
+    mat.customProgramCacheKey = () => 'actorVol3';
+  }
   const foot = Math.round(S * 0.8); const g = new THREE.PlaneGeometry(m(S), m(S)); g.translate(0, m(S) / 2 - m(S - foot), 0);
   const mesh = new THREE.Mesh(g, mat); mesh.castShadow = kind !== 'proj' && kind !== 'drop'; mesh.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: tex, alphaTest: 0.4 }); scene.add(mesh);
-  a = { o, kind, c, tex, mesh, seen: 0, sig: '', n: 0 }; ACT.set(o, a); return a;
+  let blob = null; if (kind === 'player' || kind === 'npc' || kind === 'enemy') { blob = new THREE.Mesh(BLOB_G, BLOB_M); blob.renderOrder = 1; scene.add(blob); }
+  a = { o, kind, c, tex, mesh, blob, seen: 0, sig: '', n: 0, ph: Math.random() * 6.28, lx: o.x, ly: o.y, lean: 0, spd: 0 }; ACT.set(o, a); return a;
 }
 // signature d'image : on ne redessine un panneau que si ce qu'il montre a changé (PNJ, butin) ou à cadence réduite au loin
 function sigOf(o, kind, d2) {
@@ -72,7 +105,7 @@ function sigOf(o, kind, d2) {
   if (kind === 'enemy' && d2 > 110) return Math.floor(G.t * 15) + ''; // au-delà d'environ 10 m : 15 images par seconde suffisent
   return null; // toujours redessiné
 }
-let frameId = 0;
+let frameId = 0, LDT = 1 / 60;
 const yawQ = new THREE.Quaternion(), _up = new THREE.Vector3(0, 1, 0);
 function updateActors(px, pz) {
   frameId++; const near = o => Math.abs(m(o.x) - px) < 26 && Math.abs(m(o.y) - pz) < 22;
@@ -82,11 +115,22 @@ function updateActors(px, pz) {
     const a = actor(o, kind); a.seen = frameId; const ox = m(o.x), oz = m(o.y), d2 = (ox - px) ** 2 + (oz - pz) ** 2;
     const s = sigOf(o, kind, d2);
     if (s === null || s !== a.sig) { B.drawActor(a.c, kind, o); a.tex.needsUpdate = true; a.sig = s === null ? '' : s; n++; }
-    a.mesh.position.set(ox, groundH(ox, oz) + (kind === 'proj' ? 0.6 : 0), oz); a.mesh.quaternion.copy(yawQ); a.mesh.visible = true;
+    const gy = groundH(ox, oz);
+    if (a.blob) {
+      // mouvement : vitesse lissée, rebond de pas, respiration au repos, légère inclinaison dans le sens de la marche (vu de la caméra)
+      const ddx = o.x - a.lx, ddy = o.y - a.ly; a.lx = o.x; a.ly = o.y; const v = Math.min(8, Math.hypot(ddx, ddy) / T / Math.max(1e-3, LDT)); a.spd += (v - a.spd) * Math.min(1, LDT * 10);
+      const mv = sstep(0.3, 1.5, a.spd), t = G.t || 0; a.ph += LDT * (2.2 + a.spd * 2.2);
+      const scrX = (ddx / T) * Math.cos(CAM.yaw) - (ddy / T) * Math.sin(CAM.yaw); a.lean += ((Math.abs(scrX) > 1e-4 ? -Math.sign(scrX) * 0.05 * mv : 0) - a.lean) * Math.min(1, LDT * 8);
+      const bob = Math.abs(Math.sin(a.ph * 1.0)) * 0.05 * mv, breath = (1 - mv) * Math.sin(t * 2.3 + a.ph * 0.0) * 0.012;
+      a.mesh.position.set(ox, gy + bob, oz); a.mesh.scale.set(1 - breath * 0.5, 1 + breath, 1);
+      _lq.setFromAxisAngle(_fw.set(0, 0, 1), a.lean); a.mesh.quaternion.copy(yawQ).multiply(_lq);
+      const big = kind === 'enemy' && o.def && o.def.boss ? 2.2 : 1; a.blob.position.set(ox, gy + 0.03, oz); a.blob.scale.set(1.15 * big * (1 - bob * 2), 1, 0.7 * big * (1 - bob * 2)); a.blob.visible = o.state !== 'dead' && !o.dead;
+    } else { a.mesh.position.set(ox, gy + (kind === 'proj' ? 0.6 : 0), oz); a.mesh.quaternion.copy(yawQ); }
+    a.mesh.visible = true;
   }
   PROF.nAct = n;
   for (const g of G.npcs) if (g.glow3d && near(g) && Math.random() < 0.5) MAGIC3D.emit('amb', m(g.x) + (Math.random() - 0.5) * 0.4, groundH(m(g.x), m(g.y)) + 0.3, m(g.y) + (Math.random() - 0.5) * 0.4, { S: { g: -1.2, sp: 0.4, sz: 0.12, life: 1.2, col2: '#ffe08a', flick: 1 }, col: g.glow3d });
-  for (const [o, a] of ACT) if (a.seen !== frameId) { scene.remove(a.mesh); a.tex.dispose(); a.mesh.material.dispose(); a.mesh.geometry.dispose(); ACT.delete(o); }
+  for (const [o, a] of ACT) if (a.seen !== frameId) { if (a.blob) scene.remove(a.blob); scene.remove(a.mesh); a.tex.dispose(); a.mesh.material.dispose(); a.mesh.geometry.dispose(); ACT.delete(o); }
 }
 
 // ---------------- effets ----------------
@@ -238,8 +282,11 @@ function camLimit(lx, ly, lz, yaw, pitch, dist) {
   if (BRU.inWorld(lx, lz) && !BRU.insideNow()) {
     const sd = (x, z, s) => { const vx = s.bx - s.ax, vz = s.bz - s.az, L = vx * vx + vz * vz || 1e-6; let k = ((x - s.ax) * vx + (z - s.az) * vz) / L; k = Math.max(0, Math.min(1, k)); return Math.hypot(x - s.ax - vx * k, z - s.az - vz * k); };
     const walls = COL.segs.filter(s => !s.off && (s.kind === 'mur' || s.kind === 'paroi'));
-    for (let t = 1.4; t < best; t += 0.35) { const x = lx + dx * t, y = ly + dy * t, z = lz + dz * t; if (y - groundH(x, z) > 6.2) break; const X = x - BRU.OX, Z = z - BRU.OZ;
-      if (walls.some(s => Math.abs((s.ax + s.bx) / 2 - X) < 9 && Math.abs((s.az + s.bz) / 2 - Z) < 9 && sd(X, Z, s) < 0.32)) { best = Math.max(3.2, t - 0.5); break; } }
+    for (let t = 1.4; t < best; t += 0.35) { const x = lx + dx * t, y = ly + dy * t, z = lz + dz * t; const X = x - BRU.OX, Z = z - BRU.OZ;
+      // volume complet des maisons (murs + toit) : la caméra haute ne se retrouve jamais dans un bâtiment
+      if (VIL.buildings.some(b => { if (Math.abs(b.x - X) > 12 || Math.abs(b.z - Z) > 12) return false; const [u, v] = W2L(b, X, Z); return Math.abs(u) < b.w / 2 + 0.6 && Math.abs(v) < b.d / 2 + 0.6 && y < (b.fy || 0) + b.h + Math.min(b.w, b.d) * 0.62 + 0.6; })) { best = Math.max(9, t - 0.6); break; } // jamais plus près que 9 m : le reste du mur est fondu
+      if (y - groundH(x, z) > 6.2) continue;
+      if (walls.some(s => Math.abs((s.ax + s.bx) / 2 - X) < 9 && Math.abs((s.az + s.bz) / 2 - Z) < 9 && sd(X, Z, s) < 0.32)) { best = Math.max(9, t - 0.5); break; } }
   }
   return best;
 }
@@ -303,31 +350,44 @@ B.frame3d = function () {
   if (setDirty && now - setDirty > 800) { setDirty = 0; saveSet(); }
   const t0 = performance.now();
   updateWorld(px - Math.sin(CAM.yaw) * 12, pz - Math.cos(CAM.yaw) * 12, time.value); updateBrumeval(dt, P, CAM.look); updateBrumevalLife(dt, CAM.yaw); if ((frameId & 31) === 0) settleNpcs(); pm('world', t0);
-  const t1 = performance.now(); updateActors(px, pz); pm('actors', t1);
+  const t1 = performance.now(); LDT = Math.max(1e-3, Math.min(0.1, dt)); updateActors(px, pz); pm('actors', t1);
   updateAim(dt, rdt);
-  // caméra qui suit le joueur (secousses du jeu reprises), en mode portrait plus éloignée
-  // elle se replace doucement derrière le héros quand il avance (pas quand il revient vers la caméra, ni pendant la visée)
-  { const vx = (px - (CAM.ppx ?? px)) / Math.max(1e-3, dt), vz = (pz - (CAM.ppz ?? pz)) / Math.max(1e-3, dt); CAM.ppx = px; CAM.ppz = pz; const sp = Math.hypot(vx, vz);
-    if (c.follow !== false && sp > 1.2 && sp < 40 && CAM.aimK < 0.1 && !openUI() && !BRU.insideNow() && now - (CAM.manualT || 0) > 2500) {
-      const a = Math.atan2(vz, vx), want = Math.atan2(-Math.cos(a), -Math.sin(a)); let d = (want - CAM.yawT) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2;
-      const rate = 1.5 * Math.max(0, 1 - Math.abs(d) / 1.9) * Math.min(1, sp / 4); CAM.yawT += Math.sign(d) * Math.min(Math.abs(d), rate * dt); } }
-  CAM.yaw = angLerp(CAM.yaw, CAM.yawT, Math.min(1, dt * 7)); B.yaw = CAM.yaw;
-  const inB = !!BRU.insideNow(); CAM.pitch = lerp(CAM.pitch, inB ? Math.max(CAM.pitchT, 0.95) : CAM.pitchT, Math.min(1, dt * 5));
+  // ---------------- caméra (24/11, refonte) ----------------
+  // Style « HD-2D » : focale longue (30°), caméra haute et éloignée, donc pas de déformation des premiers plans, et le décor
+  // garde sa profondeur sans boucher la vue. Tous les mouvements passent par des ressorts amortis (aucun à-coup, aucune
+  // oscillation, indépendants du nombre d'images par seconde). Le regard se porte doucement dans le sens de la marche.
+  // La caméra ne tourne plus d'elle-même (option « derrière le héros » toujours disponible), ne descend jamais sous le relief
+  // et se rapproche devant les maisons.
+  const SD = CAM.sd || (CAM.sd = { lx: 0, lz: 0, vx: 0, vz: 0, ax: 0, az: 0, avx: 0, avz: 0, py: null, pyv: 0, yv: 0, pv: 0, dv: 0, init: false });
+  const damp = (x, t, v, k, dt) => { const w = 2 / k, e = w * dt, f = 1 / (1 + e + 0.48 * e * e + 0.235 * e * e * e), ch = x - t, tmp = (v + w * ch) * dt; const nv = (v - w * tmp) * f; return [t + (ch + tmp) * f, nv]; };
+  const vx = (px - (CAM.ppx ?? px)) / Math.max(1e-3, dt), vz = (pz - (CAM.ppz ?? pz)) / Math.max(1e-3, dt); CAM.ppx = px; CAM.ppz = pz; const sp = Math.hypot(vx, vz);
+  if (c.follow === true && sp > 1.2 && sp < 40 && CAM.aimK < 0.1 && !openUI() && !BRU.insideNow() && now - (CAM.manualT || 0) > 2500) {
+    const a = Math.atan2(vz, vx), want = Math.atan2(-Math.cos(a), -Math.sin(a)); let d = (want - CAM.yawT) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2;
+    const rate = 0.9 * Math.max(0, 1 - Math.abs(d) / 1.9) * Math.min(1, sp / 4); CAM.yawT += Math.sign(d) * Math.min(Math.abs(d), rate * dt); }
+  { let d = (CAM.yawT - CAM.yaw) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; const r = damp(0, d, SD.yv, 0.16, dt); CAM.yaw += d - r[0]; SD.yv = r[1]; } B.yaw = CAM.yaw;
+  const inB = !!BRU.insideNow();
+  { const r = damp(CAM.pitch, inB ? Math.max(CAM.pitchT, 0.95) : CAM.pitchT, SD.pv, 0.2, dt); CAM.pitch = r[0]; SD.pv = r[1]; }
   const portrait = innerHeight > innerWidth ? 1.45 : 1;
-  CAM.dist = lerp(CAM.dist, (inB ? Math.min(CAM.distT, 10) : CAM.distT) * portrait * (1 - 0.2 * CAM.aimK), Math.min(1, dt * 4));
+  { const r = damp(CAM.dist, (inB ? Math.min(CAM.distT, 11) : CAM.distT) * portrait * (1 - 0.18 * CAM.aimK), SD.dv, 0.28, dt); CAM.dist = r[0]; SD.dv = r[1]; }
   const sh = G.shake && SET.shake !== false ? G.shake * 0.02 : 0, py = groundH(px, pz);
-  // regard porté devant le héros (dans le sens de la caméra) : on voit le chemin et le décor qui s'étend vers le haut de l'écran
-  const ahead = inB ? 0 : 2.6 * (1 - CAM.aimK) * sstep(0.5, 0.95, 1.25 - CAM.pitch), fwx = -Math.sin(CAM.yaw), fwz = -Math.cos(CAM.yaw);
-  const off = 2.2 * CAM.aimK; _p.set(px + Math.cos(CAM.aimA) * off + fwx * ahead, py + 0.8 + (inB ? 0 : 0.35), pz + Math.sin(CAM.aimA) * off + fwz * ahead);
-  CAM.look.lerp(_p, Math.min(1, dt * 8));
-  const lim = camLimit(CAM.look.x, CAM.look.y, CAM.look.z, CAM.yaw, CAM.pitch, CAM.dist); CAM.lim = lerp(CAM.lim || lim, lim, Math.min(1, dt * (lim < (CAM.lim || lim) ? 14 : 2.5)));
+  // regard porté dans le sens de la marche (vitesse lissée), plafonné, nul en intérieur et pendant la visée
+  const tAx = inB || sp > 40 ? 0 : clamp(vx * 0.32, -2.2, 2.2) * (1 - CAM.aimK), tAz = inB || sp > 40 ? 0 : clamp(vz * 0.32, -2.2, 2.2) * (1 - CAM.aimK);
+  { let r = damp(SD.ax, tAx, SD.avx, 0.55, dt); SD.ax = r[0]; SD.avx = r[1]; r = damp(SD.az, tAz, SD.avz, 0.55, dt); SD.az = r[0]; SD.avz = r[1]; }
+  const off = 2.2 * CAM.aimK, tx = px + Math.cos(CAM.aimA) * off + SD.ax, tz = pz + Math.sin(CAM.aimA) * off + SD.az;
+  if (!SD.init || Math.hypot(tx - SD.lx, tz - SD.lz) > 25) { SD.lx = tx; SD.lz = tz; SD.vx = SD.vz = 0; SD.py = py; SD.init = true; } // téléportation : pas de long travelling
+  { let r = damp(SD.lx, tx, SD.vx, 0.12, dt); SD.lx = r[0]; SD.vx = r[1]; r = damp(SD.lz, tz, SD.vz, 0.12, dt); SD.lz = r[0]; SD.vz = r[1]; r = damp(SD.py, py, SD.pyv, 0.3, dt); SD.py = r[0]; SD.pyv = r[1]; }
+  CAM.look.set(SD.lx, SD.py + 0.9, SD.lz);
+  const lim = camLimit(CAM.look.x, CAM.look.y, CAM.look.z, CAM.yaw, CAM.pitch, CAM.dist); CAM.lim = lerp(CAM.lim || lim, lim, Math.min(1, dt * (lim < (CAM.lim || lim) ? 10 : 2)));
   const cd = Math.min(CAM.dist, CAM.lim), hd = Math.cos(CAM.pitch) * cd;
-  camera.position.set(CAM.look.x + Math.sin(CAM.yaw) * hd + (Math.random() - 0.5) * sh, CAM.look.y + Math.sin(CAM.pitch) * cd, CAM.look.z + Math.cos(CAM.yaw) * hd + (Math.random() - 0.5) * sh); camera.lookAt(CAM.look);
+  let cx = CAM.look.x + Math.sin(CAM.yaw) * hd, cz = CAM.look.z + Math.cos(CAM.yaw) * hd, cy = CAM.look.y + Math.sin(CAM.pitch) * cd;
+  cy = Math.max(cy, groundH(cx, cz) + 1.6); // jamais sous une colline
+  const shx = sh ? (Math.sin(now * 0.09) + Math.sin(now * 0.053)) * 0.5 * sh : 0, shy = sh ? Math.sin(now * 0.071) * 0.5 * sh : 0;
+  camera.position.set(cx + shx, cy + shy, cz); camera.lookAt(CAM.look);
   camera.updateMatrixWorld();
   mouseToWorld(py);
   const t2 = performance.now(); updateEffects(); updateMagic3D(G.paused ? 0 : dt * (G.slowT > 0 ? G.slowF : 1)); pm('fx', t2);
   // découpe des arbres devant le héros
-  _p.set(px, py + 1.0, pz).project(camera); U.uPS.value.set((_p.x + 1) / 2, (_p.y + 1) / 2); U.uPD.value = _p.z * 0.5 + 0.5; U.uOR.value = 0.12 * 15 / cd * (1 + 0.6 * sstep(1.0, 0.55, CAM.pitch));
+  _p.set(px, py + 1.0, pz).project(camera); U.uPS.value.set((_p.x + 1) / 2, (_p.y + 1) / 2); U.uPD.value = _p.z * 0.5 + 0.5; U.uCutSoft.value = 1; U.uOR.value = 1.5; U.uNearF.value = 4.2; U.uHV.value.set(px, py + 0.9, pz).applyMatrix4(camera.matrixWorldInverse); // tunnel : 4,2 m de rayon côté caméra, 1,5 m au héros // premiers plans proches de la caméra fondus
   // heure : cycle jour/nuit continu (sauvegardé avec la partie) ; les zones sombres du jeu (grottes, ombres, donjons) assombrissent la lumière
   if (c.day && !G.paused && !G.dlg && !openUI()) HOUR = (HOUR + dt * DAY.speed) % 24;
   if (now - hourSave > 1000) { hourSave = now; if (G.flags) G.flags.h3d = Math.round(HOUR * 100) / 100; }
@@ -337,8 +397,7 @@ B.frame3d = function () {
   DAY.h = hEff;
   applyDay(px, 0, pz); updateRegion(dt, z, CAM.look, k); updateRegionDecor(dt, CAM.look); updateLights(k); updateWeather(dt, z, darkS);
   // profondeur : brume minimale qui fond l'horizon chargé, flou léger de l'arrière-plan (mise au point sur le héros)
-  { const k = sstep(1.1, 0.5, CAM.pitch); if (scene.fog && scene.fog.density != null) { scene.fog.density = Math.max(scene.fog.density, 0.024 * k); FOGU.d.value = scene.fog.density; }
-    if (POST.mat && POST.mat.uniforms.uDof) { POST.mat.uniforms.uDof.value = c.dof === false ? 0 : k; POST.mat.uniforms.uFocus.value = cd; } }
+  if (POST.mat && POST.mat.uniforms.uDof) { POST.mat.uniforms.uDof.value = c.dof === false ? 0 : 0.55; POST.mat.uniforms.uFocus.value = cd + 8; }
   updateGuide3D(dt, P, px, pz);
   const t3 = performance.now(); render3d(); pm('render', t3);
   pm('frame', now);
