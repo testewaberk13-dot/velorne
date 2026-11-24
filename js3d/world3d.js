@@ -24,7 +24,7 @@ const BIOME = {
   desert: P('#d8b878', '#e4c88a', '#c89a5a', '#ecd8a8', '#b08a5a', 0.05, '#f0d890'),
   neige: P('#e8eef4', '#d8e4ee', '#9aa4ae', '#f4f8fc', '#9aa8b4', 0.0, '#ffffff'),
   marais: P('#4a5a32', '#5a6a3a', '#4a3e2a', '#7a7258', '#5a5a52', 0.9, '#a8b890'),
-  volcan: P('#5a4238', '#6a4a3a', '#3a2a24', '#7a4a30', '#3e3432', 0.0, '#ffffff'),
+  volcan: P('#6e4a3a', '#7e5440', '#4a3028', '#9a5a34', '#4e3a34', 0.0, '#ffffff'),
   citadelle: P('#3a3046', '#4a3a52', '#2a2232', '#5a5064', '#3a3444', 0.15, '#b8a8d0'),
   cote: P('#7aa84a', '#8cb456', '#b8a070', '#e8d8a8', '#8a8678', 0.8, '#f0f0c8'),
   plaines: P('#a8b450', '#c4c060', '#a8885a', '#d8c890', '#8a8270', 1.1, '#fff0a0'),
@@ -39,7 +39,7 @@ const BIOME = {
   aether: P('#8ac87a', '#a8d88a', '#c8c0a0', '#f0ecd8', '#b8b8c8', 0.9, '#ffffff'),
   corrompues: P('#3a2a3e', '#4a3248', '#2a1e2e', '#5a4a5a', '#3a3040', 0.2, '#b090c0'),
   mines: P('#4a4640', '#56504a', '#3a3430', '#6a625a', '#5a5450', 0.0, '#ffffff'),
-  lave: P('#4a3430', '#5a3a30', '#2e2220', '#7a4028', '#3a2e2c', 0.0, '#ffffff'),
+  lave: P('#5e3e34', '#6e4636', '#3e2a24', '#8e4a2c', '#4a3630', 0.0, '#ffffff'),
   temple: P('#6a6a50', '#7a7a5a', '#6a5e48', '#b0a888', '#86826e', 0.3, '#e0e0c0')
 };
 const _ca = new THREE.Color(), _cb = new THREE.Color();

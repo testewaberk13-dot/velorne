@@ -8,6 +8,8 @@ import { THREE, scene, camera, renderer, STATE, U, time, DAY, applyDay, buildPos
 import { updateWorld, forceBuildAround, groundH } from './world3d.js';
 import { MAP } from './kit3d.js';
 import { VM } from '../assets/demo/v4/village.js';
+import { updateMagic3D, MAGIC3D } from './magic3d.js';
+import { updateRegion } from './regions3d.js';
 
 const B = B2D; const T = 32; // pixels par mètre
 const m = v => v / T;
@@ -79,7 +81,10 @@ function updateActors(px, pz) {
 // tournée vers la caméra, pour que les effets aient la même présence que les personnages.
 const GW = 1280, GS = MOBILE ? 0.4 : 0.5; // sol : carré de 40 m autour du joueur
 const AW = 1024, AH = 900, AS = MOBILE ? 0.45 : 0.55, AFY = 0.62; // volume : le joueur est à 62 % de la hauteur
+// bords des couches d'effets fondus (les voiles plein écran du jeu ne laissent plus de rectangle visible)
+const EDGE = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'); const g = x.createRadialGradient(64, 64, 30, 64, 64, 64); g.addColorStop(0, '#fff'); g.addColorStop(1, '#000'); x.fillStyle = g; x.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c); })();
 function fxLayer(w, h, s, mat) {
+  mat.alphaMap = EDGE;
   const c = document.createElement('canvas'); c.width = Math.round(w * s); c.height = Math.round(h * s);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = THREE.NearestFilter; t.minFilter = THREE.LinearFilter; t.generateMipmaps = false;
   mat.map = t; return { c, t, empty: false };
@@ -251,7 +256,7 @@ B.frame3d = function () {
   camera.position.set(CAM.look.x + Math.sin(CAM.yaw) * hd + (Math.random() - 0.5) * sh, CAM.look.y + Math.sin(CAM.pitch) * cd, CAM.look.z + Math.cos(CAM.yaw) * hd + (Math.random() - 0.5) * sh); camera.lookAt(CAM.look);
   camera.updateMatrixWorld();
   mouseToWorld(py);
-  const t2 = performance.now(); updateEffects(); pm('fx', t2);
+  const t2 = performance.now(); updateEffects(); updateMagic3D(G.paused ? 0 : dt * (G.slowT > 0 ? G.slowF : 1)); pm('fx', t2);
   // découpe des arbres devant le héros
   _p.set(px, py + 1.0, pz).project(camera); U.uPS.value.set((_p.x + 1) / 2, (_p.y + 1) / 2); U.uPD.value = _p.z * 0.5 + 0.5; U.uOR.value = 0.12 * 15 / cd;
   // heure : cycle jour/nuit continu (sauvegardé avec la partie) ; les zones sombres du jeu (grottes, ombres, donjons) assombrissent la lumière
@@ -261,7 +266,7 @@ B.frame3d = function () {
   const k = sstep(0.12, 0.6, darkS); let hEff = HOUR;
   if (k > 0 && HOUR >= 4.5 && HOUR < 21) hEff = lerp(HOUR, HOUR >= 12 ? 23 : 1, k);
   DAY.h = hEff;
-  applyDay(px, 0, pz); updateLights(k); updateWeather(dt, z, darkS);
+  applyDay(px, 0, pz); updateRegion(dt, z, CAM.look, k); updateLights(k); updateWeather(dt, z, darkS);
   const t3 = performance.now(); render3d(); pm('render', t3);
   pm('frame', now);
   // qualité automatique (mesurée en temps réel)
@@ -271,4 +276,4 @@ B.frame3d = function () {
   if (info) info.textContent = 'Vélorne 3D · ' + (z ? z.name : '') + ' · ' + String(Math.floor(HOUR)).padStart(2, '0') + ' h ' + String(Math.floor(HOUR % 1 * 60)).padStart(2, '0');
 };
 B.on = true;
-window.V3D = { THREE, scene, camera, renderer, CAM, ACT, PROF, STATE, DAY, hour: () => HOUR, setHour: h => { HOUR = h; } };
+window.V3D = { MAGIC3D, THREE, scene, camera, renderer, CAM, ACT, PROF, STATE, DAY, hour: () => HOUR, setHour: h => { HOUR = h; } };
