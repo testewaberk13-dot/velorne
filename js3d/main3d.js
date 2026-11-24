@@ -30,7 +30,7 @@ DAY.speed = 24 / 480; // un jour complet en 8 minutes de jeu (comme le village p
 // vers le terrain (34° par défaut au lieu de 49°), plus proche (10,5 m), regard porté devant le héros pour voir le chemin et
 // l'horizon, et qui se replace doucement derrière lui quand il avance. Les anciens réglages sont migrés une fois (v: 3).
 const PMIN = 18 * Math.PI / 180, PMAX = 69 * Math.PI / 180, DMIN = 6, DMAX = 26, PDEF = 0.46, DDEF = 8.6;
-const C3 = () => { if (!SET.c3d) SET.c3d = {}; const c = SET.c3d; if (c.v !== 3) { c.v = 3; c.pitch = PDEF; c.dist = DDEF; c.follow = true; } if (c.follow == null) c.follow = true; if (c.pitch == null) c.pitch = PDEF; if (c.yaw == null) c.yaw = 0; if (c.dist == null) c.dist = DDEF; if (c.slow == null) c.slow = true; if (c.day == null) c.day = true; if (c.btns == null) c.btns = true; if (c.wx == null) c.wx = true; return c; };
+const C3 = () => { if (!SET.c3d) SET.c3d = {}; const c = SET.c3d; if (c.v !== 3) { c.v = 3; c.pitch = PDEF; c.dist = DDEF; c.follow = true; } if (c.follow == null) c.follow = true; if (c.pitch == null) c.pitch = PDEF; if (c.yaw == null) c.yaw = 0; if (c.dist == null) c.dist = DDEF; if (c.slow == null) c.slow = true; if (c.day == null) c.day = true; if (c.btns == null) c.btns = true; if (c.wx == null) c.wx = true; if (c.stick == null) c.stick = true; return c; };
 camera.fov = 46; camera.updateProjectionMatrix();
 let setDirty = 0; const markSet = () => { setDirty = performance.now(); };
 B.cam3d = {
@@ -181,7 +181,41 @@ function mouseToWorld(py) {
 // boutons de caméra à l'écran (tactile et souris)
 const cbar = document.getElementById('cam3d');
 if (cbar) cbar.addEventListener('pointerdown', e => { const b = e.target.closest('button'); if (!b) return; e.preventDefault(); e.stopPropagation(); const k = b.dataset.c;
-  if (k === 'l') B.cam3d.rot(-Math.PI / 4); if (k === 'r') B.cam3d.rot(Math.PI / 4); if (k === 'u') B.cam3d.tilt(0.1); if (k === 'd') B.cam3d.tilt(-0.1); });
+  if (k === 'l') B.cam3d.rot(-Math.PI / 4); if (k === 'r') B.cam3d.rot(Math.PI / 4); if (k === 'u') B.cam3d.tilt(0.1); if (k === 'd') B.cam3d.tilt(-0.1); if (k === 'zi') B.cam3d.zoom(-1.5); if (k === 'zo') B.cam3d.zoom(1.5); if (k === 'c') B.cam3d.recenter(); });
+// ---------------- double joystick tactile (directive du 24/11) ----------------
+// Stick gauche : déplacement (jeu d'origine). Stick droit : toucher n'importe où dans la moitié droite, hors bouton, puis glisser :
+// rotation libre à 360° (horizontal) et inclinaison (vertical), vitesse proportionnelle à la poussée, comme le stick de caméra du
+// village pilote mais en joystick. Deux doigts écartés ou rapprochés dans la moitié droite : zoom. Boutons + − ◎ (recentrer).
+const CS = { on: false, id: null, ox: 0, oy: 0, x: 0, y: 0, pinch: null };
+const csBase = document.createElement('div'); csBase.id = 'camstick'; const csKnob = document.createElement('div'); csBase.appendChild(csKnob); document.body.appendChild(csBase);
+B.cam3d.zoom = d => { CAM.distT = clamp(CAM.distT + d, DMIN, DMAX); C3().dist = CAM.distT; markSet(); };
+B.cam3d.recenter = () => { const P = G.player; if (!P) return; const v = DIRV[P.dir] || [0, 1], a = Math.atan2(v[1], v[0]), want = Math.atan2(-Math.cos(a), -Math.sin(a));
+  let d = (want - CAM.yawT) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; CAM.yawT += d; CAM.pitchT = PDEF; CAM.distT = DDEF; const c = C3(); c.yaw = CAM.yawT; c.pitch = PDEF; c.dist = DDEF; CAM.manualT = 0; markSet(); };
+B.CAMSTICK = CS;
+{ const tb = document.getElementById('touch'), isBtn = t => { const el = document.elementFromPoint(t.clientX, t.clientY); return !!(el && el.closest && el.closest('.tbtn,#cam3d')); };
+  const freeRight = e => [...e.touches].filter(t => t.clientX >= innerWidth * 0.5 && !isBtn(t) && !(TOUCH.stick.on && t.identifier === TOUCH.stick.id));
+  if (tb) {
+    tb.addEventListener('touchstart', e => { if (G.mode !== 'play' || TOUCH.edit || C3().stick === false) return;
+      const fr = freeRight(e);
+      if (fr.length >= 2) { CS.on = false; csBase.style.display = 'none'; CS.pinch = { a: fr[0].identifier, b: fr[1].identifier, d: Math.hypot(fr[0].clientX - fr[1].clientX, fr[0].clientY - fr[1].clientY), d0: CAM.distT }; return; }
+      for (const t of e.changedTouches) if (!CS.on && t.clientX >= innerWidth * 0.5 && !isBtn(t)) {
+        Object.assign(CS, { on: true, id: t.identifier, ox: t.clientX, oy: t.clientY, x: 0, y: 0 }); csBase.style.display = 'block'; csBase.style.left = (t.clientX - 50) + 'px'; csBase.style.top = (t.clientY - 50) + 'px'; csKnob.style.transform = 'translate(0px,0px)'; } }, { passive: true });
+    tb.addEventListener('touchmove', e => {
+      if (CS.pinch) { const A = [...e.touches].find(t => t.identifier === CS.pinch.a), Bt = [...e.touches].find(t => t.identifier === CS.pinch.b);
+        if (A && Bt) { const d = Math.hypot(A.clientX - Bt.clientX, A.clientY - Bt.clientY); CAM.distT = clamp(CS.pinch.d0 * CS.pinch.d / Math.max(20, d), DMIN, DMAX); C3().dist = CAM.distT; markSet(); } return; }
+      for (const t of e.changedTouches) if (CS.on && t.identifier === CS.id) { let dx = t.clientX - CS.ox, dy = t.clientY - CS.oy; const mm = Math.hypot(dx, dy), R = 44;
+        if (mm > R) { dx *= R / mm; dy *= R / mm; } CS.x = mm < 5 ? 0 : dx / R; CS.y = mm < 5 ? 0 : dy / R; csKnob.style.transform = `translate(${dx}px,${dy}px)`; } }, { passive: true });
+    const end = e => { for (const t of e.changedTouches) { if (CS.on && t.identifier === CS.id) { CS.on = false; CS.x = CS.y = 0; csBase.style.display = 'none'; }
+      if (CS.pinch && (t.identifier === CS.pinch.a || t.identifier === CS.pinch.b)) CS.pinch = null; } };
+    tb.addEventListener('touchend', end, { passive: true }); tb.addEventListener('touchcancel', end, { passive: true });
+  }
+}
+// mouvement continu, adouci (courbe quadratique : précis au centre, rapide en bout de course)
+function updateCamStick(dt) {
+  if (C3().padCam && PAD.active && !openUI() && G.mode === 'play') { const k = v => Math.sign(v) * v * v; if (PAD.rx) B.cam3d.rot(k(PAD.rx) * dt * 2.8); if (PAD.ry) B.cam3d.tilt(-k(PAD.ry) * dt * 1.2); }
+  if (!CS.on || openUI() || G.mode !== 'play') { if (CS.on && G.mode !== 'play') { CS.on = false; csBase.style.display = 'none'; } return; }
+  const k = v => Math.sign(v) * v * v; if (CS.x) B.cam3d.rot(k(CS.x) * dt * 3.0); if (CS.y) B.cam3d.tilt(k(CS.y) * dt * 1.3);
+}
 // projection d'un point du monde vers la toile d'interface du jeu (h en mètres au-dessus du sol)
 B.project = (x, y, h) => { const X = m(x), Z = m(y); _p.set(X, (h || 0) + groundH(X, Z), Z).project(camera); if (_p.z > 1) return null; const r = gameCv.getBoundingClientRect(), [w, hh] = B.view(); const sx = (_p.x + 1) / 2 * innerWidth, sy = (1 - _p.y) / 2 * innerHeight; return { x: (sx - r.left) / r.width * w, y: (sy - r.top) / r.height * hh }; };
 
@@ -264,6 +298,7 @@ B.frame3d = function () {
   if (!built) { built = true; forceBuildAround(px, pz); syncQual(); }
   if (HOUR == null) HOUR = G.flags && G.flags.h3d != null ? +G.flags.h3d : 9.5;
   // commandes de caméra au clavier (touches modifiables dans les paramètres)
+  updateCamStick(dt);
   if (!openUI()) { if (IN.held.camL) B.cam3d.rot(-dt * 1.7); if (IN.held.camR) B.cam3d.rot(dt * 1.7); if (IN.held.camU) B.cam3d.tilt(dt * 0.7); if (IN.held.camD) B.cam3d.tilt(-dt * 0.7); }
   if (setDirty && now - setDirty > 800) { setDirty = 0; saveSet(); }
   const t0 = performance.now();
