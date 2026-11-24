@@ -53,7 +53,9 @@ function masks(x, z) {
   for (const [dx, dz, k] of [[0, 0, (1 - fx) * (1 - fz)], [1, 0, fx * (1 - fz)], [0, 1, (1 - fx) * fz], [1, 1, fx * fz]]) { const v = vget(ix + dx, iz + dz); if (v >= T_GRASS) g += k; if (v === T_WATER) w += k; }
   return [g, w];
 }
-export function groundH(x, z) { const [, w] = masks(x, z); return -0.95 * sstep(0.25, 0.85, w) + (fbm(x * 0.15, z * 0.15) - 0.5) * 0.18 * (1 - w); }
+// zones remplacées par un décor 3D complet (Brumeval) : hauteur fournie par ce décor ; sol, herbe et décors 2D masqués
+export const HOOK = { height: null, mask: null, keep: null };
+export function groundH(x, z) { if (HOOK.height) { const h = HOOK.height(x, z); if (h != null) return h; } const [, w] = masks(x, z); return -0.95 * sstep(0.25, 0.85, w) + (fbm(x * 0.15, z * 0.15) - 0.5) * 0.18 * (1 - w); }
 
 // ---------------- matériaux du sol et de l'eau ----------------
 const detail = canvasTex(256, (x, S) => { x.fillStyle = '#d0d0d0'; x.fillRect(0, 0, S, S); for (let i = 0; i < 2600; i++) { const v = 150 + Math.floor(Math.random() * 105); x.strokeStyle = `rgb(${v},${v},${v})`; x.lineWidth = 1 + Math.random(); const px = Math.random() * S, py = Math.random() * S; x.beginPath(); x.moveTo(px, py); x.lineTo(px + (Math.random() - 0.5) * 3, py - 2 - Math.random() * 5); x.stroke(); }
@@ -94,7 +96,7 @@ function buildChunk(i, j) {
   const N = MOBILE ? 48 : 64, g = new THREE.PlaneGeometry(CH, CH, N, N); g.rotateX(-Math.PI / 2); g.translate(x0 + CH / 2, 0, z0 + CH / 2);
   const p = g.attributes.position, cols = new Float32Array(p.count * 3); let hasWater = false;
   for (let k = 0; k < p.count; k++) {
-    const x = p.getX(k), z = p.getZ(k), [gm, wm] = masks(x, z), bi = biomeAt(x, z); p.setY(k, groundH(x, z)); if (wm > 0.3) hasWater = true;
+    const x = p.getX(k), z = p.getZ(k), [gm, wm] = masks(x, z), bi = biomeAt(x, z), hid = HOOK.mask && HOOK.mask(x, z); p.setY(k, hid ? -4 : groundH(x, z)); if (wm > 0.3 && !hid) hasWater = true;
     const n1 = fbm(x * 0.09, z * 0.09), n2 = vn(x * 0.6, z * 0.6);
     _ca.copy(col(bi.grass)).lerp(col(bi.grass2), sstep(0.35, 0.7, n1)); _ca.multiplyScalar(0.9 + n2 * 0.2);
     _cb.copy(col(bi.dirt)).multiplyScalar(0.92 + n2 * 0.16); _ca.lerp(_cb, 1 - sstep(0.25, 0.75, gm + (n2 - 0.5) * 0.3));
@@ -106,12 +108,13 @@ function buildChunk(i, j) {
   if (hasWater) { const wg = new THREE.PlaneGeometry(CH, CH); wg.rotateX(-Math.PI / 2); const zid = zoneId(x0 + 16, z0 + 16); const wmsh = new THREE.Mesh(wg, WATER[WATER_OF[zid] || 'def']); wmsh.position.set(x0 + CH / 2, -0.32, z0 + CH / 2); wmsh.renderOrder = 2; group.add(wmsh); }
   // herbe : touffes sur les cases d'herbe, densité et teinte du biome
   const grass = [];
-  const tries = MOBILE ? 1400 : 2600; for (let k = 0; k < tries; k++) { const x = x0 + h2(k, i * 13 + j) * CH, z = z0 + h2(k + 0.5, j * 17 + i) * CH; const bi = biomeAt(x, z); if (h2(x, z) > bi.gAmt * 0.9) continue; const [gm, wm] = masks(x, z); if (gm < 0.75 || wm > 0.02) continue; grass.push([x, z, bi]); }
+  const tries = MOBILE ? 1400 : 2600; for (let k = 0; k < tries; k++) { const x = x0 + h2(k, i * 13 + j) * CH, z = z0 + h2(k + 0.5, j * 17 + i) * CH; const bi = biomeAt(x, z); if (h2(x, z) > bi.gAmt * 0.9) continue; const [gm, wm] = masks(x, z); if (gm < 0.75 || wm > 0.02) continue; if (HOOK.mask && HOOK.mask(x, z)) continue; grass.push([x, z, bi]); }
   const gq = [0.45, 0.75, 1][STATE.qual] || 1; const gsub = new Map(); for (const g of grass) { if (h2(g[0] * 7, g[1]) > gq) continue; const q = Math.floor((g[0] - x0) / SUB) + ',' + Math.floor((g[1] - z0) / SUB); if (!gsub.has(q)) gsub.set(q, []); gsub.get(q).push(g); }
   for (const grass of gsub.values()) if (grass.length) { const parts = kitParts('grasstuft', 0); const im = new THREE.InstancedMesh(parts[0].geo, KIT_MAT.grass, grass.length); grass.forEach(([x, z, bi], k) => { const s = 0.7 + h2(x, z * 3) * 0.8; dummy.position.set(x, groundH(x, z) - 0.02, z); dummy.rotation.set(0, h2(z, x) * 6.28, 0); dummy.scale.set(s, s, s); dummy.updateMatrix(); im.setMatrixAt(k, dummy.matrix); tint.set(bi.tint).multiplyScalar(0.85 + h2(x * 2, z) * 0.3); im.setColorAt(k, tint); }); im.computeBoundingSphere(); group.add(im); }
   // décors : instanciés par modèle et variante ; les décors qui changent d'état sont suivis à part
   const groups = new Map(), list = propsByChunk().get(key) || [];
   for (const pr of list) {
+    if (HOOK.mask && HOOK.mask(pr.x / T, pr.y / T) && !(HOOK.keep && HOOK.keep(pr))) continue;
     const m = MAP[pr.type];
     if (!m) { fallback(pr, ch); continue; }
     if (m[2] || pr.hidden || pr.type === 'house_a' || pr.type === 'house_b' || pr.type === 'house_c') { dynamic(pr, m, ch); continue; }

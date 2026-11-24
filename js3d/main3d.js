@@ -7,6 +7,7 @@
 import { THREE, scene, camera, renderer, STATE, U, time, DAY, applyDay, buildPost, resize as resize3d, render as render3d, MOBILE } from '../assets/demo/v4/core.js';
 import { updateWorld, forceBuildAround, groundH } from './world3d.js';
 import { MAP } from './kit3d.js';
+import { BRU, updateBrumeval, brumevalLights, settleNpcs } from './brumeval3d.js';
 import { VM } from '../assets/demo/v4/village.js';
 import { updateMagic3D, MAGIC3D, flashLights } from './magic3d.js';
 import { updateRegion, lavaLight } from './regions3d.js';
@@ -138,6 +139,7 @@ function updateLights(darkK) {
   const hl = 3.2 * sstep(0.15, 0.8, k); if (hl > 0.05) C.push({ x: px, y: gy + 1.7, z: pz, col: '#ffd6a0', int: hl, dist: 7.5, decay: 1.3, pri: 2 });
   for (const f of flashLights()) C.push(f);
   const lv = lavaLight(); if (lv.int > 0.05) C.push(lv);
+  for (const b of brumevalLights(night)) C.push(b);
   for (const l of G.lights || []) { if (!l || l.x == null) continue; const d = Math.hypot(l.x - P.x, l.y - P.y); if (d > 520) continue; C.push({ x: m(l.x), y: 1.2 + groundH(m(l.x), m(l.y)), z: m(l.y), col: l.col ? 'rgb(' + l.col + ')' : '#ffd9a0', int: 6 * (l.a ?? 1), dist: Math.max(4, m(l.r || 90) * 1.6), decay: 1.5, dd: d }); }
   for (const c of C) c.score = c.int / (1 + Math.hypot(c.x - px, c.z - pz) * 0.3) + (c.pri || 0);
   C.sort((a, b) => b.score - a.score);
@@ -174,7 +176,7 @@ B.project = (x, y, h) => { const X = m(x), Z = m(y); _p.set(X, (h || 0) + ground
 // la caméra ne passe pas derrière un bâtiment : elle se rapproche du héros (les arbres, eux, s'estompent autour du héros)
 let HOUSES = null;
 function camLimit(lx, ly, lz, yaw, pitch, dist) {
-  if (!HOUSES) HOUSES = WORLD.props.filter(p => MAP[p.type] && /^(house|sanctuary|darkgate|tent)$/.test(MAP[p.type][0])).map(p => { const s = MAP[p.type][0] === 'house' ? (p.def.r ? p.def.r[2] / T / 5.2 : 1) : 1.2; return { x: m(p.x), z: m(p.y), hw: 3.1 * s, hd: 2.4 * s, h: 5.2 * s }; });
+  if (!HOUSES) HOUSES = WORLD.props.filter(p => !BRU.inWorld(p.x / T, p.y / T) && MAP[p.type] && /^(house|sanctuary|darkgate|tent)$/.test(MAP[p.type][0])).map(p => { const s = MAP[p.type][0] === 'house' ? (p.def.r ? p.def.r[2] / T / 5.2 : 1) : 1.2; return { x: m(p.x), z: m(p.y), hw: 3.1 * s, hd: 2.4 * s, h: 5.2 * s }; });
   const dx = Math.sin(yaw) * Math.cos(pitch), dy = Math.sin(pitch), dz = Math.cos(yaw) * Math.cos(pitch); let best = dist;
   for (const H of HOUSES) {
     if (Math.abs(H.x - lx) > 34 || Math.abs(H.z - lz) > 34) continue;
@@ -246,14 +248,14 @@ B.frame3d = function () {
   if (!openUI()) { if (IN.held.camL) B.cam3d.rot(-dt * 1.7); if (IN.held.camR) B.cam3d.rot(dt * 1.7); if (IN.held.camU) B.cam3d.tilt(dt * 0.7); if (IN.held.camD) B.cam3d.tilt(-dt * 0.7); }
   if (setDirty && now - setDirty > 800) { setDirty = 0; saveSet(); }
   const t0 = performance.now();
-  updateWorld(px, pz, time.value); pm('world', t0);
+  updateWorld(px, pz, time.value); updateBrumeval(dt, P, CAM.look); if ((frameId & 31) === 0) settleNpcs(); pm('world', t0);
   const t1 = performance.now(); updateActors(px, pz); pm('actors', t1);
   updateAim(dt, rdt);
   // caméra qui suit le joueur (secousses du jeu reprises), en mode portrait plus éloignée
   CAM.yaw = angLerp(CAM.yaw, CAM.yawT, Math.min(1, dt * 7)); B.yaw = CAM.yaw;
-  CAM.pitch = lerp(CAM.pitch, CAM.pitchT, Math.min(1, dt * 5));
+  const inB = !!BRU.insideNow(); CAM.pitch = lerp(CAM.pitch, inB ? Math.max(CAM.pitchT, 0.95) : CAM.pitchT, Math.min(1, dt * 5));
   const portrait = innerHeight > innerWidth ? 1.45 : 1;
-  CAM.dist = lerp(CAM.dist, CAM.distT * portrait * (1 - 0.2 * CAM.aimK), Math.min(1, dt * 4));
+  CAM.dist = lerp(CAM.dist, (inB ? Math.min(CAM.distT, 10) : CAM.distT) * portrait * (1 - 0.2 * CAM.aimK), Math.min(1, dt * 4));
   const sh = G.shake && SET.shake !== false ? G.shake * 0.02 : 0, py = groundH(px, pz);
   const off = 2.2 * CAM.aimK; _p.set(px + Math.cos(CAM.aimA) * off, py + 0.8, pz + Math.sin(CAM.aimA) * off);
   CAM.look.lerp(_p, Math.min(1, dt * 8));
@@ -282,4 +284,4 @@ B.frame3d = function () {
   if (info) info.textContent = 'Vélorne 3D · ' + (z ? z.name : '') + ' · ' + String(Math.floor(HOUR)).padStart(2, '0') + ' h ' + String(Math.floor(HOUR % 1 * 60)).padStart(2, '0');
 };
 B.on = true;
-window.V3D = { MAGIC3D, THREE, scene, camera, renderer, CAM, ACT, PROF, STATE, DAY, hour: () => HOUR, setHour: h => { HOUR = h; } };
+window.V3D = { BRU, MAGIC3D, THREE, scene, camera, renderer, CAM, ACT, PROF, STATE, DAY, hour: () => HOUR, setHour: h => { HOUR = h; } };
