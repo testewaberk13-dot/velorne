@@ -210,6 +210,40 @@ button{font-family:inherit;cursor:pointer}
 .tb:disabled::before{content:none}
 .tb.small{font-size:13px;padding:.8vh 18px}
 .tfoot{color:#8f7d5c;font-size:10px}
+
+/* ===== Écran titre refait (24/11) : monde 3D en travelling, blason, logo animé, menu centré ===== */
+body.t3d #cam3d,body.t3d #v3dinfo,body.t3d #touch{display:none!important}
+#title{justify-content:center;align-items:center;flex-direction:column;background:none}
+#title .tvig{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 75% 70% at 50% 45%,rgba(0,0,0,0) 40%,rgba(6,3,14,.55) 80%,rgba(6,3,14,.9)),linear-gradient(rgba(6,3,14,.65),rgba(6,3,14,0) 18%,rgba(6,3,14,0) 70%,rgba(6,3,14,.8))}
+body:not(.t3d) #title .tvig{background:radial-gradient(ellipse at center,rgba(12,10,20,.35),rgba(12,10,20,.9))}
+#title .trays{position:absolute;inset:-20%;pointer-events:none;background:repeating-conic-gradient(from 0deg at 50% 0%,rgba(255,214,140,.07) 0deg 4deg,rgba(255,214,140,0) 4deg 11deg);mix-blend-mode:screen;animation:rays 24s linear infinite;opacity:.35;filter:blur(6px)}
+@keyframes rays{to{transform:rotate(6deg)}}
+#title .tleft{position:relative;height:auto;width:min(560px,92vw);padding:0;gap:clamp(8px,2.6vh,22px);align-items:center;animation:none}
+#title .logo{position:relative;display:flex;flex-direction:column;align-items:center;animation:logoin 1.6s cubic-bezier(.2,.8,.2,1) both}
+#title .logo::before{content:'';position:absolute;left:-30%;right:-30%;top:-10%;bottom:-25%;z-index:-1;background:radial-gradient(ellipse at center,rgba(8,4,16,.72),rgba(8,4,16,.35) 50%,rgba(8,4,16,0) 72%)}
+@keyframes logoin{from{opacity:0;transform:scale(1.12);filter:blur(6px)}}
+#title .crest{width:clamp(44px,11vh,92px);height:auto;filter:drop-shadow(0 0 10px rgba(255,200,110,.5));margin-bottom:-2px}
+#title .crest .ring{transform-origin:60px 60px;animation:spin 40s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#title .logo h1{position:relative;font-size:clamp(34px,10.5vh,92px);letter-spacing:.16em;padding-left:.16em;background:linear-gradient(100deg,#a8701e 0%,#f1c96a 25%,#fff8e0 45%,#f1c96a 55%,#a8701e 80%,#ffe7a3 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 6s ease-in-out infinite,glowt 4s ease-in-out infinite}
+@keyframes shine{0%,100%{background-position:100% 0}50%{background-position:0% 0}}
+#title .logo h3{display:flex;align-items:center;gap:12px;font-size:clamp(12px,3.6vh,20px);letter-spacing:.28em;color:#f0dcae;text-shadow:0 2px 6px #000;margin-top:2px}
+#title .logo h3 i{display:block;width:clamp(30px,8vw,80px);height:1px;background:linear-gradient(90deg,transparent,#e8c070,transparent)}
+#title .tmenu{width:min(340px,80vw);gap:clamp(2px,0.9vh,8px)}
+#title .tmenu .tb{align-items:center;text-align:center;border:none;border-radius:0;background:linear-gradient(90deg,transparent,rgba(16,10,24,.55) 25%,rgba(16,10,24,.55) 75%,transparent);padding:clamp(4px,1.25vh,11px) 18px;font-size:clamp(14px,4.4vh,21px);letter-spacing:.14em;text-transform:uppercase;color:#f1e2bd;text-shadow:0 2px 4px #000;box-shadow:none;animation:itemin .6s ease-out both}
+#title .tmenu .tb:nth-child(1){animation-delay:.55s}#title .tmenu .tb:nth-child(2){animation-delay:.65s}#title .tmenu .tb:nth-child(3){animation-delay:.75s}#title .tmenu .tb:nth-child(4){animation-delay:.85s}#title .tmenu .tb:nth-child(5){animation-delay:.95s}#title .tmenu .tb:nth-child(6){animation-delay:1.05s}
+@keyframes itemin{from{opacity:0;transform:translateY(8px)}}
+#title .tmenu .tb small{text-transform:none;letter-spacing:.04em;font-size:10px;color:#c9b386}
+#title .tmenu .tb.small{font-size:clamp(11px,3.2vh,15px);letter-spacing:.12em;opacity:.85}
+#title .tmenu .tb::after{content:'';position:absolute;left:15%;right:15%;bottom:0;height:1px;background:linear-gradient(90deg,transparent,rgba(232,192,112,.35),transparent)}
+#title .tmenu .tb:hover,#title .tmenu .tb:focus{padding-left:18px;color:#fff8e0;background:linear-gradient(90deg,transparent,rgba(120,80,24,.55) 20%,rgba(150,100,30,.7) 50%,rgba(120,80,24,.55) 80%,transparent);text-shadow:0 0 10px rgba(255,210,120,.8),0 2px 4px #000}
+#title .tmenu .tb:hover::before,#title .tmenu .tb:focus::before{content:'◆';left:14%;color:#ffe08a;font-size:10px;animation:pulse 1.2s ease-in-out infinite}
+#title .tmenu .tb:hover::after,#title .tmenu .tb:focus::after{background:linear-gradient(90deg,transparent,#ffe08a,transparent)}
+@keyframes pulse{50%{opacity:.35}}
+#title .tmenu .tb:disabled{opacity:.4;padding-left:18px}
+#title .tfoot{position:absolute;left:max(12px,env(safe-area-inset-left));bottom:8px;color:#a8946c;font-size:10px;text-shadow:0 1px 2px #000}
+#title .tver{position:absolute;right:max(12px,env(safe-area-inset-right));bottom:8px;color:#a8946c;font-size:10px;letter-spacing:.08em;text-shadow:0 1px 2px #000}
+@media (max-height:460px){#title .tfoot{display:none}#title .tmenu .tb small{display:none}}
 .tconfirm{position:fixed;inset:0;z-index:70;background:rgba(6,3,14,.7);display:flex;align-items:center;justify-content:center}
 .tconfirm>div{max-width:480px;background:linear-gradient(#211a2c,#15101d);border:2px solid #c9a45a;border-radius:10px;padding:16px;text-align:center}
 .tconfirm .row{justify-content:center;margin-top:12px}
@@ -279,10 +313,19 @@ body.padmode .tb:focus{padding-left:26px}
 <div id="hudbtns"><button id="hbMenu" aria-label="Menu">☰</button><button id="hbBag" aria-label="Inventaire">🎒</button></div>
 <div id="editbar"><button class="big" id="editDone">Terminer</button></div>
 <div id="loading" class="ov show"><div style="font-family:Georgia,serif;font-size:22px;color:#ffe9c0">Vélorne</div><div class="lb"><div id="loadbar"></div></div><div style="font-size:12px;color:#9a8a6a">Chargement des graphismes…</div></div>
-<div id="title" class="ov"><div class="tleft">
-  <div class="logo"><div class="orn">✦ ━━━━━ ✦</div><h1>VÉLORNE</h1><h3>Les Terres de Brumeval</h3><div class="orn">✦ ━━━━━ ✦</div></div>
+<div id="title" class="ov"><div class="tvig"></div><div class="trays"></div><div class="tleft">
+  <div class="logo">
+    <svg class="crest" viewBox="0 0 120 120" aria-hidden="true"><defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3c8"/><stop offset=".5" stop-color="#e8b955"/><stop offset="1" stop-color="#8a5a1c"/></linearGradient></defs>
+      <g class="ring"><circle cx="60" cy="60" r="52" fill="none" stroke="url(#cg)" stroke-width="1.5" stroke-dasharray="3 5"/><circle cx="60" cy="60" r="46" fill="none" stroke="url(#cg)" stroke-width="1"/>
+        <g fill="url(#cg)" font-size="9" font-family="Georgia" text-anchor="middle"><text x="60" y="13">ᚹ</text><text x="107" y="63">ᛟ</text><text x="60" y="113">ᚱ</text><text x="13" y="63">ᛉ</text></g></g>
+      <path d="M60 18 L64 70 L60 92 L56 70 Z" fill="url(#cg)" stroke="#3a210a" stroke-width="1"/><path d="M44 68 H76 L72 73 H48 Z" fill="url(#cg)" stroke="#3a210a" stroke-width="1"/><circle cx="60" cy="96" r="4" fill="url(#cg)" stroke="#3a210a"/>
+      <path d="M30 60 Q60 34 90 60 Q60 86 30 60 Z" fill="none" stroke="url(#cg)" stroke-width="1.2" opacity=".7"/></svg>
+    <h1 data-t="VÉLORNE">VÉLORNE</h1>
+    <h3><i></i>Les Terres de Brumeval<i></i></h3>
+  </div>
   <div class="tmenu"><button id="btnContinue" class="tb"><span>Continuer</span><small>Aucune sauvegarde</small></button><button id="btnNew" class="tb"><span>Nouvelle partie</span></button><button id="btnOpts" class="tb"><span>Paramètres</span></button><button id="btnCmds" class="tb"><span>Commandes</span></button><button id="btnCredits" class="tb"><span>Crédits</span></button><button id="btnFs" class="tb small"><span>Plein écran</span></button></div>
-  <small class="tfoot">RPG d'action en pixel art · graphismes Liberated Pixel Cup (licences libres, voir Crédits)</small></div></div>
+</div>
+<small class="tfoot">RPG d'action en pixel art · graphismes Liberated Pixel Cup (licences libres, voir Crédits)</small><small class="tver">Version de développement</small></div>
 <div id="creator" class="ov"></div>
 <div id="panel" class="panel"></div>
 <div id="fader"></div>

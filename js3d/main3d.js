@@ -408,5 +408,30 @@ B.frame3d = function () {
   if (info) info.textContent = 'Vélorne 3D · ' + (z ? z.name : '') + ' · ' + String(Math.floor(HOUR)).padStart(2, '0') + ' h ' + String(Math.floor(HOUR % 1 * 60)).padStart(2, '0');
 };
 B.extraOverlay = ctx => { drawBubbles(ctx); const h = window.fishHint && window.fishHint(); if (h) { const P = G.player, s = B.project(P.x, P.y, 2.1); if (s) { ctx.save(); ctx.font = '8px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(Math.round(s.x - 34), Math.round(s.y - 9), 68, 12); ctx.fillStyle = '#9fe3ff'; ctx.fillText('[' + actLabel('interact') + '] ' + h, Math.round(s.x), Math.round(s.y)); ctx.restore(); } } };
+// ---------------- ÉCRAN TITRE CINÉMATIQUE (24/11) ----------------
+// Derrière le menu : le vrai monde 3D du jeu, Brumeval à l'heure dorée, filmé par un lent travelling circulaire autour de la
+// place (fontaine, maisons, étals), avec lucioles et braises. Aucune partie n'est lancée : seul le décor est rendu.
+const TT = { t: 0, built: false, look: new THREE.Vector3() };
+B.title3d = function () {
+  const now = performance.now(), dt = Math.min(0.05, (now - lastT) / 1000); lastT = now; time.value += dt; TT.t += dt;
+  const cx = BRU.OX + 1, cz = BRU.OZ + 2;
+  if (!TT.built) { TT.built = true; forceBuildAround(cx, cz); }
+  const yaw = 0.6 + TT.t * 0.04, pitch = 0.5 + Math.sin(TT.t * 0.07) * 0.04, dist = 27 + Math.sin(TT.t * 0.05) * 2.5;
+  const gy = groundH(cx, cz); TT.look.set(cx + Math.sin(TT.t * 0.11) * 1.5, gy + 2.2, cz + Math.cos(TT.t * 0.09) * 1.5);
+  updateWorld(cx - Math.sin(yaw) * 10, cz - Math.cos(yaw) * 10, time.value);
+  try { updateBrumeval(dt, { x: (cx + 40) * T, y: cz * T }, TT.look); } catch (e) { }
+  const hd = Math.cos(pitch) * dist; camera.position.set(TT.look.x + Math.sin(yaw) * hd, TT.look.y + Math.sin(pitch) * dist, TT.look.z + Math.cos(yaw) * hd);
+  camera.position.y = Math.max(camera.position.y, groundH(camera.position.x, camera.position.z) + 2); camera.lookAt(TT.look); camera.updateMatrixWorld();
+  DAY.h = 17.5 + Math.sin(TT.t * 0.03) * 0.2; applyDay(cx, 0, cz);
+  const z = WORLD.zones.find(z => z.id === 'village') || WORLD.zones[0]; try { updateRegion(dt, z, TT.look, 0); updateRegionDecor(dt, TT.look); } catch (e) { }
+  VM.glass.emissiveIntensity = 0.9; for (const l of PL) l.intensity = 0;
+  // lucioles et braises dorées
+  if (Math.random() < 0.6) MAGIC3D.emit('amb', TT.look.x + (Math.random() - 0.5) * 22, gy + 0.4 + Math.random() * 2.5, TT.look.z + (Math.random() - 0.5) * 22, { S: { g: -0.25, sp: 0.35, sz: 0.1, life: 3.5, col2: '#fff2b0', flick: 1 }, col: '#ffd36a' });
+  updateMagic3D(dt);
+  // tunnel de visibilité vers la place : aucun toit ni feuillage ne bouche le plan
+  U.uCutSoft.value = 1; U.uOR.value = 4; U.uNearF.value = 7; U.uHV.value.copy(TT.look).applyMatrix4(camera.matrixWorldInverse);
+  if (POST.mat && POST.mat.uniforms.uDof) { POST.mat.uniforms.uDof.value = 0.7; POST.mat.uniforms.uFocus.value = dist + 6; }
+  render3d();
+};
 B.on = true;
 window.V3D = { GUIDE: GUIDE3D, BRULIFE, BRU, MAGIC3D, THREE, scene, camera, renderer, CAM, ACT, PROF, STATE, DAY, hour: () => HOUR, setHour: h => { HOUR = h; } };

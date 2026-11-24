@@ -191,7 +191,7 @@ export function updateWorld(px, pz, t) {
   for (const [k, ch] of CHUNKS) if (Math.abs(ch.i - ci) > R + 1 || Math.abs(ch.j - cj) > R + 1) free(k, ch);
   // qualité graphique changée : les blocs sont reconstruits un par un avec la nouvelle finesse
   if (!built) for (const [k, ch] of CHUNKS) if (ch.q !== STATE.qual) { free(k, ch); buildChunk(ch.i, ch.j); break; }
-  const P = G.player; for (const ch of CHUNKS.values()) if (Math.abs(ch.i - ci) <= 1 && Math.abs(ch.j - cj) <= 1) for (const d of ch.dyn) refreshDyn(d, t, P);
+  const P = G.player || { x: -1e9, y: -1e9 }; // écran titre : pas encore de héros for (const ch of CHUNKS.values()) if (Math.abs(ch.i - ci) <= 1 && Math.abs(ch.j - cj) <= 1) for (const d of ch.dyn) refreshDyn(d, t, P);
 }
 export function forceBuildAround(px, pz) { const ci = Math.floor(px / CH), cj = Math.floor(pz / CH); for (let j = cj - 1; j <= cj + 1; j++) for (let i = ci - 1; i <= ci + 1; i++) if (i >= 0 && j >= 0 && i * CH < MW && j * CH < MH) buildChunk(i, j); }
 export { CHUNKS, BIOME };
