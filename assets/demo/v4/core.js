@@ -291,13 +291,18 @@ export function buildPost() {
   const rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, depthTexture: new THREE.DepthTexture(4, 4) });
   rt.texture.minFilter = rt.texture.magFilter = THREE.LinearFilter; rt.depthTexture.type = THREE.UnsignedIntType;
   const mat = new THREE.ShaderMaterial({ toneMapped: true, depthTest: false, depthWrite: false,
-    uniforms: { tColor: { value: rt.texture }, tDepth: { value: rt.depthTexture }, uRes: { value: new THREE.Vector2(4, 4) }, uNear: { value: camera.near }, uFar: { value: camera.far }, uPix: { value: 1 }, uLevels: { value: 30 }, uNight: { value: 0 }, uWarm: { value: 1 } },
+    uniforms: { tColor: { value: rt.texture }, tDepth: { value: rt.depthTexture }, uRes: { value: new THREE.Vector2(4, 4) }, uNear: { value: camera.near }, uFar: { value: camera.far }, uPix: { value: 1 }, uLevels: { value: 30 }, uNight: { value: 0 }, uWarm: { value: 1 }, uDof: { value: 0 }, uFocus: { value: 10 } },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
-    fragmentShader: `uniform sampler2D tColor; uniform sampler2D tDepth; uniform vec2 uRes; uniform float uNear, uFar, uPix, uLevels, uNight, uWarm; varying vec2 vUv;
+    fragmentShader: `uniform sampler2D tColor; uniform sampler2D tDepth; uniform vec2 uRes; uniform float uNear, uFar, uPix, uLevels, uNight, uWarm, uDof, uFocus; varying vec2 vUv;
       float lin(float d) { float z = d * 2.0 - 1.0; return (2.0 * uNear * uFar) / (uFar + uNear - z * (uFar - uNear)); }
       vec3 bright(vec2 uv){ vec3 c = texture2D(tColor, uv).rgb; float l = dot(c, vec3(0.299,0.587,0.114)); return c * smoothstep(0.85, 1.6, l); }
       void main() {
         vec2 px = 1.0 / uRes; vec3 c = texture2D(tColor, vUv).rgb; float d = lin(texture2D(tDepth, vUv).r);
+        // profondeur de champ légère (caméra oblique du jeu) : l'arrière-plan lointain se fond, le premier plan reste net
+        if (uDof > 0.01) { float bk = smoothstep(uFocus + 6.0, uFocus + 36.0, d) * uDof; if (bk > 0.02) { vec3 s = c; float r = 1.6 * bk;
+          s += texture2D(tColor, vUv + vec2(px.x, 0.0) * r).rgb + texture2D(tColor, vUv - vec2(px.x, 0.0) * r).rgb + texture2D(tColor, vUv + vec2(0.0, px.y) * r).rgb + texture2D(tColor, vUv - vec2(0.0, px.y) * r).rgb;
+          s += texture2D(tColor, vUv + px * r).rgb + texture2D(tColor, vUv - px * r).rgb + texture2D(tColor, vUv + vec2(px.x, -px.y) * r).rgb + texture2D(tColor, vUv + vec2(-px.x, px.y) * r).rgb;
+          c = mix(c, s / 9.0, min(1.0, bk * 1.2)); } }
         // contour d'une couleur (silhouettes), seulement en mode Pixel 3D et pas au loin
         if (uPix > 0.5) {
           float dn = lin(texture2D(tDepth, vUv + vec2(0.0, px.y)).r), ds = lin(texture2D(tDepth, vUv - vec2(0.0, px.y)).r), de = lin(texture2D(tDepth, vUv + vec2(px.x, 0.0)).r), dw = lin(texture2D(tDepth, vUv - vec2(px.x, 0.0)).r);

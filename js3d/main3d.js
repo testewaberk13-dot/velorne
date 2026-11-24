@@ -4,7 +4,8 @@
 //  caméra réglable (angle 24°–69°, rotation, distance), visée immersive, cycle jour/nuit, qualité automatique.
 //  La logique reste entièrement celle du jeu (voir js3d/bridge2d.js).
 // =====================================================================
-import { THREE, scene, camera, renderer, STATE, U, time, DAY, applyDay, buildPost, resize as resize3d, render as render3d, MOBILE } from '../assets/demo/v4/core.js';
+import { THREE, scene, camera, renderer, STATE, U, time, DAY, applyDay, buildPost, resize as resize3d, render as render3d, MOBILE, FOGU, POST, COL } from '../assets/demo/v4/core.js';
+import { updateGuide3D, GUIDE3D } from './guide3d.js';
 import { updateWorld, forceBuildAround, groundH } from './world3d.js';
 import { MAP } from './kit3d.js';
 import { BRU, updateBrumeval, brumevalLights, settleNpcs } from './brumeval3d.js';
@@ -25,13 +26,16 @@ STATE.pix = true;
 DAY.speed = 24 / 480; // un jour complet en 8 minutes de jeu (comme le village pilote)
 
 // ---------------- réglages 3D (conservés avec les paramètres du jeu) ----------------
-const PMIN = 24 * Math.PI / 180, PMAX = 69 * Math.PI / 180, DMIN = 8, DMAX = 26;
-const C3 = () => { if (!SET.c3d) SET.c3d = {}; const c = SET.c3d; if (c.pitch == null) c.pitch = 0.85; if (c.yaw == null) c.yaw = 0; if (c.dist == null) c.dist = 15; if (c.slow == null) c.slow = true; if (c.day == null) c.day = true; if (c.btns == null) c.btns = true; if (c.wx == null) c.wx = true; return c; };
+// CAMÉRA OBLIQUE (24/11, direction visuelle « personnages 2D + monde 3D ») : derrière le héros et au-dessus de lui, inclinée
+// vers le terrain (34° par défaut au lieu de 49°), plus proche (10,5 m), regard porté devant le héros pour voir le chemin et
+// l'horizon, et qui se replace doucement derrière lui quand il avance. Les anciens réglages sont migrés une fois (v: 2).
+const PMIN = 18 * Math.PI / 180, PMAX = 69 * Math.PI / 180, DMIN = 6, DMAX = 26, PDEF = 0.6, DDEF = 10.5;
+const C3 = () => { if (!SET.c3d) SET.c3d = {}; const c = SET.c3d; if (c.v !== 2) { c.v = 2; c.pitch = PDEF; c.dist = DDEF; c.follow = true; } if (c.follow == null) c.follow = true; if (c.pitch == null) c.pitch = PDEF; if (c.yaw == null) c.yaw = 0; if (c.dist == null) c.dist = DDEF; if (c.slow == null) c.slow = true; if (c.day == null) c.day = true; if (c.btns == null) c.btns = true; if (c.wx == null) c.wx = true; return c; };
 let setDirty = 0; const markSet = () => { setDirty = performance.now(); };
 B.cam3d = {
-  rot(d) { CAM.yawT += d; C3().yaw = CAM.yawT; markSet(); },
+  rot(d) { CAM.yawT += d; C3().yaw = CAM.yawT; CAM.manualT = performance.now(); markSet(); },
   tilt(d) { CAM.pitchT = clamp(CAM.pitchT + d, PMIN, PMAX); C3().pitch = CAM.pitchT; markSet(); },
-  reset() { const c = C3(); c.pitch = 0.85; c.yaw = 0; c.dist = 15; CAM.pitchT = 0.85; CAM.yawT = Math.round(CAM.yaw / (Math.PI * 2)) * Math.PI * 2; CAM.distT = 15; markSet(); },
+  reset() { const c = C3(); c.pitch = PDEF; c.yaw = 0; c.dist = DDEF; CAM.pitchT = PDEF; CAM.yawT = Math.round(CAM.yaw / (Math.PI * 2)) * Math.PI * 2; CAM.distT = DDEF; markSet(); },
   angleDeg() { return Math.round(CAM.pitchT * 180 / Math.PI); },
 };
 
@@ -52,7 +56,10 @@ function actor(o, kind) {
   let a = ACT.get(o); if (a) return a;
   const S = kind === 'enemy' && o.def && o.def.boss ? 288 : kind === 'drop' || kind === 'proj' ? 96 : 192;
   const c = document.createElement('canvas'); c.width = c.height = S; const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false;
-  const mat = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.4, side: THREE.DoubleSide });
+  const mat = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.4, side: THREE.DoubleSide, emissive: new THREE.Color(0.2, 0.2, 0.22), emissiveMap: tex });
+  // volume du panneau : normale arrondie (gauche/droite, haut/bas) pour que la lumière du soleil modèle le personnage
+  // au lieu de l'éclairer comme une feuille plate ; un liseré de lumière souligne le bord exposé
+  if (kind !== 'proj' && kind !== 'drop') mat.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n { vec2 q = vMapUv - vec2(0.5, 0.42); normal = normalize(vec3(clamp(q.x * 7.0, -0.8, 0.8), clamp(q.y * 2.0, -0.35, 0.45) + 0.12, 1.0)); }'); };
   const foot = Math.round(S * 0.8); const g = new THREE.PlaneGeometry(m(S), m(S)); g.translate(0, m(S) / 2 - m(S - foot), 0);
   const mesh = new THREE.Mesh(g, mat); mesh.castShadow = kind !== 'proj' && kind !== 'drop'; mesh.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: tex, alphaTest: 0.4 }); scene.add(mesh);
   a = { o, kind, c, tex, mesh, seen: 0, sig: '', n: 0 }; ACT.set(o, a); return a;
@@ -192,6 +199,13 @@ function camLimit(lx, ly, lz, yaw, pitch, dist) {
     }
     if (t0 <= t1 && t0 > 0.3) best = Math.min(best, Math.max(3.2, t0 - 0.6));
   }
+  // maisons du village pilote (murs en segments) : la caméra oblique, plus basse, se rapproche au lieu de traverser un mur
+  if (BRU.inWorld(lx, lz) && !BRU.insideNow()) {
+    const sd = (x, z, s) => { const vx = s.bx - s.ax, vz = s.bz - s.az, L = vx * vx + vz * vz || 1e-6; let k = ((x - s.ax) * vx + (z - s.az) * vz) / L; k = Math.max(0, Math.min(1, k)); return Math.hypot(x - s.ax - vx * k, z - s.az - vz * k); };
+    const walls = COL.segs.filter(s => !s.off && (s.kind === 'mur' || s.kind === 'paroi'));
+    for (let t = 1.4; t < best; t += 0.35) { const x = lx + dx * t, y = ly + dy * t, z = lz + dz * t; if (y - groundH(x, z) > 6.2) break; const X = x - BRU.OX, Z = z - BRU.OZ;
+      if (walls.some(s => Math.abs((s.ax + s.bx) / 2 - X) < 9 && Math.abs((s.az + s.bz) / 2 - Z) < 9 && sd(X, Z, s) < 0.32)) { best = Math.max(3.2, t - 0.5); break; } }
+  }
   return best;
 }
 
@@ -252,16 +266,23 @@ B.frame3d = function () {
   if (!openUI()) { if (IN.held.camL) B.cam3d.rot(-dt * 1.7); if (IN.held.camR) B.cam3d.rot(dt * 1.7); if (IN.held.camU) B.cam3d.tilt(dt * 0.7); if (IN.held.camD) B.cam3d.tilt(-dt * 0.7); }
   if (setDirty && now - setDirty > 800) { setDirty = 0; saveSet(); }
   const t0 = performance.now();
-  updateWorld(px, pz, time.value); updateBrumeval(dt, P, CAM.look); updateBrumevalLife(dt, CAM.yaw); if ((frameId & 31) === 0) settleNpcs(); pm('world', t0);
+  updateWorld(px - Math.sin(CAM.yaw) * 12, pz - Math.cos(CAM.yaw) * 12, time.value); updateBrumeval(dt, P, CAM.look); updateBrumevalLife(dt, CAM.yaw); if ((frameId & 31) === 0) settleNpcs(); pm('world', t0);
   const t1 = performance.now(); updateActors(px, pz); pm('actors', t1);
   updateAim(dt, rdt);
   // caméra qui suit le joueur (secousses du jeu reprises), en mode portrait plus éloignée
+  // elle se replace doucement derrière le héros quand il avance (pas quand il revient vers la caméra, ni pendant la visée)
+  { const vx = (px - (CAM.ppx ?? px)) / Math.max(1e-3, dt), vz = (pz - (CAM.ppz ?? pz)) / Math.max(1e-3, dt); CAM.ppx = px; CAM.ppz = pz; const sp = Math.hypot(vx, vz);
+    if (c.follow !== false && sp > 1.2 && sp < 40 && CAM.aimK < 0.1 && !openUI() && !BRU.insideNow() && now - (CAM.manualT || 0) > 2500) {
+      const a = Math.atan2(vz, vx), want = Math.atan2(-Math.cos(a), -Math.sin(a)); let d = (want - CAM.yawT) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2;
+      const rate = 1.5 * Math.max(0, 1 - Math.abs(d) / 1.9) * Math.min(1, sp / 4); CAM.yawT += Math.sign(d) * Math.min(Math.abs(d), rate * dt); } }
   CAM.yaw = angLerp(CAM.yaw, CAM.yawT, Math.min(1, dt * 7)); B.yaw = CAM.yaw;
   const inB = !!BRU.insideNow(); CAM.pitch = lerp(CAM.pitch, inB ? Math.max(CAM.pitchT, 0.95) : CAM.pitchT, Math.min(1, dt * 5));
   const portrait = innerHeight > innerWidth ? 1.45 : 1;
   CAM.dist = lerp(CAM.dist, (inB ? Math.min(CAM.distT, 10) : CAM.distT) * portrait * (1 - 0.2 * CAM.aimK), Math.min(1, dt * 4));
   const sh = G.shake && SET.shake !== false ? G.shake * 0.02 : 0, py = groundH(px, pz);
-  const off = 2.2 * CAM.aimK; _p.set(px + Math.cos(CAM.aimA) * off, py + 0.8, pz + Math.sin(CAM.aimA) * off);
+  // regard porté devant le héros (dans le sens de la caméra) : on voit le chemin et le décor qui s'étend vers le haut de l'écran
+  const ahead = inB ? 0 : 2.6 * (1 - CAM.aimK) * sstep(0.5, 0.95, 1.25 - CAM.pitch), fwx = -Math.sin(CAM.yaw), fwz = -Math.cos(CAM.yaw);
+  const off = 2.2 * CAM.aimK; _p.set(px + Math.cos(CAM.aimA) * off + fwx * ahead, py + 0.8 + (inB ? 0 : 0.35), pz + Math.sin(CAM.aimA) * off + fwz * ahead);
   CAM.look.lerp(_p, Math.min(1, dt * 8));
   const lim = camLimit(CAM.look.x, CAM.look.y, CAM.look.z, CAM.yaw, CAM.pitch, CAM.dist); CAM.lim = lerp(CAM.lim || lim, lim, Math.min(1, dt * (lim < (CAM.lim || lim) ? 14 : 2.5)));
   const cd = Math.min(CAM.dist, CAM.lim), hd = Math.cos(CAM.pitch) * cd;
@@ -270,7 +291,7 @@ B.frame3d = function () {
   mouseToWorld(py);
   const t2 = performance.now(); updateEffects(); updateMagic3D(G.paused ? 0 : dt * (G.slowT > 0 ? G.slowF : 1)); pm('fx', t2);
   // découpe des arbres devant le héros
-  _p.set(px, py + 1.0, pz).project(camera); U.uPS.value.set((_p.x + 1) / 2, (_p.y + 1) / 2); U.uPD.value = _p.z * 0.5 + 0.5; U.uOR.value = 0.12 * 15 / cd;
+  _p.set(px, py + 1.0, pz).project(camera); U.uPS.value.set((_p.x + 1) / 2, (_p.y + 1) / 2); U.uPD.value = _p.z * 0.5 + 0.5; U.uOR.value = 0.12 * 15 / cd * (1 + 0.6 * sstep(1.0, 0.55, CAM.pitch));
   // heure : cycle jour/nuit continu (sauvegardé avec la partie) ; les zones sombres du jeu (grottes, ombres, donjons) assombrissent la lumière
   if (c.day && !G.paused && !G.dlg && !openUI()) HOUR = (HOUR + dt * DAY.speed) % 24;
   if (now - hourSave > 1000) { hourSave = now; if (G.flags) G.flags.h3d = Math.round(HOUR * 100) / 100; }
@@ -279,6 +300,10 @@ B.frame3d = function () {
   if (k > 0 && HOUR >= 4.5 && HOUR < 21) hEff = lerp(HOUR, HOUR >= 12 ? 23 : 1, k);
   DAY.h = hEff;
   applyDay(px, 0, pz); updateRegion(dt, z, CAM.look, k); updateRegionDecor(dt, CAM.look); updateLights(k); updateWeather(dt, z, darkS);
+  // profondeur : brume minimale qui fond l'horizon chargé, flou léger de l'arrière-plan (mise au point sur le héros)
+  { const k = sstep(1.1, 0.5, CAM.pitch); if (scene.fog && scene.fog.density != null) { scene.fog.density = Math.max(scene.fog.density, 0.024 * k); FOGU.d.value = scene.fog.density; }
+    if (POST.mat && POST.mat.uniforms.uDof) { POST.mat.uniforms.uDof.value = c.dof === false ? 0 : k; POST.mat.uniforms.uFocus.value = cd; } }
+  updateGuide3D(dt, P, px, pz);
   const t3 = performance.now(); render3d(); pm('render', t3);
   pm('frame', now);
   // qualité automatique (mesurée en temps réel)
@@ -289,4 +314,4 @@ B.frame3d = function () {
 };
 B.extraOverlay = ctx => { drawBubbles(ctx); const h = window.fishHint && window.fishHint(); if (h) { const P = G.player, s = B.project(P.x, P.y, 2.1); if (s) { ctx.save(); ctx.font = '8px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(Math.round(s.x - 34), Math.round(s.y - 9), 68, 12); ctx.fillStyle = '#9fe3ff'; ctx.fillText('[' + actLabel('interact') + '] ' + h, Math.round(s.x), Math.round(s.y)); ctx.restore(); } } };
 B.on = true;
-window.V3D = { BRULIFE, BRU, MAGIC3D, THREE, scene, camera, renderer, CAM, ACT, PROF, STATE, DAY, hour: () => HOUR, setHour: h => { HOUR = h; } };
+window.V3D = { GUIDE: GUIDE3D, BRULIFE, BRU, MAGIC3D, THREE, scene, camera, renderer, CAM, ACT, PROF, STATE, DAY, hour: () => HOUR, setHour: h => { HOUR = h; } };
