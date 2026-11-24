@@ -211,3 +211,6 @@ export function buildNature(reserved) {
   NATURE.trees = near; NATURE.counts = { oaks: oaks.length, birches: birches.length, autumns: autumns.length, pines: pines.length, bushes: bushes.length + blooms.length, ferns: ferns.length, rocks: rocks.length };
   return NATURE;
 }
+
+// ---------------- outils partagés avec le jeu 3D (js3d/kit3d.js) ----------------
+export { cardCanopy, trunk, blobsOak, TEX as NATURE_TEX, SHADOW_ONLY, shadowBlobs, leafMat, PAL_OAK, PAL_LIGHT, PAL_BUSH, PAL_AUTUMN, leafClump };

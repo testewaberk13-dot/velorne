@@ -173,7 +173,13 @@ export function patch(mat, o = {}) {
   mat.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, U);
     if (o.wind) sh.vertexShader = 'uniform float uTime; uniform vec2 uWind;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
-      { vec4 wp0 = ${o.inst === false ? 'modelMatrix' : 'instanceMatrix'} * vec4(0.0,0.0,0.0,1.0); float hk = max(position.y - ${(o.windBase ?? 1.5).toFixed(2)}, 0.0) * ${o.wind.toFixed(3)};
+      {
+#ifdef USE_INSTANCING
+ vec4 wp0 = instanceMatrix * vec4(0.0,0.0,0.0,1.0);
+#else
+ vec4 wp0 = modelMatrix * vec4(0.0,0.0,0.0,1.0);
+#endif
+ float hk = max(position.y - ${(o.windBase ?? 1.5).toFixed(2)}, 0.0) * ${o.wind.toFixed(3)};
         float g = sin(uTime * 1.1 + wp0.x * 0.21 + wp0.z * 0.17) * 0.6 + sin(uTime * 2.7 + wp0.x * 0.9 + position.y * 1.3) * 0.25;
         transformed.x += g * hk * uWind.x; transformed.z += g * hk * uWind.y + cos(uTime * 1.7 + position.x * 2.0) * hk * 0.15; }`);
     if (o.soft) sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', 'float faceDirection = 1.0; vec3 normal = normalize(vNormal); vec3 nonPerturbedNormal = normal;');
