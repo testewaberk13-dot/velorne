@@ -3,8 +3,8 @@
 //  Source : la carte du jeu (WORLD.V, WORLD.solid, WORLD.props, WORLD.zones). Rien n'est retiré :
 //  chaque décor a un modèle 3D, ou à défaut son image du jeu (panneau debout ou décalque au sol).
 // =====================================================================
-import { THREE, scene, patch, canvasTex, MOBILE, U } from '../assets/demo/v4/core.js';
-import { kitParts, kitScale, MAP, VARIANTS, KIT_MAT } from './kit3d.js';
+import { THREE, scene, patch, canvasTex, MOBILE, U, STATE } from '../assets/demo/v4/core.js';
+import { kitParts, kitScale, MAP, VARIANTS, KIT_MAT, setKitLod } from './kit3d.js';
 import { mergeGeos } from '../assets/demo/v4/nature.js';
 
 const T = 32, CH = 32, B = B2D;
@@ -86,8 +86,10 @@ const WATER_OF = { volcan: 'lava', lave: 'lava', marais: 'murky', jungle: 'murky
 const CHUNKS = new Map(), DYN = new Set(), BOARDS = new Map();
 const dummy = new THREE.Object3D(), tint = new THREE.Color();
 function propsByChunk() { if (WORLD._pc) return WORLD._pc; const m = new Map(); for (const p of WORLD.props) { const k = Math.floor(p.x / T / CH) + ',' + Math.floor(p.y / T / CH); if (!m.has(k)) m.set(k, []); m.get(k).push(p); } WORLD._pc = m; return m; }
+const SUB = 16; // quart de bloc : unité de tri hors champ
 function buildChunk(i, j) {
-  const key = i + ',' + j; if (CHUNKS.has(key)) return; const x0 = i * CH, z0 = j * CH, group = new THREE.Group(); scene.add(group); const ch = { i, j, group, dyn: [] };
+  setKitLod(STATE.qual);
+  const key = i + ',' + j; if (CHUNKS.has(key)) return; const x0 = i * CH, z0 = j * CH, group = new THREE.Group(); scene.add(group); const ch = { i, j, group, dyn: [], q: STATE.qual };
   // sol : 64 × 64 segments, couleurs par sommet (biome, terre, herbe, rives), relief doux, eau creusée
   const N = MOBILE ? 48 : 64, g = new THREE.PlaneGeometry(CH, CH, N, N); g.rotateX(-Math.PI / 2); g.translate(x0 + CH / 2, 0, z0 + CH / 2);
   const p = g.attributes.position, cols = new Float32Array(p.count * 3); let hasWater = false;
@@ -99,20 +101,21 @@ function buildChunk(i, j) {
     if (wm > 0.05) _ca.lerp(col(bi.sand), sstep(0.05, 0.4, wm) * 0.85);
     cols[k * 3] = _ca.r; cols[k * 3 + 1] = _ca.g; cols[k * 3 + 2] = _ca.b;
   }
-  g.setAttribute('color', new THREE.BufferAttribute(cols, 3)); g.computeVertexNormals();
+  g.setAttribute('color', new THREE.BufferAttribute(cols, 3)); g.computeVertexNormals(); g.userData.own = true;
   const mesh = new THREE.Mesh(g, groundMat); mesh.receiveShadow = true; group.add(mesh);
   if (hasWater) { const wg = new THREE.PlaneGeometry(CH, CH); wg.rotateX(-Math.PI / 2); const zid = zoneId(x0 + 16, z0 + 16); const wmsh = new THREE.Mesh(wg, WATER[WATER_OF[zid] || 'def']); wmsh.position.set(x0 + CH / 2, -0.32, z0 + CH / 2); wmsh.renderOrder = 2; group.add(wmsh); }
   // herbe : touffes sur les cases d'herbe, densité et teinte du biome
   const grass = [];
   const tries = MOBILE ? 1400 : 2600; for (let k = 0; k < tries; k++) { const x = x0 + h2(k, i * 13 + j) * CH, z = z0 + h2(k + 0.5, j * 17 + i) * CH; const bi = biomeAt(x, z); if (h2(x, z) > bi.gAmt * 0.9) continue; const [gm, wm] = masks(x, z); if (gm < 0.75 || wm > 0.02) continue; grass.push([x, z, bi]); }
-  if (grass.length) { const parts = kitParts('grasstuft', 0); const im = new THREE.InstancedMesh(parts[0].geo, KIT_MAT.grass, grass.length); grass.forEach(([x, z, bi], k) => { const s = 0.7 + h2(x, z * 3) * 0.8; dummy.position.set(x, groundH(x, z) - 0.02, z); dummy.rotation.set(0, h2(z, x) * 6.28, 0); dummy.scale.set(s, s, s); dummy.updateMatrix(); im.setMatrixAt(k, dummy.matrix); tint.set(bi.tint).multiplyScalar(0.85 + h2(x * 2, z) * 0.3); im.setColorAt(k, tint); }); im.computeBoundingSphere(); group.add(im); }
+  const gq = [0.45, 0.75, 1][STATE.qual] || 1; const gsub = new Map(); for (const g of grass) { if (h2(g[0] * 7, g[1]) > gq) continue; const q = Math.floor((g[0] - x0) / SUB) + ',' + Math.floor((g[1] - z0) / SUB); if (!gsub.has(q)) gsub.set(q, []); gsub.get(q).push(g); }
+  for (const grass of gsub.values()) if (grass.length) { const parts = kitParts('grasstuft', 0); const im = new THREE.InstancedMesh(parts[0].geo, KIT_MAT.grass, grass.length); grass.forEach(([x, z, bi], k) => { const s = 0.7 + h2(x, z * 3) * 0.8; dummy.position.set(x, groundH(x, z) - 0.02, z); dummy.rotation.set(0, h2(z, x) * 6.28, 0); dummy.scale.set(s, s, s); dummy.updateMatrix(); im.setMatrixAt(k, dummy.matrix); tint.set(bi.tint).multiplyScalar(0.85 + h2(x * 2, z) * 0.3); im.setColorAt(k, tint); }); im.computeBoundingSphere(); group.add(im); }
   // décors : instanciés par modèle et variante ; les décors qui changent d'état sont suivis à part
   const groups = new Map(), list = propsByChunk().get(key) || [];
   for (const pr of list) {
     const m = MAP[pr.type];
     if (!m) { fallback(pr, ch); continue; }
     if (m[2] || pr.hidden || pr.type === 'house_a' || pr.type === 'house_b' || pr.type === 'house_c') { dynamic(pr, m, ch); continue; }
-    const v = Math.floor(h2(pr.x, pr.y) * VARIANTS), gk = m[0] + ':' + v; if (!groups.has(gk)) groups.set(gk, []); groups.get(gk).push(pr);
+    const v = Math.floor(h2(pr.x, pr.y) * VARIANTS), gk = m[0] + ':' + v + ':' + Math.floor((pr.x / T - x0) / SUB) + ',' + Math.floor((pr.y / T - z0) / SUB); if (!groups.has(gk)) groups.set(gk, []); groups.get(gk).push(pr);
   }
   for (const [gk, L] of groups) { const [kit, v] = gk.split(':'); const parts = kitParts(kit, +v);
     for (const part of parts) { const im = new THREE.InstancedMesh(part.geo, part.mat, L.length); im.castShadow = part.cast !== false; im.receiveShadow = !part.shadowOnly; if (part.shadowOnly) { im.layers.set(1); im.castShadow = true; }
@@ -150,7 +153,10 @@ function refreshDyn(d, t, P) {
 export function updateWorld(px, pz, t) {
   const ci = Math.floor(px / CH), cj = Math.floor(pz / CH), R = 1;
   let built = 0; for (let j = cj - R; j <= cj + R; j++) for (let i = ci - R; i <= ci + R; i++) if (i >= 0 && j >= 0 && i * CH < MW && j * CH < MH && !CHUNKS.has(i + ',' + j) && built < 1) { buildChunk(i, j); built++; }
-  for (const [k, ch] of CHUNKS) if (Math.abs(ch.i - ci) > R + 1 || Math.abs(ch.j - cj) > R + 1) { scene.remove(ch.group); ch.group.traverse(o => { if (o.isInstancedMesh) o.dispose(); if (o.geometry && o.geometry !== undefined && o.isMesh && !o.isInstancedMesh && o.geometry.userData.own) o.geometry.dispose(); }); CHUNKS.delete(k); }
+  const free = (k, ch) => { scene.remove(ch.group); ch.group.traverse(o => { if (o.isInstancedMesh) o.dispose(); if (o.geometry && o.isMesh && !o.isInstancedMesh && o.geometry.userData.own) o.geometry.dispose(); }); CHUNKS.delete(k); };
+  for (const [k, ch] of CHUNKS) if (Math.abs(ch.i - ci) > R + 1 || Math.abs(ch.j - cj) > R + 1) free(k, ch);
+  // qualité graphique changée : les blocs sont reconstruits un par un avec la nouvelle finesse
+  if (!built) for (const [k, ch] of CHUNKS) if (ch.q !== STATE.qual) { free(k, ch); buildChunk(ch.i, ch.j); break; }
   const P = G.player; for (const ch of CHUNKS.values()) if (Math.abs(ch.i - ci) <= 1 && Math.abs(ch.j - cj) <= 1) for (const d of ch.dyn) refreshDyn(d, t, P);
 }
 export function forceBuildAround(px, pz) { const ci = Math.floor(px / CH), cj = Math.floor(pz / CH); for (let j = cj - 1; j <= cj + 1; j++) for (let i = ci - 1; i <= ci + 1; i++) if (i >= 0 && j >= 0 && i * CH < MW && j * CH < MH) buildChunk(i, j); }

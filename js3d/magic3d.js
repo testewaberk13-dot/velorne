@@ -135,10 +135,11 @@ function updateRings(dt) {
 }
 
 // ---------------- éclairs de lumière (incantations, ultimes, foudre) ----------------
-const FL = []; for (let i = 0; i < 3; i++) { const l = new THREE.PointLight('#ffffff', 0, 9, 1.4); scene.add(l); FL.push({ l, t: 0, d: 1, k: 0 }); }
+const FL = []; for (let i = 0; i < 3; i++) FL.push({ x: 0, y: 0, z: 0, col: '#fff', t: 9, d: 1, k: 0, int: 0 });
 let flI = 0;
-function flash(f, x, y, z, k = 1, d = 0.4) { const F = FL[flI++ % FL.length]; F.l.color.set(colOf(f)); F.l.position.set(x, y, z); F.k = k * 7 * (styleOf(f).light || 1); F.t = 0; F.d = d; }
-function updateFlashes(dt) { for (const F of FL) { F.t += dt; F.l.intensity = F.t < F.d ? F.k * (1 - F.t / F.d) : 0; } }
+function flash(f, x, y, z, k = 1, d = 0.4) { const F = FL[flI++ % FL.length]; F.col = colOf(f); F.x = x; F.y = y; F.z = z; F.k = k * 7 * (styleOf(f).light || 1); F.t = 0; F.d = d; }
+function updateFlashes(dt) { for (const F of FL) { F.t += dt; F.int = F.t < F.d ? F.k * (1 - F.t / F.d) : 0; } }
+export function flashLights() { return FL.filter(F => F.int > 0.05).map(F => ({ x: F.x, y: F.y, z: F.z, col: F.col, int: F.int, dist: 9, decay: 1.4 })); }
 
 // ---------------- événements du jeu ----------------
 const at = o => { const X = m(o.x), Z = m(o.y); return [X, groundH(X, Z), Z]; };

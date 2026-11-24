@@ -53,7 +53,8 @@ const Z = {
 };
 const cur = { fog: new THREE.Color(), hemi: new THREE.Color(), ground: new THREE.Color(), sun: new THREE.Color(), top: new THREE.Color(), mid: new THREE.Color(), bot: new THREE.Color(), fk: 0, dens: 1, exp: 1, hk: 0, gk: 0, sk: 0, skyk: 0, lava: 0, init: false };
 const tmp = new THREE.Color();
-const lavaLight = new THREE.PointLight('#ff5a1a', 0, 22, 1.2); scene.add(lavaLight);
+const LAVA = { x: 0, y: 0, z: 0, col: '#ff5a1a', int: 0, dist: 22, decay: 1.2 };
+export const lavaLight = () => LAVA;
 let acc = 0;
 export function updateRegion(dt, zone, look, darkK) {
   const D = Z[zone && zone.id] || {}; const k = Math.min(1, dt * 0.8);
@@ -71,7 +72,7 @@ export function updateRegion(dt, zone, look, darkK) {
   skyU.top.value.lerp(cur.top, cur.skyk * nk); skyU.mid.value.lerp(cur.mid, cur.skyk * nk); skyU.bot.value.lerp(cur.bot, cur.skyk * nk);
   renderer.toneMappingExposure *= cur.exp;
   // lave : lueur rouge qui monte du sol, pulsée
-  lavaLight.intensity = cur.lava * (5 + Math.sin(performance.now() * 0.002) * 1.2); lavaLight.position.set(look.x + 3, look.y + 1.5, look.z - 4);
+  LAVA.int = cur.lava * (5 + Math.sin(performance.now() * 0.002) * 1.2); LAVA.x = look.x + 3; LAVA.y = look.y + 1.5; LAVA.z = look.z - 4;
   // particules d'ambiance autour de la caméra
   if (!D.p || darkK > 0.9) return;
   acc += dt;

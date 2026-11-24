@@ -8,8 +8,8 @@ import { THREE, scene, camera, renderer, STATE, U, time, DAY, applyDay, buildPos
 import { updateWorld, forceBuildAround, groundH } from './world3d.js';
 import { MAP } from './kit3d.js';
 import { VM } from '../assets/demo/v4/village.js';
-import { updateMagic3D, MAGIC3D } from './magic3d.js';
-import { updateRegion } from './regions3d.js';
+import { updateMagic3D, MAGIC3D, flashLights } from './magic3d.js';
+import { updateRegion, lavaLight } from './regions3d.js';
 
 const B = B2D; const T = 32; // pixels par mètre
 const m = v => v / T;
@@ -123,19 +123,25 @@ function updateEffects() {
 }
 
 // ---------------- lumières : torches et sorts du jeu, lanterne du héros la nuit ----------------
+// un seul ensemble de lumières ponctuelles (2, 4 ou 6 selon la qualité) partagé entre la lanterne du héros, les éclairs des sorts,
+// la lueur de la lave et les lumières du jeu (torches, sorts) : les plus fortes et les plus proches sont gardées.
 const PL = []; const _c = new THREE.Color();
 function setLights() {
   const n = [2, 4, 6][STATE.qual]; while (PL.length < n) { const l = new THREE.PointLight('#ffcc88', 0, 8, 1.5); scene.add(l); PL.push(l); }
   while (PL.length > n) scene.remove(PL.pop());
 }
 setLights();
-const HL = new THREE.PointLight('#ffd6a0', 0, 7.5, 1.3); scene.add(HL);
 function updateLights(darkK) {
-  const P = G.player; const L = (G.lights || []).filter(l => l && l.x != null).map(l => [l, Math.hypot(l.x - P.x, l.y - P.y)]).sort((a, b) => a[1] - b[1]).slice(0, PL.length);
-  PL.forEach((pl, i) => { const it = L[i]; if (!it) { pl.intensity = 0; return; } const l = it[0]; pl.position.set(m(l.x), 1.2 + groundH(m(l.x), m(l.y)), m(l.y)); pl.distance = Math.max(4, m(l.r || 90) * 1.6); if (l.col) _c.set('rgb(' + l.col + ')'); else _c.set('#ffd9a0'); pl.color.copy(_c); pl.intensity = 6 * (l.a ?? 1); });
+  const P = G.player, px = m(P.x), pz = m(P.y), gy = groundH(px, pz), C = [];
   const night = DAY.cur ? DAY.cur.night : 0, k = Math.max(night, darkK);
   VM.glass.emissiveIntensity = sstep(0.25, 0.75, k) * 1.3; // fenêtres allumées la nuit et dans l'obscurité
-  HL.intensity = 3.2 * sstep(0.15, 0.8, k); HL.position.set(m(P.x), groundH(m(P.x), m(P.y)) + 1.7, m(P.y));
+  const hl = 3.2 * sstep(0.15, 0.8, k); if (hl > 0.05) C.push({ x: px, y: gy + 1.7, z: pz, col: '#ffd6a0', int: hl, dist: 7.5, decay: 1.3, pri: 2 });
+  for (const f of flashLights()) C.push(f);
+  const lv = lavaLight(); if (lv.int > 0.05) C.push(lv);
+  for (const l of G.lights || []) { if (!l || l.x == null) continue; const d = Math.hypot(l.x - P.x, l.y - P.y); if (d > 520) continue; C.push({ x: m(l.x), y: 1.2 + groundH(m(l.x), m(l.y)), z: m(l.y), col: l.col ? 'rgb(' + l.col + ')' : '#ffd9a0', int: 6 * (l.a ?? 1), dist: Math.max(4, m(l.r || 90) * 1.6), decay: 1.5, dd: d }); }
+  for (const c of C) c.score = c.int / (1 + Math.hypot(c.x - px, c.z - pz) * 0.3) + (c.pri || 0);
+  C.sort((a, b) => b.score - a.score);
+  PL.forEach((pl, i) => { const c = C[i]; if (!c) { pl.intensity = 0; return; } pl.position.set(c.x, c.y, c.z); pl.color.set(c.col); pl.intensity = c.int; pl.distance = c.dist; pl.decay = c.decay; });
 }
 
 // ---------------- caméra ----------------
@@ -270,7 +276,7 @@ B.frame3d = function () {
   const t3 = performance.now(); render3d(); pm('render', t3);
   pm('frame', now);
   // qualité automatique (mesurée en temps réel)
-  fpsN++; fpsAcc += dt; if (fpsAcc > 1.5) { PROF.fps = fpsN / fpsAcc; fpsN = 0; fpsAcc = 0; syncQual();
+  fpsN++; fpsAcc += rdt; if (fpsAcc > 1.5) { PROF.fps = fpsN / fpsAcc; fpsN = 0; fpsAcc = 0; syncQual();
     if (STATE.auto) { if (PROF.fps < 26 && STATE.qual > 0) { STATE.qual--; resize3d(); setLights(); } else if (PROF.fps > 55 && STATE.qual < (MOBILE ? 1 : 2)) { STATE.qual++; resize3d(); setLights(); } } }
   if (cbar) cbar.classList.toggle('on', !!c.btns);
   if (info) info.textContent = 'Vélorne 3D · ' + (z ? z.name : '') + ' · ' + String(Math.floor(HOUR)).padStart(2, '0') + ' h ' + String(Math.floor(HOUR % 1 * 60)).padStart(2, '0');
