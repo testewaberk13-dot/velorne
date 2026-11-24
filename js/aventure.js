@@ -120,9 +120,9 @@ function placeVisible(p) { return !p.req || p.req(); }
 function placeText(p) { return p.after && p.after.when() ? p.after.txt : p.txt; }
 function discover(p) {
   const N = NS(); if (N.disc[p.id]) return; N.disc[p.id] = N.seq + 1;
-  nLog('lieu', (p.hidden ? 'Lieu secret découvert : ' : 'Découverte : ') + '<b>' + p.n + '</b>.');
-  toast((p.hidden ? '✧ Lieu secret : ' : 'Lieu découvert : ') + p.n, p.hidden ? '#ffd27a' : '#e9d5ff');
-  if (typeof fogReveal === 'function') fogReveal(p.x, p.y, 6);
+  nLog('lieu', (p.named ? 'Tu entres dans un lieu légendaire : ' : p.hidden ? 'Lieu secret découvert : ' : 'Découverte : ') + '<b>' + p.n + '</b>.');
+  toast((p.named ? '❖ ' : p.hidden ? '✧ Lieu secret : ' : 'Lieu découvert : ') + p.n, p.named ? '#a5f3fc' : p.hidden ? '#ffd27a' : '#e9d5ff');
+  if (typeof fogReveal === 'function') fogReveal(p.x, p.y, p.named ? 12 : 6);
   if (typeof repGain === 'function') repGain('cartographes', p.hidden ? 30 : 10);
   if (p.hidden) sfx && sfx('level');
 }
@@ -130,15 +130,24 @@ function readPlace(p) {
   const N = NS(), P = G.player; discover(p);
   let extra = '';
   // étape de mission liée à ce lieu
+  const rid = stepHit('riddle', p.id); if (rid && rid.step.t === 'riddle') return riddleDialog(p, rid);
   const hit = stepHit('read', p.id) || stepHit('visit', p.id);
   if (hit) extra = '<br><br><i>' + (hit.step.found || '') + '</i>';
   if (!N.read[p.id]) { N.read[p.id] = 1; if (p.reward) { const R = p.reward; if (R.gold) P.gold += R.gold; if (R.item) giveItem(P, R.item[0], R.item[1], 'Découverte : ' + p.n); if (R.rep && typeof repGain === 'function') repGain(R.rep[0], R.rep[1]); extra += `<br><br><small>Trouvé : ${R.gold ? R.gold + ' or' : ''}${R.item && REG[R.item[0]] ? ', ' + R.item[1] + ' × ' + REG[R.item[0]].name : ''}</small>`; } }
   dialog(p.n, placeText(p) + extra, [['Fermer', () => { closePanel(); if (hit) advance(hit.id); }]]);
 }
+function riddleDialog(p, rid) {
+  const s = rid.step;
+  dialog(p.n, placeText(p) + '<br><br><b>' + s.q + '</b>', s.opts.map(([label, ok, reply]) => [label, () => {
+    if (ok) { nLog('mission', `${MISSIONS[rid.id].n} — énigme résolue : « ${label} ».`); dialog(p.n, reply, [['Continuer', () => { closePanel(); advance(rid.id); }]]); }
+    else { dialog(p.n, reply + '<br><small>Tu peux réessayer après le combat.</small>', [['Se battre', () => { closePanel(); const f = s.fail; if (f) for (let i = 0; i < f.n; i++) { const a = i * 3.1 + Math.random(); const x = G.player.x + Math.cos(a) * 70, y = G.player.y + Math.sin(a) * 50; const e = spawnEnemy(f.kind, x, y, { once: true, kind: f.kind, x, y, n: 0, r: 0 }); e.aggro = true; } }]]); }
+  }]));
+}
 function checkPlaces() {
   for (const id in PLACE) {
     const p = PLACE[id]; if (!placeVisible(p)) continue;
     const d = pDistT(p.x, p.y);
+    if (p.named && d < p.r && !NS().disc[p.id]) { discover(p); G.zoneBanner = { name: p.n, t: 0 }; }
     if (d < (p.prop ? 2.6 : 3.5)) { discover(p); if (!p.prop) { const hit = stepHit('visit', p.id) || stepHit('read', p.id); if (hit) { const s = hit.step; dialog(p.n, placeText(p) + (s.found ? '<br><br><i>' + s.found + '</i>' : ''), [['Continuer', () => { closePanel(); advance(hit.id); }]]); return; } } }
     else if (!p.prop && d < 5) { const hit = stepHit('visit', p.id); if (hit && hit.step.t === 'visit') { } }
   }
@@ -164,7 +173,7 @@ function stepStart(id) {
 function stepHit(type, arg) {
   for (const id in MISSIONS) {
     const m = narrM(id); if (!m || m.st !== 1) continue; const s = MISSIONS[id].steps[m.step]; if (!s || s.t !== type) continue;
-    if ((type === 'read' || type === 'visit') && s.place === arg) return { id, step: s };
+    if ((type === 'read' || type === 'visit' || type === 'riddle') && s.place === arg) return { id, step: s };
     if ((type === 'talk' || type === 'choice') && arg && giverMatch(arg, s.who)) return { id, step: s };
   }
   return null;
@@ -256,13 +265,14 @@ function arcMissions(arcId) {
 function arcState(arcId) {
   if (arcId === 'main') { const Q = G.quests; const done = typeof sagaDone === 'function' && sagaDone(); return { known: true, done, prog: done ? 1 : Q.main >= 3 ? 0.4 + 0.12 * sagaSeals() : Q.main >= 1 ? 0.2 : 0.05 }; }
   const L = arcMissions(arcId), A = ARCS[arcId]; const tot = A.range ? A.range[1] - A.range[0] + 1 : L.length;
-  const done = L.filter(x => x.st === 2).length, known = L.some(x => x.st > 0) || (arcId === 'a1' && hasStyleAny(G.player));
-  return { known, done: NS().ev['arc_' + arcId] === 1, prog: done / tot, nDone: done, nTot: tot, nAvail: L.length };
+  const nTotal = Math.max(tot, L.length); const done = L.filter(x => x.st === 2).length, known = L.some(x => x.st > 0) || (arcId === 'a1' && hasStyleAny(G.player));
+  return { known, done: NS().ev['arc_' + arcId] === 1, prog: done / nTotal, nDone: done, nTot: nTotal, nAvail: L.length };
 }
 function arcCheck(arcId) {
   if (!arcId || NS().ev['arc_' + arcId]) return;
   const own = Object.keys(MISSIONS).filter(id => MISSIONS[id].arc === arcId);
   if (!own.length || !own.every(narrDone) || !arcOutro(arcId)) return;
+  if (arcId === 'a7' && MISSIONS.q056 && !narrDone('q056')) return;
   NS().ev['arc_' + arcId] = 1;
   nLog('arc', `Fin de l'arc <b>${ARCS[arcId].n}</b>.`);
   later(() => { flashScreen('#e9d5ff', 0.6); sfx('level'); dialog('— ' + ARCS[arcId].n + ' —', arcOutro(arcId), [['Continuer', closePanel]]); }, 900);
@@ -273,13 +283,18 @@ function arcOutro(arcId) {
   if (arcId === 'a3') return 'De Port-Épave au Fjord des Baleines jusqu\'à l\'archipel des Sirènes, la mer s\'est tue. Le chant qui attirait les marins n\'était pas celui d\'une reine, mais celui d\'un écho de Nyx caché dans une cargaison destinée au porteur des sceaux.<br><br><b>Arc terminé : Peuples de la mer.</b>';
   if (arcId === 'a4') return 'Le sel de l\'oasis, le blé des plaines et le fer des monts voyagent de nouveau sur une route sûre. Les relais se racontent ton nom d\'une caravane à l\'autre.<br><br><b>Arc terminé : Routes commerciales et peuples.</b>';
   if (arcId === 'a5') return 'Autour du nid de Sangvert, les panthères d\'ombre dorment au son d\'une clochette. Les bêtes de Vélorne peuvent retrouver leur calme, si quelqu\'un prend le temps de les écouter.<br><br><b>Arc terminé : Créatures et liens.</b>';
+  if (arcId === 'a7' && narrDone('q056')) return 'La forge des sceaux est détruite : plus aucun écho ne s\'éveillera. Mais le Sans-Nom a emporté un dernier sceau, plus grand que tous les autres. Il a vécu à Brumeval, autrefois, et il a effacé son nom partout.<br><br><b>Arc terminé : Ombres et corruption.</b><br><small>Qui est le Sans-Nom ? La suite reste à écrire.</small>';
+  if (arcId === 'a8') return 'Torven et Liora mariés, Néria partie voir la mer, Orlan et sa grande carte, Bérick et ses dettes, Kaël à tes côtés, Selyne et ses trois lumières : les vies que tu as croisées ont changé de chemin.<br><br><b>Arc terminé : Destinées personnelles.</b>';
+  if (arcId === 'a9') return 'Les cinq gardiens légendaires sont tombés, et le seuil du Monde des Dragons est ouvert. Au-delà de l\'arche, le vent sent le soufre et l\'inconnu.<br><br><b>Arc terminé : Épreuves légendaires.</b><br><small>Le Monde des Dragons reste à explorer.</small>';
   if (arcId === 'a7') return 'Le Sans-Nom n\'était pas dans la crypte. Il t\'a seulement parlé, à travers une ombre cousue de sceaux. Il sait désormais qui tu es.<br><br><b>Arc terminé : Ombres et corruption (première partie).</b><br><small>La suite reste à écrire.</small>';
   return null;
 }
+if (typeof TITLES !== 'undefined') TITLES.push({ id: 'cartographe', n: 'le Cartographe', r: 2, d: 'Offrir à Orlan la grande carte de Vélorne.', ok: () => narrDone('q059') }, { id: 'legendaire', n: 'le Légendaire', r: 4, d: 'Ouvrir le seuil du Monde des Dragons.', ok: () => narrDone('q072') }, { id: 'ami_betes', n: 'l\'Ami des bêtes', r: 3, d: 'Accomplir le rite du lien des Gardiens du Vivant.', ok: () => narrDone('q040') });
 if (typeof TITLES !== 'undefined') TITLES.push({ id: 'ami_veilleurs', n: 'l\'Ami des Veilleurs', r: 3, d: 'Apaiser les quatre souffles de Nyx (arc « Les Quatre Veilleurs »).', ok: () => narrDone('q016') });
 if (typeof TITLES !== 'undefined') TITLES.push({ id: 'veilleur_brume', n: 'le Veilleur de Brumeval', r: 2, d: 'Apaiser la brume de Brumeval (arc « Débuts à Brumeval »).', ok: () => narrDone('q008') });
 
 // ---------------- personnages : rencontres et mémoire ----------------
+const sayOf = s => typeof s.say === 'function' ? s.say() : s.say;
 function metNpc(n) {
   const N = NS(), k = n.name; if (!k) return;
   const r = N.npc[k] || (N.npc[k] = { met: 0, talks: 0 });
@@ -300,7 +315,7 @@ function narrNpcTalk(n) {
   const d = NNPC[n.narr] || {}; metNpc(n);
   // 1. étape « parler » ou « choix » d'une mission
   const hit = stepHit('talk', n) || stepHit('choice', n);
-  if (hit) { if (hit.step.t === 'choice') return choiceDialog(n, hit.id, hit.step); return dialog(n.name, hit.step.say, [['Continuer', () => { closePanel(); advance(hit.id); }]]); }
+  if (hit) { if (hit.step.t === 'choice') return choiceDialog(n, hit.id, hit.step); return dialog(n.name, sayOf(hit.step), [['Continuer', () => { closePanel(); advance(hit.id); }]]); }
   // 2. mission à proposer
   for (const id in MISSIONS) if (giverMatch(n, MISSIONS[id].giver) && missionAvail(id)) return missionOfferDialog(n, id);
   // 3. phrase contextuelle
@@ -324,7 +339,7 @@ interact = function (n) {
   metNpc(n);
   // PNJ existant : étape de mission, mission à proposer, puis phrase contextuelle — le dialogue habituel suit toujours
   const hit = stepHit('talk', n) || stepHit('choice', n);
-  if (hit) { if (hit.step.t === 'choice') return choiceDialog(n, hit.id, hit.step); return dialog(n.name, hit.step.say, [['Continuer', () => { closePanel(); advance(hit.id); }], ['Autre chose', () => { advance(hit.id); _interactN(n); }]]); }
+  if (hit) { if (hit.step.t === 'choice') return choiceDialog(n, hit.id, hit.step); return dialog(n.name, sayOf(hit.step), [['Continuer', () => { closePanel(); advance(hit.id); }], ['Autre chose', () => { advance(hit.id); _interactN(n); }]]); }
   for (const id in MISSIONS) if (giverMatch(n, MISSIONS[id].giver) && missionAvail(id)) {
     const M = MISSIONS[id];
     return dialog(n.name, M.intro + `<br><br><small>${ARCS[M.arc].n} · ${M.type}</small>`, [['Accepter', () => { startMission(id); closePanel(); }], ['Plus tard', () => _interactN(n)]]);
@@ -370,12 +385,17 @@ function seedMemories() {
   if (F.codex && F.codex.r) for (const r in F.codex.r) N.regions[r] = N.regions[r] || 1;
   for (const t of mem) nLog('souvenir', t);
 }
+function bossLink(kind) {
+  if (typeof BOSS_LINKS === 'undefined' || !BOSS_LINKS[kind]) return; const N = NS(); N.bl = N.bl || {}; if (N.bl[kind]) return; N.bl[kind] = 1;
+  const n = Object.keys(N.bl).length; addClue('boss_' + kind, BOSS_LINKS[kind]);
+  later(() => toast(`Fil rouge : ${n} trace${n > 1 ? 's' : ''} du Sans-Nom${narrDone('q054') ? '' : ' (le cercle brisé)'}`, '#e9d5ff'), 1500);
+}
 // combats majeurs consignés dans le récit
 const _questEventN = questEvent;
 questEvent = function (t, a) {
   _questEventN(t, a);
   try {
-    if (t === 'kill') missionKill(a);
+    if (t === 'kill') { missionKill(a); bossLink(a); }
     if (t === 'boss' && a && ENEMIES[a]) nLog('boss', `Victoire : <b>${ENEMIES[a].name}</b> est tombé.`);
   } catch (e) { }
 };
@@ -440,7 +460,8 @@ setInterval(() => {
     if (!G || G.mode !== 'play' || !G.player || !G.flags) return;
     NS(); seedMemories(); syncNpcs();
     if (G.paused) return;
-    zoneCheck(); checkPlaces(); missionSpawns(); missionItems(); dynCheck();
+    zoneCheck(); checkPlaces();
+    if (narrWs('grande_carte') && !NS().ev.carte_revelee && typeof fogReveal === 'function') { NS().ev.carte_revelee = 1; for (const id in NS().disc) { const p = PLACE[id]; if (p) fogReveal(p.x, p.y, 16); } } missionSpawns(); missionItems(); dynCheck();
     narrT++;
     if (narrT % 4 === 0) runScripted();
     if (G.t > DYN.next && calm()) { DYN.next = G.t + 150 + Math.random() * 120; if (Math.random() < 0.7) dynamicEvent(); }
@@ -533,6 +554,15 @@ if (typeof E2 === 'function') Object.assign(ENEMIES, {
   echo_maree: E2('dark_mage', { name: 'Écho de la marée', hp: 11000, dmg: 116, xp: 6400, gold: [500, 700], elite: true, el: 'eau', scale: 1.3, res: { eau: 0.85, foudre: -0.5, ombre: 0.4 } }),
   collecteur: E2('orc_warrior', { name: 'Le Collecteur', hp: 6200, dmg: 74, xp: 2600, gold: [300, 420], elite: true, scale: 1.25 }),
   ombre_sans_nom: E2('dark_mage', { name: 'Ombre du Sans-Nom', hp: 13500, dmg: 128, xp: 8200, gold: [600, 900], elite: true, el: 'ombre', scale: 1.3, res: { ombre: 0.9, lumiere: -0.5 } }),
+  forgeron_sceaux: E2('demon_brute', { name: 'Forgeron des sceaux', hp: 17000, dmg: 150, xp: 9500, gold: [800, 1100], elite: true, el: 'ombre', scale: 1.3, res: { ombre: 0.85, feu: 0.6, lumiere: -0.5 } }),
+  gardien_silence: E2('king_specter', { name: 'Gardien du Silence', hp: 26000, dmg: 165, xp: 14000, gold: [1200, 1600], elite: true, scale: 1.45, res: { ombre: 0.7, son: 0.95, lumiere: -0.3 } }),
+  gardien_trone: E2('skeleton_archer', { name: 'Gardien du trône d\'Aether', hp: 15000, dmg: 132, xp: 8800, gold: [800, 1100], elite: true, scale: 1.4, res: { lumiere: 0.85, ombre: -0.4 } }),
+  gardien_givre: E2('wolf_brute', { name: 'Gardien de Glaçâme', hp: 42000, dmg: 175, xp: 26000, gold: [2000, 2600], elite: true, el: 'glace', scale: 1.6, res: { glace: 0.95, feu: -0.4 } }),
+  gardien_sable: E2('lizard_spearman', { name: 'Gardien du Sable Rouge', hp: 46000, dmg: 182, xp: 28000, gold: [2100, 2700], elite: true, el: 'terre', scale: 1.6, res: { terre: 0.9, eau: -0.4 } }),
+  gardien_ames: E2('king_specter', { name: 'Gardien des Âmes', hp: 50000, dmg: 188, xp: 30000, gold: [2200, 2800], elite: true, el: 'ombre', scale: 1.6, res: { ombre: 0.9, lumiere: -0.5 } }),
+  gardien_volcan: E2('demon_brute', { name: 'Gardien du Volcan', hp: 54000, dmg: 196, xp: 32000, gold: [2300, 2900], elite: true, el: 'feu', scale: 1.65, res: { feu: 0.95, eau: -0.5 } }),
+  gardien_astral: E2('dark_mage', { name: 'Gardien des Astres', hp: 58000, dmg: 204, xp: 34000, gold: [2400, 3000], elite: true, el: 'lumiere', scale: 1.6, res: { lumiere: 0.8, espace: 0.8, ombre: -0.3 } }),
+  dragon_seuil: E2('demon_brute', { name: 'Dragon du seuil', hp: 90000, dmg: 230, xp: 60000, gold: [5000, 7000], elite: true, el: 'feu', scale: 2.0, res: { feu: 0.9, glace: -0.3, foudre: 0.4 } }),
   echo_givre: E2('king_specter', { name: 'Écho du givre', hp: 2600, dmg: 42, xp: 1800, gold: [160, 240], elite: true, el: 'glace', res: { glace: 0.8, feu: -0.5, ombre: 0.4 } }),
   echo_ombre: E2('king_specter', { name: 'Écho de l\'Éclipse', hp: 9500, dmg: 108, xp: 5200, gold: [420, 600], elite: true, el: 'ombre', res: { ombre: 0.85, lumiere: -0.5 } }),
   braise_vive: E2('bat', { name: 'Braise vivante', hp: 2700, dmg: 128, xp: 560, gold: [120, 180], el: 'feu', res: { feu: 0.9, eau: -0.5 } }),
