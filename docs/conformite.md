@@ -2,7 +2,7 @@
 
 Établie le 24/11/2026 (audit historique, directive 12 ; auto-diagnostic, directive 13). Elle est **à tenir à jour à chaque séance** : toute nouvelle demande y entre avec son origine, son état et ses tests.
 
-**Version contrôlée :** `jeu3d.html`, la version 3D officielle en construction. `index.html` reste le village pilote v4 tant que `jeu3d.html` n'a pas intégré Brumeval v4. `jeu-2d.html` est la référence logique, laissée intacte.
+**Version contrôlée :** `jeu3d.html`, la version 3D officielle. `index.html` l'ouvre directement depuis le 24/11 ; le village pilote v4 est conservé dans `demo3d-v4.html`. `jeu-2d.html` est la référence logique, laissée intacte.
 
 **Méthode de vérification :** les tests sont automatiques, dans Chrome sans carte graphique (rendu logiciel), sur ordinateur et en émulation de téléphone tactile. **Aucun test n'a été fait sur un vrai téléphone ni avec une vraie manette** : la manette est simulée. Les images par seconde mesurées en rendu logiciel ne représentent pas un appareil réel.
 
@@ -55,7 +55,7 @@
 | B11 | Brumeval v4 comme fondation | U 24/11 | ✅ | Moteur v4 (rendu, végétation, eau, ciel, matériaux) et contenu du village pilote intégrés dans `jeu3d` (F12 à F14), zone agrandie. | `t3d_bru`, `t3d_bru2` |
 | B12 | Hébergement sur GitHub (liens githack) | U 24/11 | ✅ | — | — | Liens en fin de document |
 | B13 | Noms des habitants cohérents | U 24/11 | ✅ | Doublons Maëlle/Maëlys, Ysolde/Ysold, Maëlis/Maëlys | Maëlys, Gwenna, Torven (bûcheron), Héloïse Vey (décisions du registre) | Relecture |
-| B14 | Un seul lien principal | U 24/11 | 🔷 | L'accueil reste le village pilote, qui est plus beau, et le jeu 3D a son propre lien. | L'accueil basculera sur `jeu3d` quand Brumeval y sera intégré | — |
+| B14 | Un seul lien principal | U 24/11 | ✅ | — | L'accueil (`index.html`) ouvre maintenant `jeu3d.html`, Brumeval y étant intégré. Le village pilote v4 est conservé à l'identique dans `demo3d-v4.html`. | Ouverture de l'accueil |
 | B15 | Ne rien oublier de tout le travail effectué | U 24/11 | 🟨 | Une perte involontaire est retrouvée : la **pluie** des prototypes v1 à v3 avait disparu de la v4. | Pluie rétablie dans `jeu3d`, et neige ajoutée dans les régions froides (PROPOSITION de réglage) | Section F |
 | B16 | Magie innée jamais choisie : rituel du Maître Mage | U (plan du lundi, point 17) | ✅ | — | — | `gs5` : aucune magie ni style à la création. `t7_pad` : Théobald envoie vers Orvael. |
 | B17 | Premier style appris auprès d'un maître de combat | U (point 17) | ✅ | — | — | `gs5`, `gq` |
@@ -192,7 +192,8 @@ Remarque : deux tests (`t7_pad`, `camp`) ont échoué une fois lorsqu'ils tourna
 ## Liens
 
 - Jeu 3D (version officielle en construction) : https://raw.githack.com/testewaberk13-dot/velorne/main/jeu3d.html
-- Village pilote (accueil actuel) : https://raw.githack.com/testewaberk13-dot/velorne/main/index.html
+- Accueil (ouvre le jeu 3D) : https://raw.githack.com/testewaberk13-dot/velorne/main/index.html
+- Village pilote v4 (conservé) : https://raw.githack.com/testewaberk13-dot/velorne/main/demo3d-v4.html
 - Ancien jeu 2D : https://raw.githack.com/testewaberk13-dot/velorne/main/jeu-2d.html
 
 ## I. Essais physiques à faire par toi (impossibles ici)
@@ -222,7 +223,7 @@ Ce qui est déjà testé ici, en simulation : tactile en 844 × 390 (stick, bout
 **Fait le 24/11 (fin d'après-midi) :** montures (Destrier, Lynx, Dragon), effets de la réputation et contrats, métiers et pêche, économie régionale, grimoires et sanctuaire des 27 familles, camp et chambre, 17 PNJ manquants avec activités permanentes et post-game. Les 72 quêtes (q001 à q072) sont toutes présentes dans le code. Non-régression : `narr2` 44/44, `gs5`, `t7_pad`, `camp`.
 
 **Prochaines tâches :**
-1. Passer l'accueil du site sur `jeu3d`, une fois validé par toi sur téléphone (G4).
+1. Accueil du site passé sur `jeu3d` (fait le 24/11). Reste ta vérification sur téléphone et manette (section I).
 2. Raffinements possibles : formes 3D propres à certaines compétences (lion de feu, piliers de glace…).
 
 **Ancienne liste (toute faite) :**
