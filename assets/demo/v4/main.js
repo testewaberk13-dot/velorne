@@ -36,7 +36,7 @@ const PATROL = ['place_n', 'chapelle_porte', 'place_e', 'pont', 'place_s', 'edra
 const NPC_DEFS = [
   { id: 'edran', name: 'Édran', title: "l'archiviste", sheet: 'npc_elder_walk', home: 'edran', start: [-8, 7], speed: 1.0,
     sched: [[0, 'edran_lit', 'sleep'], [7, 'edran_bureau', 'work'], [11, 'banc_chene', 'sit'], [13, 'aub_t1', 'sit'], [14.5, 'edran_bureau', 'work'], [17, 'fontaine_0', 'chat'], [19, 'aub_t1', 'sit'], [21.5, 'edran_lit', 'sleep']] },
-  { id: 'maelys', name: 'Maëlys', title: 'la marchande', sheet: 'npc_merchant_walk', home: 'echoppe', start: [6, 4],
+  { id: 'maelys', name: 'Maëlle', title: 'la marchande', sheet: 'npc_merchant_walk', home: 'echoppe', start: [6, 4],
     sched: [[0, 'echoppe_lit', 'sleep'], [7, 'etal_maelle', 'work'], [12, 'aub_t2', 'sit'], [13.5, 'etal_maelle', 'work'], [17.5, 'echoppe_comptoir', 'work'], [19, 'fontaine_1', 'chat'], [21, 'echoppe_lit', 'sleep']] },
   { id: 'borin', name: 'Borin', title: 'le forgeron', sheet: 'npc_smith_walk', home: 'auberge', start: [8, -5],
     sched: [[0, 'aub_lit', 'sleep'], [6.5, 'forge_enclume', 'work'], [12, 'aub_t3', 'sit'], [13, 'forge_enclume', 'work'], [18, 'aub_t3', 'sit'], [22, 'aub_lit', 'sleep']] },

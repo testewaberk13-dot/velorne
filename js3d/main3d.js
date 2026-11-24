@@ -8,6 +8,8 @@ import { THREE, scene, camera, renderer, STATE, U, time, DAY, applyDay, buildPos
 import { updateWorld, forceBuildAround, groundH } from './world3d.js';
 import { MAP } from './kit3d.js';
 import { BRU, updateBrumeval, brumevalLights, settleNpcs } from './brumeval3d.js';
+import { startBrumevalLife, updateBrumevalLife, drawBubbles, BRULIFE } from './brumevalLife.js';
+startBrumevalLife().catch(e => console.warn('brumeval vie', e));
 import { VM } from '../assets/demo/v4/village.js';
 import { updateMagic3D, MAGIC3D, flashLights } from './magic3d.js';
 import { updateRegion, lavaLight } from './regions3d.js';
@@ -65,7 +67,7 @@ let frameId = 0;
 const yawQ = new THREE.Quaternion(), _up = new THREE.Vector3(0, 1, 0);
 function updateActors(px, pz) {
   frameId++; const near = o => Math.abs(m(o.x) - px) < 26 && Math.abs(m(o.y) - pz) < 22;
-  const list = [[G.player, 'player']]; for (const e of G.enemies) if (near(e)) list.push([e, 'enemy']); for (const n of G.npcs) if (near(n)) list.push([n, 'npc']); for (const d of G.drops) if (near(d)) list.push([d, 'drop']); for (const p of G.projs) if (near(p)) list.push([p, 'proj']);
+  const list = [[G.player, 'player']]; for (const e of G.enemies) if (near(e)) list.push([e, 'enemy']); for (const n of G.npcs) if (near(n) && !n.bru3d) list.push([n, 'npc']); for (const d of G.drops) if (near(d)) list.push([d, 'drop']); for (const p of G.projs) if (near(p)) list.push([p, 'proj']);
   yawQ.setFromAxisAngle(_up, CAM.yaw); let n = 0;
   for (const [o, kind] of list) {
     const a = actor(o, kind); a.seen = frameId; const ox = m(o.x), oz = m(o.y), d2 = (ox - px) ** 2 + (oz - pz) ** 2;
@@ -248,7 +250,7 @@ B.frame3d = function () {
   if (!openUI()) { if (IN.held.camL) B.cam3d.rot(-dt * 1.7); if (IN.held.camR) B.cam3d.rot(dt * 1.7); if (IN.held.camU) B.cam3d.tilt(dt * 0.7); if (IN.held.camD) B.cam3d.tilt(-dt * 0.7); }
   if (setDirty && now - setDirty > 800) { setDirty = 0; saveSet(); }
   const t0 = performance.now();
-  updateWorld(px, pz, time.value); updateBrumeval(dt, P, CAM.look); if ((frameId & 31) === 0) settleNpcs(); pm('world', t0);
+  updateWorld(px, pz, time.value); updateBrumeval(dt, P, CAM.look); updateBrumevalLife(dt, CAM.yaw); if ((frameId & 31) === 0) settleNpcs(); pm('world', t0);
   const t1 = performance.now(); updateActors(px, pz); pm('actors', t1);
   updateAim(dt, rdt);
   // caméra qui suit le joueur (secousses du jeu reprises), en mode portrait plus éloignée
@@ -283,5 +285,6 @@ B.frame3d = function () {
   if (cbar) cbar.classList.toggle('on', !!c.btns);
   if (info) info.textContent = 'Vélorne 3D · ' + (z ? z.name : '') + ' · ' + String(Math.floor(HOUR)).padStart(2, '0') + ' h ' + String(Math.floor(HOUR % 1 * 60)).padStart(2, '0');
 };
+B.extraOverlay = drawBubbles;
 B.on = true;
-window.V3D = { BRU, MAGIC3D, THREE, scene, camera, renderer, CAM, ACT, PROF, STATE, DAY, hour: () => HOUR, setHour: h => { HOUR = h; } };
+window.V3D = { BRULIFE, BRU, MAGIC3D, THREE, scene, camera, renderer, CAM, ACT, PROF, STATE, DAY, hour: () => HOUR, setHour: h => { HOUR = h; } };

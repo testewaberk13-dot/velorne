@@ -91,6 +91,7 @@ B2D.overlay = function () {
     if (typeof narrMarkers === 'function') { try { narrMarkers(pr); } catch (e) { } }
   }
   try { B2D.drawAim3D(ctx); } catch (e) { }
+  try { if (B2D.extraOverlay) B2D.extraOverlay(ctx); } catch (e) { }
   if (G.timeTint > 0) { ctx.fillStyle = 'rgba(200,170,255,0.18)'; ctx.fillRect(0, 0, W, H); }
   if (G.reveal > 0) { ctx.strokeStyle = 'rgba(255,233,160,0.35)'; ctx.lineWidth = 3; ctx.strokeRect(1.5, 1.5, W - 3, H - 3); }
   if (G.flash) { ctx.globalAlpha = Math.max(0, G.flash.a); ctx.fillStyle = G.flash.col; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }

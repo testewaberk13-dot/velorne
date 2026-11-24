@@ -283,8 +283,8 @@ export function buildVillage(waterMat) {
       { const [x, z] = L2W(b, -0.2, -0.2); addCircle(x, z, 0.4, 'enclume'); } { const [x, z] = L2W(b, 0.8, 1.4); addCircle(x, z, 0.35, 'tonneau'); }
       poi('forge_enclume', b, -0.2, 0.55, Math.PI);
     } });
-  // 3. Échoppe de Maëlys
-  building({ id: 'echoppe', name: 'Échoppe de Maëlys', x: 10.5, z: 7, rot: R(10.5, 7), w: 5, d: 4.4, h: 2.6, roof: 'tile', roofTint: '#e8d0c0', enter: true, shutter: '#8a3a3a', inside: (P, b) => {
+  // 3. Échoppe de Maëlle
+  building({ id: 'echoppe', name: 'Échoppe de Maëlle', x: 10.5, z: 7, rot: R(10.5, 7), w: 5, d: 4.4, h: 2.6, roof: 'tile', roofTint: '#e8d0c0', enter: true, shutter: '#8a3a3a', inside: (P, b) => {
     F.counter(P, 0, -0.4, 0, 2.4); F.shelf(P, -1.4, -1.95, 0, 1.6, false); F.shelf(P, 1.0, -1.95, 0, 1.6, false); F.sack(P, -2.0, 1.4); F.sack(P, -1.6, 1.6); F.barrel(P, 1.9, 1.2, 0.8); F.crate(P, 1.9, 0.3, 0.5);
     for (let i = 0; i < 4; i++) { const [x, z] = L2W(b, -0.9 + i * 0.6, -0.4); addCircle(x, z, 0.3, 'comptoir'); } { const [x, z] = L2W(b, 1.9, 0.75); addCircle(x, z, 0.6, 'tonneau'); }
     for (let i = 0; i < 5; i++) F.plate(P, -0.9 + i * 0.45, 1.03, -0.4, ['#c84a3a', '#e8b030', '#8ab040', '#a050a0', '#e07030'][i]);
