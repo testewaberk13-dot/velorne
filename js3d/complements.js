@@ -221,3 +221,31 @@ window.fishHint = () => { try { const P = G.player; return P && !P.mount && !G.n
 //  CORRECTION — le titre « le Légendaire » (rareté 4) faisait planter l'onglet Codex : rareté 4 ajoutée (défaut aussi présent en 2D).
 // ---------------------------------------------------------------------
 if (typeof TITLE_RAR !== 'undefined' && !TITLE_RAR[4]) TITLE_RAR[4] = ['Légendaire', '#ff7ad9'];
+
+// ---------------------------------------------------------------------
+//  4. ÉCONOMIE RÉGIONALE — cahier V2 / Partie 5 §22 : « les prix doivent dépendre de la région, de la disponibilité,
+//     de la valeur des matériaux » ; « spécialités régionales ». Chaque marchand vend les spécialités de sa région,
+//     moins cher. Les prix montent dans les régions lointaines. Les produits d'autres régions se revendent mieux.
+//     Coefficients : PROPOSITIONS d'équilibrage (sans spéculation abusive : écart borné de −20 % à +35 %).
+// ---------------------------------------------------------------------
+const REGION_ECO = {
+  village: { f: 1.0, spec: ['herbe', 'bois_ancien', 'cuir', 'p_truite'] }, forest: { f: 1.0, spec: ['herbe', 'bois_ancien', 'cuir', 'p_truite'] },
+  plaines: { f: 1.03, spec: ['cuir', 'herbe', 'p_truite'] }, desert: { f: 1.06, spec: ['ecaille_drake', 'croc'] }, oasis: { f: 1.05, spec: ['herbe', 'ecaille_drake'] },
+  marais: { f: 1.08, spec: ['gelee', 'herbe', 'p_carpe'] }, jungle: { f: 1.1, spec: ['herbe', 'cuir', 'p_carpe'] },
+  neige: { f: 1.1, spec: ['croc', 'acier', 'p_saumon'] }, monts: { f: 1.1, spec: ['fer', 'acier', 'mithril'] }, hurlevents: { f: 1.12, spec: ['croc', 'acier'] }, fjord: { f: 1.12, spec: ['p_saumon', 'cuir'] },
+  mines: { f: 1.12, spec: ['fer', 'mithril', 'acier'] }, volcan: { f: 1.15, spec: ['cendres', 'ecaille_drake', 'p_braise'] }, lave: { f: 1.18, spec: ['cendres', 'mithril', 'p_braise'] },
+  cote: { f: 1.06, spec: ['p_lune', 'cuir'] }, archipel: { f: 1.1, spec: ['p_lune', 'cristal_magique'] },
+  cristal: { f: 1.15, spec: ['cristal_magique', 'fragment_runique', 'p_cristal'] }, aether: { f: 1.2, spec: ['cristal_magique', 'fragment_runique', 'p_cristal'] },
+  temple: { f: 1.18, spec: ['fragment_runique', 'essence_spectrale'] }, ombres: { f: 1.22, spec: ['essence_spectrale', 'p_ombre'] },
+  corrompues: { f: 1.2, spec: ['essence_spectrale', 'gelee'] }, citadelle: { f: 1.25, spec: ['essence_spectrale', 'cendres'] },
+};
+function shopZone() { const n = G.shopNpc; const z = n ? zoneAt(n.x, n.y) : (G.player ? zoneAt(G.player.x, G.player.y) : null); return (z && REGION_ECO[z.id]) ? z.id : 'village'; }
+function isSpec(zid, id) { return (REGION_ECO[zid] || REGION_ECO.village).spec.includes(id); }
+function isForeignSpec(zid, id) { if (isSpec(zid, id)) return false; for (const k in REGION_ECO) if (REGION_ECO[k].spec.includes(id)) return true; return false; }
+{ const bp0 = buyPrice; buyPrice = function (d) { const z = shopZone(), E = REGION_ECO[z]; let k = E.f; if (d && isSpec(z, d.id)) k *= 0.8; return Math.max(1, Math.round(bp0(d) * k)); }; }
+{ const sp0 = sellPrice; sellPrice = function (d) { const z = shopZone(); let k = 1; if (d && isSpec(z, d.id)) k = 0.8; else if (d && isForeignSpec(z, d.id)) k = 1.35; return Math.max(1, Math.floor(sp0(d) * k)); }; }
+{ const os0 = openShop; openShop = function (n, tab) {
+    const z = n ? zoneAt(n.x, n.y) : null, zid = z && REGION_ECO[z.id] ? z.id : 'village', spec = REGION_ECO[zid].spec.filter(id => REG[id]);
+    const sp = SHOP.special; SHOP.special = sp.concat(spec.filter(id => !sp.includes(id)));
+    try { os0(n, tab); } finally { SHOP.special = sp; }
+    try { const body = document.querySelector('.panel.show .pbody'); if (body && (tab || 'buy') === 'buy') { const el = document.createElement('p'); el.className = 'hint'; el.innerHTML = `Économie de la région « ${z ? z.name : 'Brumeval'} » : prix ×${REGION_ECO[zid].f.toFixed(2)} ; spécialités locales −20 % (${spec.map(id => REG[id].name).join(', ')}) ; les spécialités d'autres régions se revendent ici +35 %.`; body.prepend(el); } } catch (e) { } }; }
