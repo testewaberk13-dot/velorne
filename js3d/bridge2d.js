@@ -97,10 +97,28 @@ B2D.overlay = function () {
   if (G.flash) { ctx.globalAlpha = Math.max(0, G.flash.a); ctx.fillStyle = G.flash.col; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
   if (P.hp < P.st8.maxhp * 0.25 && P.state !== 'dead') { const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.8); g.addColorStop(0, 'rgba(120,0,0,0)'); g.addColorStop(1, `rgba(150,0,0,${0.25 + Math.sin(G.t * 6) * 0.1})`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
   try { drawHUD(ctx); } catch (e) { console.warn('hud', e); }
-  // mini-carte : cône de vue indiquant l'orientation de la caméra (la carte reste orientée au nord)
-  try { if (MINIMAP) { const mh = Math.min(72, Math.round(96 * MH / MW)), mw = Math.round(mh * MW / MH), mx = W - mw - 5, my = 5, sx = mw / (MW * TILE), sy = mh / (MH * TILE);
-    const px = mx + P.x * sx, py = my + P.y * sy, fa = Math.atan2(-Math.cos(B2D.yaw), -Math.sin(B2D.yaw));
-    ctx.save(); ctx.beginPath(); ctx.rect(mx, my, mw, mh); ctx.clip(); ctx.fillStyle = 'rgba(255,240,190,0.28)'; ctx.beginPath(); ctx.moveTo(px, py); ctx.arc(px, py, 9, fa - 0.55, fa + 0.55); ctx.closePath(); ctx.fill(); ctx.restore(); } } catch (e) { }
+  // mini-carte : en 3D, carte locale ronde qui tourne avec la caméra (le haut = la direction regardée) ; option « nord fixe »
+  try { if (MINIMAP) { const mh = Math.min(72, Math.round(96 * MH / MW)), mw = Math.round(mh * MW / MH), mx = W - mw - 5, my = 5, rot = !(SET.c3d && SET.c3d.mapRot === false);
+    if (!rot) { const sx = mw / (MW * TILE), sy = mh / (MH * TILE), px = mx + P.x * sx, py = my + P.y * sy, fa = Math.atan2(-Math.cos(B2D.yaw), -Math.sin(B2D.yaw));
+      ctx.save(); ctx.beginPath(); ctx.rect(mx, my, mw, mh); ctx.clip(); ctx.fillStyle = 'rgba(255,240,190,0.28)'; ctx.beginPath(); ctx.moveTo(px, py); ctx.arc(px, py, 9, fa - 0.55, fa + 0.55); ctx.closePath(); ctx.fill(); ctx.restore(); }
+    else { const R = mh / 2, cx = W - 5 - R, cy = my + R, k = R / (B2D.mapRange || 46 * TILE);
+      // recouvre la carte fixe dessinée par le jeu
+      ctx.fillStyle = 'rgba(10,8,16,0.92)'; ctx.fillRect(mx - 3, my - 3, mw + 6, mh + 6); ctx.fillRect(cx - R - 3, cy - R - 3, 2 * R + 6, 2 * R + 6);
+      ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.clip(); ctx.fillStyle = '#100c18'; ctx.fill();
+      ctx.translate(cx, cy); ctx.rotate(B2D.yaw); ctx.translate(-P.x * k, -P.y * k);
+      const sm = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = false; ctx.globalAlpha = 0.92; ctx.drawImage(MINIMAP, 0, 0, MW * TILE * k, MH * TILE * k); ctx.globalAlpha = 1; ctx.imageSmoothingEnabled = sm;
+      if (typeof drawFog === 'function') drawFog(ctx, 0, 0, MW * TILE * k, MH * TILE * k);
+      const dot = (x, y, c, s) => { ctx.fillStyle = c; ctx.fillRect(x * k - s / 2, y * k - s / 2, s, s); }, rr = (B2D.mapRange || 46 * TILE) * 1.5;
+      for (const e of G.enemies) if (!e.dead && Math.abs(e.x - P.x) < rr && Math.abs(e.y - P.y) < rr) dot(e.x, e.y, e.def.boss ? '#ff3a3a' : '#ff8a8a', e.def.boss ? 4 : 2);
+      for (const n of G.npcs) { if (Math.abs(n.x - P.x) > rr || Math.abs(n.y - P.y) > rr || (typeof fogSeen === 'function' && !fogSeen(n.x, n.y))) continue; dot(n.x, n.y, '#ffe27a', 3); }
+      for (const c of WORLD.chests) if (!c.opened && Math.abs(c.x - P.x) < rr && Math.abs(c.y - P.y) < rr && (typeof fogSeen !== 'function' || fogSeen(c.x, c.y))) dot(c.x, c.y, '#d9a441', 3);
+      ctx.restore();
+      // bord, flèche du héros (toujours vers le haut) et nord qui tourne
+      ctx.strokeStyle = '#c9a45a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, R + 0.5, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(cx, cy - 4.5); ctx.lineTo(cx + 3.2, cy + 3); ctx.lineTo(cx, cy + 1.5); ctx.lineTo(cx - 3.2, cy + 3); ctx.closePath(); ctx.fill();
+      const na = -Math.PI / 2 + B2D.yaw, nx = cx + Math.cos(na) * (R - 1), ny = cy + Math.sin(na) * (R - 1);
+      ctx.fillStyle = 'rgba(10,8,16,0.9)'; ctx.beginPath(); ctx.arc(nx, ny, 5, 0, Math.PI * 2); ctx.fill(); txt(ctx, 'N', nx, ny + 3, '#ff8a6a', 7, 'center');
+    } } } catch (e) { }
   if (TOUCH.edit) txt(ctx, 'Fais glisser les boutons, puis touche « Terminer »', W / 2, H / 2, '#ffe9a0', 11, 'center');
 };
 
@@ -164,7 +182,23 @@ drawChar = function (ctx, spr, an, dir, fr, x, y, flash, alpha, sc) {
 };
 // petits monstres (planches à 4 directions) : sens choisi par rapport à la caméra
 const B2D_drawMon0 = drawMon;
-drawMon = function (ctx, key, dir, t, x, y, flash, alpha) { return B2D_drawMon0(ctx, key, B2D.dir4 != null ? B2D.dir4 : dir, t, x, y, flash, alpha); };
+// petits monstres : leurs planches ont 4 directions (lignes 0 dos, 1 ouest, 2 face, 3 est). Les 4 diagonales sont composées
+// comme pour le héros : bas du corps tiré de la vue de profil, haut du corps tiré de la vue de face ou de dos, resserré et
+// décalé vers le côté regardé. Le monstre a ainsi 8 directions à l'écran, calculées par rapport à la caméra.
+const B2D_MSEC = [[3, 3, 0], [3, 2, 1], [2, 2, 0], [1, 2, -1], [1, 1, 0], [1, 0, -1], [0, 0, 0], [3, 0, 1]];
+const B2D_MC = document.createElement('canvas'); B2D_MC.width = B2D_MC.height = 384; const B2D_MX = B2D_MC.getContext('2d'); B2D_MX.imageSmoothingEnabled = false;
+drawMon = function (ctx, key, dir, t, x, y, flash, alpha) {
+  const D = B2D.dir8, M = ENV.mon && ENV.mon[key];
+  if (D == null || !M || !(D & 1) || M.fw > 192 || M.fh > 192) return B2D_drawMon0(ctx, key, B2D.dir4 != null ? B2D.dir4 : dir, t, x, y, flash, alpha);
+  const S = B2D_MSEC[D], X = 192, Y = 300, K = 0.86, c = B2D_MX, fw = M.fw, fh = M.fh;
+  const top = Y - fh + 4, split = Math.round(top + fh * 0.6), bx = X - fw, bw = fw * 2;
+  if (alpha !== undefined) ctx.globalAlpha = alpha;
+  c.clearRect(bx, top - 2, bw, fh + 4); B2D_drawMon0(c, key, S[0], t, X, Y, flash);
+  const lh = top + fh - split; if (lh > 0) ctx.drawImage(B2D_MC, bx, split, bw, lh, Math.round(x - X + bx), Math.round(y - Y + split), bw, lh);
+  c.clearRect(bx, top - 2, bw, fh + 4); B2D_drawMon0(c, key, S[1], t, X, Y, flash);
+  const th = split - top + 2; if (th > 0) ctx.drawImage(B2D_MC, bx, top, bw, th, Math.round(x + (bx - X) * K + S[2] * Math.max(1, fw * 0.04)), Math.round(y - Y + top), Math.round(bw * K), th);
+  ctx.globalAlpha = 1;
+};
 if (typeof drawMonDeath === 'function') { const B2D_dmd0 = drawMonDeath; drawMonDeath = function (ctx, key, dir, f, x, y) { return B2D_dmd0(ctx, key, B2D.dir4 != null ? B2D.dir4 : dir, f, x, y); }; }
 
 // =====================================================================
@@ -185,14 +219,14 @@ for (const k of ['camL', 'camR', 'camU', 'camD']) if (!SET.keys[k]) SET.keys[k] 
 const B2D_opts0 = optsHTML;
 optsHTML = function () {
   const h = B2D_opts0(); if (!B2D.cam3d) return h; const c = SET.c3d || {};
-  const cam = `<h4>Caméra 3D</h4><div class="row"><button data-opt="c3d_rl">Tourner ⟲</button><button data-opt="c3d_rr">Tourner ⟳</button><button data-opt="c3d_up">Vue plus plongeante</button><button data-opt="c3d_dn">Vue plus rasante</button><span class="hint">Angle : ${B2D.cam3d.angleDeg()}° (de 24° à 69°). Molette : distance ; bouton du milieu : tourner.</span><button data-opt="c3d_reset">Caméra par défaut</button><button data-opt="c3d_btns">Boutons de caméra à l'écran : ${c.btns !== false ? 'oui' : 'non'}</button><button data-opt="c3d_slow">Ralenti pendant la visée : ${c.slow !== false ? 'oui' : 'non'}</button><button data-opt="c3d_day">Cycle jour/nuit : ${c.day !== false ? 'actif' : 'figé'}</button><button data-opt="c3d_wx">Météo (pluie, neige) : ${c.wx !== false ? 'active' : 'désactivée'}</button></div>`;
+  const cam = `<h4>Caméra 3D</h4><div class="row"><button data-opt="c3d_rl">Tourner ⟲</button><button data-opt="c3d_rr">Tourner ⟳</button><button data-opt="c3d_up">Vue plus plongeante</button><button data-opt="c3d_dn">Vue plus rasante</button><span class="hint">Angle : ${B2D.cam3d.angleDeg()}° (de 24° à 69°). Molette : distance ; bouton du milieu : tourner.</span><button data-opt="c3d_reset">Caméra par défaut</button><button data-opt="c3d_btns">Boutons de caméra à l'écran : ${c.btns !== false ? 'oui' : 'non'}</button><button data-opt="c3d_map">Mini-carte : ${c.mapRot !== false ? 'tourne avec la caméra' : 'nord fixe'}</button><button data-opt="c3d_slow">Ralenti pendant la visée : ${c.slow !== false ? 'oui' : 'non'}</button><button data-opt="c3d_day">Cycle jour/nuit : ${c.day !== false ? 'actif' : 'figé'}</button><button data-opt="c3d_wx">Météo (pluie, neige) : ${c.wx !== false ? 'active' : 'désactivée'}</button></div>`;
   return h.replace('<h4>Manette</h4>', cam + '<h4>Manette</h4>');
 };
 document.addEventListener('click', e => {
   const b = e.target.closest && e.target.closest('[data-opt^="c3d_"]'); if (!b || !B2D.cam3d) return; e.stopImmediatePropagation(); e.preventDefault();
   const o = b.dataset.opt, c = SET.c3d || (SET.c3d = {}), C = B2D.cam3d;
   if (o === 'c3d_rl') C.rot(-Math.PI / 4); if (o === 'c3d_rr') C.rot(Math.PI / 4); if (o === 'c3d_up') C.tilt(0.1); if (o === 'c3d_dn') C.tilt(-0.1); if (o === 'c3d_reset') C.reset();
-  if (o === 'c3d_btns') c.btns = c.btns === false; if (o === 'c3d_slow') c.slow = c.slow === false; if (o === 'c3d_day') c.day = c.day === false; if (o === 'c3d_wx') c.wx = c.wx === false;
+  if (o === 'c3d_btns') c.btns = c.btns === false; if (o === 'c3d_slow') c.slow = c.slow === false; if (o === 'c3d_day') c.day = c.day === false; if (o === 'c3d_wx') c.wx = c.wx === false; if (o === 'c3d_map') c.mapRot = c.mapRot === false;
   saveSet(); if (G.mode === 'play') openMenu('opt');
 }, true);
 // qualité graphique : appliquée au moteur 3D

@@ -6,6 +6,7 @@
 // =====================================================================
 import { THREE, scene, renderer, MOBILE } from '../assets/demo/v4/core.js';
 import { groundH } from './world3d.js';
+import { formForSkill, formForProj, updateForms, FORMS3D } from './forms3d.js';
 
 const T = 32, m = v => v / T, R = (a, b) => a + Math.random() * (b - a);
 // identité de mouvement de chaque famille (couleurs du jeu : MAGIC_DATA)
@@ -164,9 +165,9 @@ function projFx(dt) {
   let n = 0;
   for (const p of G.projs) {
     if (n > 40) break; const f = p.fam || p.el || ((p.from === 'p' && (p.magic || p.kind !== 'arrow')) ? (G.player && G.player.magic) : null);
-    const fam = STY[f] ? f : null; if (!fam && !p.light) continue; n++;
+    const fam = STY[f] ? f : null; if (!fam && !p.light && p.kind !== 'firelion') continue; n++;
     const [x, y, z] = at(p), h = y + 0.6 + (p.z ? m(p.z) : 0);
-    let s = PSEEN.get(p); if (!s) { s = { acc: 0 }; PSEEN.set(p, s); }
+    let s = PSEEN.get(p); if (!s) { s = { acc: 0 }; PSEEN.set(p, s); try { formForProj(p); } catch (e) { } }
     s.acc += dt * (MOBILE ? 22 : 40);
     const vx = -m(p.vx || 0) * 0.15, vz = -m(p.vy || 0) * 0.15;
     while (s.acc > 1) { s.acc--; emit(fam || 'lumiere', x + R(-0.1, 0.1), h + R(-0.1, 0.1), z + R(-0.1, 0.1), { sp: 0.6, vx, vz, life: 0.45, k: 0.9, col: fam ? null : 'rgb(' + p.light + ')' }); }
@@ -181,9 +182,12 @@ function mfxFx(dt) {
 // enveloppes : on observe les actions du jeu sans rien changer à leur effet
 let lastCast = 0;
 const wrap = (name, fn) => { const f0 = window[name]; if (typeof f0 !== 'function') return; window[name] = function (...a) { const r = f0.apply(this, a); try { fn(a, r); } catch (e) { } return r; }; };
-wrap('castSkill', (a) => { const P = a[0]; if (P && P.magic && performance.now() - lastCast > 120) { lastCast = performance.now(); castFx(P.magic, P, false); } });
-wrap('castUlt', (a) => { const P = a[0]; if (P && P.magic && P.state === 'cast') castFx(P.magic, P, true); });
+// forme 3D de la compétence : déclenchée au moment où le sort part (P.castFn), sinon tout de suite
+function withRelease(P, fn) { const f0 = P.castFn; if (typeof f0 === 'function' && !f0.__f3d) { const w = function (...x) { const r = f0.apply(this, x); try { fn(); } catch (e) { } return r; }; w.__f3d = 1; P.castFn = w; } else { try { fn(); } catch (e) { } } }
+function skillName(P, id) { try { const sp = innateSpell(P, id); if (sp) return [sp.fam || P.magic, sp.name]; } catch (e) { } try { const d = skillDef(id); if (d) return [P.magic, d.name || '']; } catch (e) { } return [P.magic, '']; }
+wrap('castSkill', (a, r) => { const P = a[0]; if (!P || !P.magic || P.state !== 'cast' || P.animT > 0.05) return; if (performance.now() - lastCast > 120) { lastCast = performance.now(); castFx(P.magic, P, false); } const [f, nm] = skillName(P, a[1]); withRelease(P, () => formForSkill(f, nm, P, false)); });
+wrap('castUlt', (a) => { const P = a[0]; if (P && P.magic && P.state === 'cast') { castFx(P.magic, P, true); withRelease(P, () => formForSkill(P.magic, 'ultime', P, true)); } });
 wrap('damageEnemy', (a) => { const [e, dmg, crit, , , , , el] = a; if (!e || !dmg) return; const f = STY[el] ? el : (G.player && G.player.magic && Math.random() < 0.5 ? G.player.magic : null); if (f) hitFx(f, e, crit); else { const [x, y, z] = at(e); burst('metal', x, y + 0.7, z, crit ? 10 : 5, { S: DEF, col: '#fff2d0' }); } });
 
-export function updateMagic3D(dt) { projFx(dt); mfxFx(dt); updateParticles(dt); updateRings(dt); updateFlashes(dt); }
-export const MAGIC3D = { STY, emit, burst, ring, column, bolt, flash, castFx, hitFx, alive: () => alive, rings: () => RINGS.length };
+export function updateMagic3D(dt) { projFx(dt); mfxFx(dt); updateParticles(dt); updateRings(dt); updateFlashes(dt); updateForms(dt); }
+export const MAGIC3D = { FORMS3D, STY, emit, burst, ring, column, bolt, flash, castFx, hitFx, alive: () => alive, rings: () => RINGS.length };

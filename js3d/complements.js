@@ -427,3 +427,9 @@ function spawnActFoes(D, n) {
   list.forEach((k, i) => { const a = i * 2.1, x = n.x + Math.cos(a) * 140, y = n.y + Math.sin(a) * 140; try { const e = spawnEnemy(k, x, y); if (!e) return; e.def = Object.assign({}, e.def, { boss: false, elite: true, name: (D.act.type === 'arena' ? 'Écho de ' : '') + (e.def.name || k) }); const m = D.act.mult || 1.3; e.hp = e.maxhp = Math.round(e.maxhp * m); e.actOf = D.name; e.aggro = true; } catch (er) { } });
   toast(D.act.label + ' : ' + (kinds ? 'un écho surgit !' : 'des élites surgissent !'), '#ff8a6a');
 }
+
+// ---------------------------------------------------------------------
+//  8. GARDE-FOU : halo lumineux (glow) appelé avec une opacité ou un rayon invalides (NaN) par certains effets.
+//     Le dessin levait une erreur et s'interrompait ; il est désormais simplement ignoré pour cette image.
+// ---------------------------------------------------------------------
+if (typeof glow === 'function') { const gl0 = glow; glow = function (ctx, x, y, r, rgb, a, ...rest) { if (!isFinite(a) || !isFinite(r) || !isFinite(x) || !isFinite(y) || r <= 0) return; return gl0(ctx, x, y, r, rgb, a, ...rest); }; }

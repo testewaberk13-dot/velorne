@@ -47,15 +47,38 @@ const COLC = new Map(); const col = h => { let c = COLC.get(h); if (!c) { c = ne
 function zoneId(tx, ty) { for (const z of WORLD.zones) if (z.id !== 'forest' && tx >= z.x0 && tx < z.x1 && ty >= z.y0 && ty < z.y1) return z.id; return 'forest'; }
 // biome d'un point avec bords mêlés (on décale la recherche avec un peu de bruit)
 const biomeAt = (x, z) => BIOME[zoneId(Math.floor(x + (vn(x * 0.2, z * 0.2) - 0.5) * 5), Math.floor(z + (vn(z * 0.2 + 9, x * 0.2) - 0.5) * 5))] || BIOME.forest;
-// masques continus depuis la grille de sommets du jeu (0 terre, 1 herbe, 2 eau)
-function masks(x, z) {
+// GÉOGRAPHIE ORGANIQUE (visuelle) : la grille du jeu reste la référence des collisions et de la sauvegarde ; le sol 3D lit
+// cette grille à travers une distorsion douce (jusqu'à environ une case), si bien que rives, lisières et chemins ondulent au lieu de suivre
+// les cases. Les frontières de régions sont mêlées sur plusieurs cases, et un relief doux (collines, dunes, monts) s'ajoute
+// selon la région, aplati dans les souterrains et à l'approche de Brumeval.
+const WARP = 1.0;
+const warpX = (x, z) => x + (vn(x * 0.07 + 1.3, z * 0.07 + 4.1) - 0.5) * 1.0 + (fbm(x * 0.33 + 3.1, z * 0.33 + 7.7) - 0.5) * WARP + (vn(x * 0.83, z * 0.83 + 2.2) - 0.5) * 0.25;
+const warpZ = (x, z) => z + (vn(x * 0.07 + 8.2, z * 0.07 + 0.6) - 0.5) * 1.0 + (fbm(x * 0.33 + 11.3, z * 0.33 + 1.9) - 0.5) * WARP + (vn(x * 0.83 + 5.5, z * 0.83) - 0.5) * 0.25;
+// masques continus depuis la grille de sommets du jeu (0 terre, 1 herbe, 2 eau), lus à travers la distorsion
+function masks(x0, z0) {
+  const x = warpX(x0, z0), z = warpZ(x0, z0);
   const ix = Math.floor(x), iz = Math.floor(z), fx = x - ix, fz = z - iz; let g = 0, w = 0;
   for (const [dx, dz, k] of [[0, 0, (1 - fx) * (1 - fz)], [1, 0, fx * (1 - fz)], [0, 1, (1 - fx) * fz], [1, 1, fx * fz]]) { const v = vget(ix + dx, iz + dz); if (v >= T_GRASS) g += k; if (v === T_WATER) w += k; }
   return [g, w];
 }
+// relief par région : presque nul dans les souterrains, collines ailleurs, plus marqué pour les monts, les pics et les dunes
+const HILL = { mines: 0, temple: 0.1, lave: 0.15, citadelle: 0.35, village: 0.45, camp: 0.5, ruins: 0.6, boss: 0.6, plaines: 0.75, desert: 1.5, oasis: 1.1, monts: 1.8, hurlevents: 1.4, neige: 1.5, fjord: 1.4, volcan: 1.3, aether: 1.1, archipel: 0.9, cote: 0.8, marais: 0.35, jungle: 1.0, forest: 1.0, cristal: 1.1, ombres: 0.9, corrompues: 0.9 };
+let HILLG = null, HW = 0, HH = 0;
+function hillGrid() { if (HILLG) return HILLG; HW = Math.ceil(MW / 4) + 1; HH = Math.ceil(MH / 4) + 1; HILLG = new Float32Array(HW * HH); for (let y = 0; y < HH; y++) for (let x = 0; x < HW; x++) HILLG[y * HW + x] = HILL[zoneId(Math.min(MW - 1, x * 4), Math.min(MH - 1, y * 4))] ?? 1; return HILLG; }
+function hillAt(x, z) { const G = hillGrid(), fx = Math.min(HW - 1.001, Math.max(0, x / 4)), fz = Math.min(HH - 1.001, Math.max(0, z / 4)), ix = Math.floor(fx), iz = Math.floor(fz), u = fx - ix, v = fz - iz;
+  return (G[iz * HW + ix] * (1 - u) + G[iz * HW + ix + 1] * u) * (1 - v) + (G[(iz + 1) * HW + ix] * (1 - u) + G[(iz + 1) * HW + ix + 1] * u) * v; }
 // zones remplacées par un décor 3D complet (Brumeval) : hauteur fournie par ce décor ; sol, herbe et décors 2D masqués
-export const HOOK = { height: null, mask: null, keep: null, decor: null };
-export function groundH(x, z) { if (HOOK.height) { const h = HOOK.height(x, z); if (h != null) return h; } const [, w] = masks(x, z); return -0.95 * sstep(0.25, 0.85, w) + (fbm(x * 0.15, z * 0.15) - 0.5) * 0.18 * (1 - w); }
+export const HOOK = { height: null, mask: null, keep: null, decor: null, flat: null };
+function rawH(x, z) { const [g, w] = masks(x, z);
+  const fl = HOOK.flat ? HOOK.flat(x, z) : 1, hill = (fbm(x * 0.045 + 7, z * 0.045 + 3) - 0.5) * 1.3 * hillAt(x, z) * fl * (0.45 + 0.55 * g);
+  return -0.95 * sstep(0.25, 0.85, w) + ((fbm(x * 0.15, z * 0.15) - 0.5) * 0.18 + hill) * (1 - w); }
+// hauteurs mises en cache par bloc (grille de 0,5 m) : le relief organique coûte cher à calculer, on le lit ensuite par interpolation
+const HC = new Map(), HN = 64;
+function heightCache(i, j) { const k = i + ',' + j; let c = HC.get(k); if (c) return c; c = new Float32Array((HN + 1) * (HN + 1)); const x0 = i * CH, z0 = j * CH, st = CH / HN; for (let b = 0; b <= HN; b++) for (let a = 0; a <= HN; a++) c[b * (HN + 1) + a] = rawH(x0 + a * st, z0 + b * st); HC.set(k, c); return c; }
+export function groundH(x, z) { if (HOOK.height) { const h = HOOK.height(x, z); if (h != null) return h; }
+  const i = Math.floor(x / CH), j = Math.floor(z / CH), c = HC.get(i + ',' + j); if (!c) return rawH(x, z);
+  const fx = (x - i * CH) / (CH / HN), fz = (z - j * CH) / (CH / HN), a = Math.min(HN - 1, Math.floor(fx)), b = Math.min(HN - 1, Math.floor(fz)), u = fx - a, v = fz - b, W = HN + 1;
+  return (c[b * W + a] * (1 - u) + c[b * W + a + 1] * u) * (1 - v) + (c[(b + 1) * W + a] * (1 - u) + c[(b + 1) * W + a + 1] * u) * v; }
 
 // ---------------- matériaux du sol et de l'eau ----------------
 const detail = canvasTex(256, (x, S) => { x.fillStyle = '#d0d0d0'; x.fillRect(0, 0, S, S); for (let i = 0; i < 2600; i++) { const v = 150 + Math.floor(Math.random() * 105); x.strokeStyle = `rgb(${v},${v},${v})`; x.lineWidth = 1 + Math.random(); const px = Math.random() * S, py = Math.random() * S; x.beginPath(); x.moveTo(px, py); x.lineTo(px + (Math.random() - 0.5) * 3, py - 2 - Math.random() * 5); x.stroke(); }
@@ -64,23 +87,25 @@ detail.wrapS = detail.wrapT = THREE.RepeatWrapping;
 const groundMat = new THREE.MeshLambertMaterial({ vertexColors: true, map: detail });
 groundMat.onBeforeCompile = sh => {
   Object.assign(sh.uniforms, U);
-  sh.vertexShader = 'varying vec3 vWP;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vWP = (modelMatrix * vec4(position,1.0)).xyz;').replace('#include <uv_vertex>', '#include <uv_vertex>\n#ifdef USE_MAP\n vMapUv = (modelMatrix * vec4(position,1.0)).xz / 3.0;\n#endif');
-  sh.fragmentShader = 'uniform float uTime; varying vec3 vWP;\n float th(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233)))*43758.5453); }\n float tn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(th(i),th(i+vec2(1,0)),f.x), mix(th(i+vec2(0,1)),th(i+vec2(1,1)),f.x), f.y); }\n' +
-    sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n { float big = tn(vWP.xz * 0.11) * 0.6 + tn(vWP.xz * 0.37) * 0.4; diffuseColor.rgb *= 0.86 + big * 0.28; }')
+  sh.vertexShader = 'attribute float wet; varying float vWet; varying vec3 vWP;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vWet = wet; vWP = (modelMatrix * vec4(position,1.0)).xyz;').replace('#include <uv_vertex>', '#include <uv_vertex>\n#ifdef USE_MAP\n vMapUv = (modelMatrix * vec4(position,1.0)).xz / 3.0;\n#endif');
+  sh.fragmentShader = 'uniform float uTime; varying float vWet; varying vec3 vWP;\n float th(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233)))*43758.5453); }\n float tn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(th(i),th(i+vec2(1,0)),f.x), mix(th(i+vec2(0,1)),th(i+vec2(1,1)),f.x), f.y); }\n' +
+    sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n { float big = tn(vWP.xz * 0.11) * 0.6 + tn(vWP.xz * 0.37) * 0.4; diffuseColor.rgb *= 0.86 + big * 0.28; diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.72, 0.78, 0.84), vWet * 0.45); }')
       .replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\n { float cl = smoothstep(0.35, 0.75, tn(vWP.xz * 0.025 + vec2(uTime * 0.018, uTime * 0.007)) * 0.7 + tn(vWP.xz * 0.06 - uTime * 0.01) * 0.3); reflectedLight.directDiffuse *= 1.0 - cl * 0.4; }');
 };
 const mkWater = (deep, shallow, lava) => new THREE.ShaderMaterial({ transparent: true, depthWrite: false, uniforms: { uTime: U.uTime, uSunDir: U.uSunDir, uDeep: { value: new THREE.Color(deep) }, uShallow: { value: new THREE.Color(shallow) }, uLava: { value: lava ? 1 : 0 } },
-  vertexShader: 'varying vec3 vWP; void main(){ vec4 wp = modelMatrix * vec4(position,1.0); vWP = wp.xyz; gl_Position = projectionMatrix * viewMatrix * wp; }',
-  fragmentShader: `uniform float uTime, uLava; uniform vec3 uSunDir, uDeep, uShallow; varying vec3 vWP;
+  vertexShader: 'attribute float edge; varying float vE; varying vec3 vWP; void main(){ vE = edge; vec4 wp = modelMatrix * vec4(position,1.0); vWP = wp.xyz; gl_Position = projectionMatrix * viewMatrix * wp; }',
+  fragmentShader: `uniform float uTime, uLava; uniform vec3 uSunDir, uDeep, uShallow; varying float vE; varying vec3 vWP;
     float h(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
     float n(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(h(i),h(i+vec2(1,0)),f.x), mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x), f.y); }
     void main(){ vec2 p = vWP.xz; float w1 = n(p * 1.3 + vec2(uTime * 0.3, uTime * 0.5)), w2 = n(p * 2.6 - vec2(uTime * 0.4, uTime * 0.2));
-      vec3 c = mix(uShallow, uDeep, 0.55 + (w1 - 0.5) * 0.3) * 0.6;
-      if (uLava > 0.5) { float cr = smoothstep(0.35, 0.75, n(p * 0.8 + vec2(uTime * 0.05, -uTime * 0.03)) * 0.6 + w2 * 0.4); gl_FragColor = vec4(mix(vec3(0.5, 0.08, 0.02), vec3(2.2, 0.9, 0.2), cr), 1.0); return; }
+      vec3 c = mix(uShallow, uDeep, clamp(smoothstep(0.0, 0.85, vE) + (w1 - 0.5) * 0.25, 0.0, 1.0)) * 0.6;
+      if (uLava > 0.5) { float cr = smoothstep(0.35, 0.75, n(p * 0.8 + vec2(uTime * 0.05, -uTime * 0.03)) * 0.6 + w2 * 0.4); vec3 lv = mix(vec3(0.5, 0.08, 0.02), vec3(2.2, 0.9, 0.2), cr); lv = mix(vec3(0.12, 0.05, 0.04), lv, smoothstep(0.0, 0.35, vE) * 0.85 + 0.15); gl_FragColor = vec4(lv, 1.0); return; }
       vec3 V = normalize(cameraPosition - vWP); vec3 nr = normalize(vec3((w1 - 0.5) * 0.25, 1.0, (w2 - 0.5) * 0.25)); vec3 R = reflect(-V, nr);
       c += vec3(1.0, 0.95, 0.85) * pow(max(dot(R, normalize(uSunDir)), 0.0), 200.0) * 1.2;
-      c += smoothstep(0.82, 0.95, n(p * 0.9 + uTime * 0.15)) * 0.04;
-      gl_FragColor = vec4(c, 0.82); }` });
+      c += smoothstep(0.82, 0.95, n(p * 0.9 + uTime * 0.15)) * 0.04 * smoothstep(0.2, 0.6, vE);
+      float fres = pow(1.0 - clamp(V.y, 0.0, 1.0), 4.0); c = mix(c, vec3(0.55, 0.7, 0.8) * 0.5, 0.06 + fres * 0.25);
+      float foam = smoothstep(0.18, 0.0, vE) * (0.35 + 0.65 * smoothstep(0.5, 0.85, w1 * 0.6 + w2 * 0.4)); c = mix(c, vec3(0.6, 0.68, 0.68), foam * 0.55);
+      gl_FragColor = vec4(c, mix(0.7, 0.92, smoothstep(0.0, 0.5, vE))); }` });
 const WATER = { def: mkWater('#0a3a4a', '#2a7a80'), lava: mkWater('#000', '#000', true), murky: mkWater('#1a2a14', '#3a4a22'), dark: mkWater('#140a20', '#3a2048'), ice: mkWater('#2a4a5a', '#7aa8c0') };
 const WATER_OF = { volcan: 'lava', lave: 'lava', marais: 'murky', jungle: 'murky', corrompues: 'dark', citadelle: 'dark', ombres: 'dark', neige: 'ice', fjord: 'ice' };
 
@@ -91,21 +116,25 @@ function propsByChunk() { if (WORLD._pc) return WORLD._pc; const m = new Map(); 
 const SUB = 16; // quart de bloc : unité de tri hors champ
 function buildChunk(i, j) {
   setKitLod(STATE.qual);
-  const key = i + ',' + j; if (CHUNKS.has(key)) return; const x0 = i * CH, z0 = j * CH, group = new THREE.Group(); scene.add(group); const ch = { i, j, group, dyn: [], q: STATE.qual };
+  const key = i + ',' + j; if (CHUNKS.has(key)) return; heightCache(i, j); const x0 = i * CH, z0 = j * CH, group = new THREE.Group(); scene.add(group); const ch = { i, j, group, dyn: [], q: STATE.qual };
   // sol : 64 × 64 segments, couleurs par sommet (biome, terre, herbe, rives), relief doux, eau creusée
   const N = MOBILE ? 48 : 64, g = new THREE.PlaneGeometry(CH, CH, N, N); g.rotateX(-Math.PI / 2); g.translate(x0 + CH / 2, 0, z0 + CH / 2);
-  const p = g.attributes.position, cols = new Float32Array(p.count * 3); let hasWater = false;
+  const p = g.attributes.position, cols = new Float32Array(p.count * 3), wets = new Float32Array(p.count); let hasWater = false; const bis = [];
   for (let k = 0; k < p.count; k++) {
     const x = p.getX(k), z = p.getZ(k), [gm, wm] = masks(x, z), bi = biomeAt(x, z), hid = HOOK.mask && HOOK.mask(x, z); p.setY(k, hid ? -4 : groundH(x, z)); if (wm > 0.3 && !hid) hasWater = true;
     const n1 = fbm(x * 0.09, z * 0.09), n2 = vn(x * 0.6, z * 0.6);
     _ca.copy(col(bi.grass)).lerp(col(bi.grass2), sstep(0.35, 0.7, n1)); _ca.multiplyScalar(0.9 + n2 * 0.2);
     _cb.copy(col(bi.dirt)).multiplyScalar(0.92 + n2 * 0.16); _ca.lerp(_cb, 1 - sstep(0.25, 0.75, gm + (n2 - 0.5) * 0.3));
     if (wm > 0.05) _ca.lerp(col(bi.sand), sstep(0.05, 0.4, wm) * 0.85);
+    wets[k] = sstep(0.02, 0.35, wm) * (1 - sstep(0.6, 0.9, wm)); bis[k] = bi;
     cols[k * 3] = _ca.r; cols[k * 3 + 1] = _ca.g; cols[k * 3 + 2] = _ca.b;
   }
-  g.setAttribute('color', new THREE.BufferAttribute(cols, 3)); g.computeVertexNormals(); g.userData.own = true;
+  g.computeVertexNormals();
+  // pentes : roche de la région qui affleure là où le relief se redresse (comme dans le village pilote)
+  { const nr = g.attributes.normal; for (let k = 0; k < p.count; k++) { const sl = sstep(0.04, 0.16, 1 - nr.getY(k)); if (sl <= 0 || !bis[k]) continue; const n = vn(p.getX(k) * 0.6, p.getZ(k) * 0.9); _cb.copy(col(bis[k].rock)).multiplyScalar(0.85 + n * 0.3); cols[k * 3] += (_cb.r - cols[k * 3]) * sl * 0.8; cols[k * 3 + 1] += (_cb.g - cols[k * 3 + 1]) * sl * 0.8; cols[k * 3 + 2] += (_cb.b - cols[k * 3 + 2]) * sl * 0.8; } }
+  g.setAttribute('color', new THREE.BufferAttribute(cols, 3)); g.setAttribute('wet', new THREE.BufferAttribute(wets, 1)); g.userData.own = true;
   const mesh = new THREE.Mesh(g, groundMat); mesh.receiveShadow = true; group.add(mesh);
-  if (hasWater) { const wg = new THREE.PlaneGeometry(CH, CH); wg.rotateX(-Math.PI / 2); const zid = zoneId(x0 + 16, z0 + 16); const wmsh = new THREE.Mesh(wg, WATER[WATER_OF[zid] || 'def']); wmsh.position.set(x0 + CH / 2, -0.32, z0 + CH / 2); wmsh.renderOrder = 2; group.add(wmsh); }
+  if (hasWater) { const WN = MOBILE ? 24 : 32, wg = new THREE.PlaneGeometry(CH, CH, WN, WN); wg.rotateX(-Math.PI / 2); { const wp = wg.attributes.position, ed = new Float32Array(wp.count); for (let k = 0; k < wp.count; k++) { const x = wp.getX(k) + x0 + CH / 2, z = wp.getZ(k) + z0 + CH / 2; ed[k] = sstep(0.35, 0.95, masks(x, z)[1]); } wg.setAttribute('edge', new THREE.BufferAttribute(ed, 1)); } const zid = zoneId(x0 + 16, z0 + 16); const wmsh = new THREE.Mesh(wg, WATER[WATER_OF[zid] || 'def']); wmsh.position.set(x0 + CH / 2, -0.32, z0 + CH / 2); wmsh.renderOrder = 2; group.add(wmsh); }
   // herbe : touffes sur les cases d'herbe, densité et teinte du biome
   const grass = [];
   const tries = MOBILE ? 1400 : 2600; for (let k = 0; k < tries; k++) { const x = x0 + h2(k, i * 13 + j) * CH, z = z0 + h2(k + 0.5, j * 17 + i) * CH; const bi = biomeAt(x, z); if (h2(x, z) > bi.gAmt * 0.9) continue; const [gm, wm] = masks(x, z); if (gm < 0.75 || wm > 0.02) continue; if (HOOK.mask && HOOK.mask(x, z)) continue; grass.push([x, z, bi]); }

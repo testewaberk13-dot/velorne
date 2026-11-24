@@ -52,6 +52,8 @@ ROOT.traverse(o => {
 // ---------------- le monde du jeu dans la zone : sol masqué, hauteur et collisions du village pilote ----------------
 HOOK.height = (x, z) => inWorld(x, z) ? walkH(x - OX, z - OZ) : null;
 HOOK.mask = (x, z) => inWorld(x, z);
+// relief du reste du monde : ramené à plat à l'approche du village pilote, pour que les deux sols se raccordent
+HOOK.flat = (x, z) => { const dx = Math.max(0, OX - 44 - x, x - (OX + 37)), dz = Math.max(0, OZ - 44 - z, z - (OZ + 14)); return Math.min(1, Math.hypot(dx, dz) / 10); };
 // décors du jeu gardés dans la zone : ceux qui ont un rôle (coffres, ressources, réserve, sanctuaire, autel, cercle des Arcanes, cachettes)
 const FUNC = /chest|ore|herb|stash|sanctuary|altar|arcane|circle|cache|lore|node|res_|mine|crystal_n/;
 HOOK.keep = pr => !!(pr.loot || pr.hidden || pr.def && (pr.def.interact || pr.def.arcane || pr.def.circle || pr.def.res) || FUNC.test(pr.type));
