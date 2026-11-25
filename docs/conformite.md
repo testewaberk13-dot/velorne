@@ -69,6 +69,7 @@
 | B26 | Traînée de lumière vers l'objectif | U 24/11 | ✅ | — | Traînée lumineuse qui suit le terrain praticable jusqu'au but : trame principale (or), mission suivie du journal (violet), quête secondaire (turquoise) ; colonne de lumière sur la cible. Les étapes volontairement vagues ne mènent qu'à la région. Désactivable. **Correctif 24/11 :** la traînée manquait au tout début de partie (Théobald, Orvael, Kaelen, mannequins, maîtres de style), car le guide du jeu 2D ne connaît pas ces étapes ; elle y est maintenant, plus fine. | `t3d_trail` : traînée vers Grakhul (38 m, 22 points), mission « Le registre d'Édran » ciblée ; capture du village : traînée vers Théobald |
 | B27 | Caméra au double joystick, directement dans le jeu principal (directive 11 du 24/11 : aucune version pilote) | U 24/11 | ✅ | Le jeu n'avait que des boutons de rotation et d'angle ; le village pilote avait un glissement du doigt pour la caméra. | Dans `jeu3d.html` uniquement : stick gauche = déplacement (inchangé) ; stick droit = toucher la moitié droite hors bouton puis glisser, rotation libre à 360° et inclinaison de 18° à 69°, vitesse proportionnelle à la poussée, courbe douce ; les deux sticks s'utilisent en même temps. Pincement à deux doigts (moitié droite) : zoom de 6 à 26 m. Boutons ＋ − et ◎ (recentrer derrière le héros, angle et distance par défaut) ajoutés aux boutons existants ⟲ ⟳ ⤒ ⤓, conservés. Suivi derrière le héros suspendu 2,5 s après un geste manuel. Obstacles : la caméra se rapproche devant les maisons et les murs de Brumeval (inchangé). Option manette « stick droit = caméra » (désactivée par défaut, car ce stick sert à viser). Options dans Paramètres > Caméra 3D. Aucune nouvelle version créée. | `t_camstick` : rotation, inclinaison, double stick (héros déplacé et caméra tournée), pincement 8,6 → 25,8 m, zoom, recentrage ; `tm3d` : aucun chevauchement en 844 × 390 ; `t7_pad`, `gs5`, `narr2` 44/44, `camp` |
 | B28 | Écran titre digne d'un jeu vidéo (directive du 24/11) | U 24/11 | ✅ | Fond : ancienne vue 2D du village, menu en panneau à gauche. | Fond : le vrai monde 3D du jeu, Brumeval à l'heure dorée, filmé par un lent travelling circulaire autour de la place (fenêtres allumées, lucioles et braises, profondeur de champ, aucun toit ni feuillage devant le plan). Blason animé (anneau de runes qui tourne), logo « VÉLORNE » doré avec reflet qui balaie les lettres et halo, sous-titre encadré de filets, rayons de lumière doux, vignettage cinéma. Menu centré, entrées qui apparaissent l'une après l'autre ; entrée choisie (souris, toucher ou manette) éclairée avec losanges. Les 6 boutons et leurs fonctions sont inchangés (Continuer, Nouvelle partie, Paramètres, Commandes, Crédits, Plein écran). La création du personnage s'affiche sur le même décor 3D. Option de secours : `SET.c3d.title3d = false` rend l'ancien fond. | Captures `q/title_grid.png` (844 × 390) ; `gs5` (menu complet, création, 5 races), `t7_pad` (création et menus à la manette) |
+| B29 | Les 12 nouvelles magies et leurs 132 compétences (dossier du 25/11), transformations en vrais modèles 3D, méthode LOOP | U 25/11 | 🟨 | Absentes du jeu avant le 25/11. | Ajoutées au jeu principal sans toucher aux 27 familles (`js3d/nm_core.js`, `nm_fams1.js`, `nm_fams2.js`, `nm3d.js`). Intégrées dans : Magic Spin aux taux inchangés, grimoire à 11 compétences, jauges propres, sauvegarde, grimoires de famille, interface, commandes. Les 132 compétences sont jouables. Modèles 3D procéduraux des transformations, avec transitions et caméra reculée. Fiches : `docs/nouvelles-magies-donnees.md`. Rapport LOOP : `docs/nouvelles-magies-loop.md` (132 verdicts, 8 corrections). Restes (d'où 🟨) : choix libre des ordres et séquences (cycle ou ordre fixe pour l'instant) ; maintien de touche pour les sphères ; modèles construits en code, pas sculptés ; équilibrage. | `t_nm132` : 132/132 lancées, effet visible ou dégâts, 0 erreur. `t_nmmech` : mécaniques liées (plumes, renaissance, gardes, sceaux, boss non entravé, rempart, passerelle sur l'eau, inertie, formation, maîtrise, sauvegarde, vol plané, possession). `t_nm3d` : 13 formes et 2 ultimes en 3D, 0 erreur. Non-régression : `gs5`, `t7_pad`, `camp`, `narr2` 44/44, `gst`, `gq`, `tcombo`, `gc`, `qa`. |
 | B24 | Mode autonome : décider, enchaîner, vérifier | U | ✅ | — | — | — |
 
 ## C. Cahier des charges V2 (systèmes)
@@ -248,6 +249,45 @@ Ce qui est déjà testé ici, en simulation : tactile en 844 × 390 (stick, bout
 - **Personnages en volume :** chaque héros, PNJ et ennemi est maintenant un objet épais (tranches empilées dans la profondeur, épaisseur tirée de la silhouette : corps bombé, bords minces), visible de biais et d'en haut ; légèrement incliné vers la caméra en vue de dessus pour ne jamais paraître écrasé. Le dessin pixel art est conservé. Désactivable (Paramètres > Caméra 3D). **Limite :** ce ne sont pas des modèles 3D sculptés ; les dessins sont ceux des planches existantes.
 - **Petits écrans (Safari avec ses barres, environ 740 × 290) :** boutons tactiles réduits en proportion, ils ne couvrent plus la mini-carte et laissent la moitié droite libre pour la caméra ; « Résonance … » ne s'écrit plus par-dessus l'objectif ; bandeau du bas masqué.
 Non-régression : `t7_pad`, `gs5`, `camp`, `narr2` 44/44, `tm3d`, `t3d_bru2`, `t3d_trail`.
+
+**Ajouté le 25/11 (après-midi) — les 12 nouvelles magies (dossier « 132 compétences ») :**
+- **Familles :** 12, au catalogue avec leurs noms validés.
+  - Épiques à transformation : Yamata no Orochi, Phénix, Titan, Kitsune, Dix Ombres.
+  - Épiques sans transformation : Arsenal du Roi déchu, Architecte des structures, Manipulation de l'Énergie, Art de la Découpe, Sceau de Possession.
+  - Légendaires : Dragon divin, Léviathan.
+  - Les 27 familles et 270 compétences historiques ne sont pas modifiées.
+- **Magic Spin :** taux inchangés, mesurés sur 60 000 tirages : 5,2 / 24,7 / 35,2 / 25 / 10. Les nouvelles familles sont tirées dans les raretés 4 et 5.
+- **Grimoire :** 10 compétences plus l'ultime.
+  - Rangement : C1 à C9, puis l'ultime en C10 (convention existante), puis la compétence 10 en C11.
+  - La compétence 10 s'ouvre au niveau de maîtrise 9, l'ultime au niveau 10.
+  - Écran du grimoire dédié.
+- **Jauges propres :** affichées à l'écran et enregistrées dans la sauvegarde (`G.flags.nmr`, clé de sauvegarde inchangée). Une compétence trop chère pour la jauge part affaiblie.
+- **Grimoires de famille :** ajoutés pour les 12 familles. Butin de boss, liés au personnage.
+- **Mécaniques propres :**
+  - plumes plantées et rappelées ; renaissance conditionnelle (180 s de recharge interne) ;
+  - inertie du Titan ; sceaux, permutation et palais du Kitsune ;
+  - familiers à disponibilité individuelle ; décrets, sceptre, bannière et salle du trône ;
+  - ouvrages de l'Architecte : collisions, résistance, tirs arrêtés, passerelle et pont rendant l'eau franchissable ;
+  - réserve et champ de maîtrise ; lignes de rupture différées ;
+  - frappe ancestrale sur les coups d'arme ; paliers draconiques et vol plané au-dessus de l'eau ; marques et paliers abyssaux.
+  - Aucun boss n'est immobilisé : les contrôles deviennent un bref ralentissement.
+- **Modèles 3D** (`js3d/nm3d.js`) : construits en code et articulés.
+  - huit cous et têtes d'Orochi ; ailes, plumage et queue du Phénix ;
+  - colosse du Titan qui remplace le corps ; queues (selon la maîtrise) et oreilles du Kitsune ;
+  - manteau, bras et dix présences des Dix Ombres ;
+  - Possession : cornes, yeux rouges, marques, aura, peau et cheveux blancs (personnage recomposé) ;
+  - Dragon : ailes, dragon complet, hybride ;
+  - Léviathan : appendices et hôte ;
+  - ultimes : huit têtes géantes d'Orochi, dévoreur du Léviathan.
+  - Les formes géantes recadrent la caméra et sont interdites en intérieur.
+- **LOOP :** 132 verdicts, 0 doublon ; 8 corrections faites dans les nouvelles compétences.
+- **Tests :**
+  - `t_nm132` : 132/132 lancées, sans erreur ;
+  - `t_nmmech` : mécaniques liées, tous les contrôles attendus ;
+  - `t_nm3d` : 13 formes et 2 ultimes, sans erreur ;
+  - non-régression : `gs5`, `t7_pad`, `camp`, `narr2` 44/44, `gst`, `gq`, `tcombo`, `gc`, `qa`.
+- **Pas encore testé :** sur un vrai téléphone (performances des modèles).
+- **Pas encore fait :** choix libre des ordres et séquences, maintien de touche, modèles sculptés par un artiste.
 
 **Prochaines tâches :**
 1. Accueil du site passé sur `jeu3d` (fait le 24/11). Reste ta vérification sur téléphone et manette (section I).

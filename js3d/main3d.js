@@ -15,6 +15,7 @@ import { VM, V as VIL, W2L } from '../assets/demo/v4/village.js';
 import { updateMagic3D, MAGIC3D, flashLights } from './magic3d.js';
 import { updateRegion, lavaLight } from './regions3d.js';
 import { updateRegionDecor } from './regionDecor3d.js';
+import { updateNM3D, nmHidePlayer, nmCamExtra, NM3D } from './nm3d.js';
 
 const B = B2D; const T = 32; // pixels par mètre
 const m = v => v / T;
@@ -166,6 +167,7 @@ function updateActors(px, pz) {
       const big = kind === 'enemy' && o.def && o.def.boss ? 2.2 : 1; a.blob.position.set(ox, gy + 0.03, oz); a.blob.scale.set(1.15 * big * (1 - bob * 2), 1, 0.7 * big * (1 - bob * 2)); a.blob.visible = o.state !== 'dead' && !o.dead;
     } else { a.mesh.position.set(ox, gy + (kind === 'proj' ? 0.6 : 0), oz); a.mesh.quaternion.copy(yawQ); }
     a.mesh.visible = true;
+    if (kind === 'player' && nmHidePlayer()) a.mesh.visible = false; // forme qui remplace le corps (Titan, Dragon) : le modèle 3D prend sa place
   }
   PROF.nAct = n;
   for (const g of G.npcs) if (g.glow3d && near(g) && Math.random() < 0.5) MAGIC3D.emit('amb', m(g.x) + (Math.random() - 0.5) * 0.4, groundH(m(g.x), m(g.y)) + 0.3, m(g.y) + (Math.random() - 0.5) * 0.4, { S: { g: -1.2, sp: 0.4, sz: 0.12, life: 1.2, col2: '#ffe08a', flick: 1 }, col: g.glow3d });
@@ -407,7 +409,7 @@ B.frame3d = function () {
   const inB = !!BRU.insideNow();
   { const r = damp(CAM.pitch, inB ? Math.max(CAM.pitchT, 0.95) : CAM.pitchT, SD.pv, CS.on ? 0.05 : 0.2, dt); CAM.pitch = r[0]; SD.pv = r[1]; }
   const portrait = innerHeight > innerWidth ? 1.45 : 1;
-  { const r = damp(CAM.dist, (inB ? Math.min(CAM.distT, 11) : CAM.distT) * portrait * (1 - 0.18 * CAM.aimK), SD.dv, 0.28, dt); CAM.dist = r[0]; SD.dv = r[1]; }
+  { const r = damp(CAM.dist, (inB ? Math.min(CAM.distT, 11) : CAM.distT) * portrait * (1 - 0.18 * CAM.aimK) + nmCamExtra(), SD.dv, 0.28, dt); CAM.dist = r[0]; SD.dv = r[1]; }
   const sh = G.shake && SET.shake !== false ? G.shake * 0.02 : 0, py = groundH(px, pz);
   // regard porté dans le sens de la marche (vitesse lissée), plafonné, nul en intérieur et pendant la visée
   const tAx = inB || sp > 40 ? 0 : clamp(vx * 0.32, -2.2, 2.2) * (1 - CAM.aimK), tAz = inB || sp > 40 ? 0 : clamp(vz * 0.32, -2.2, 2.2) * (1 - CAM.aimK);
@@ -426,7 +428,7 @@ B.frame3d = function () {
   camera.position.set(cx + shx, cy + shy, cz); camera.lookAt(CAM.look);
   camera.updateMatrixWorld();
   mouseToWorld(py);
-  const t2 = performance.now(); updateEffects(); updateMagic3D(G.paused ? 0 : dt * (G.slowT > 0 ? G.slowF : 1)); pm('fx', t2);
+  const t2 = performance.now(); updateEffects(); updateMagic3D(G.paused ? 0 : dt * (G.slowT > 0 ? G.slowF : 1)); try { updateNM3D(G.paused ? 0 : dt); } catch (e) { console.error('NM3D', e); } pm('fx', t2);
   // découpe des arbres devant le héros
   _p.set(px, py + 1.0, pz).project(camera); U.uPS.value.set((_p.x + 1) / 2, (_p.y + 1) / 2); U.uPD.value = _p.z * 0.5 + 0.5; U.uCutSoft.value = 1; U.uOR.value = 1.5; U.uNearF.value = 4.2; U.uHV.value.set(px, py + 0.9, pz).applyMatrix4(camera.matrixWorldInverse); // tunnel : 4,2 m de rayon côté caméra, 1,5 m au héros // premiers plans proches de la caméra fondus
   // heure : cycle jour/nuit continu (sauvegardé avec la partie) ; les zones sombres du jeu (grottes, ombres, donjons) assombrissent la lumière
@@ -476,4 +478,4 @@ B.title3d = function () {
   render3d();
 };
 B.on = true;
-window.V3D = { GUIDE: GUIDE3D, BRULIFE, BRU, MAGIC3D, THREE, scene, camera, renderer, CAM, ACT, PROF, STATE, DAY, hour: () => HOUR, setHour: h => { HOUR = h; } };
+window.V3D = { NM3D, GUIDE: GUIDE3D, BRULIFE, BRU, MAGIC3D, THREE, scene, camera, renderer, CAM, ACT, PROF, STATE, DAY, hour: () => HOUR, setHour: h => { HOUR = h; } };
