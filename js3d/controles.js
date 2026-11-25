@@ -99,3 +99,44 @@ const CT = window.CT = { aim: false, lock: null, sprint: false, runT: 0 };
   document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-ctcam]'); if (!b) return; e.stopImmediatePropagation(); e.preventDefault();
     const nw = TPSon() ? 'haut' : 'tps'; if (typeof B2D !== 'undefined' && B2D.cam3d && B2D.cam3d.setMode) B2D.cam3d.setMode(nw); else { SET.c3d = SET.c3d || {}; SET.c3d.cam = nw; } CT.lock = null; layout(); saveSet(); if (G.mode === 'play') openMenu('opt'); }, true);
 })();
+
+// =====================================================================
+//  DIAGNOSTIC MANETTE (25/11) — « la manette ne se détecte pas ».
+//  Un bandeau sur l'écran titre dit en clair où ça bloque : navigateur sans manette (ex. navigateur intégré d'une appli),
+//  manette pas encore réveillée (il faut appuyer sur ✕ une fois la page ouverte), ou manette détectée.
+//  Toucher le bandeau affiche le détail technique (à m'envoyer en capture si besoin).
+// =====================================================================
+(function () {
+  const D = window.PADDIAG = { ev: 0, last: '', seen: false };
+  addEventListener('gamepadconnected', e => { D.ev++; D.seen = true; D.last = e.gamepad.id || '?'; });
+  let box = null, detail = false;
+  function state() {
+    if (!window.isSecureContext) return ['err', '🎮 Manette impossible : la page n\'est pas en https.'];
+    if (!navigator.getGamepads) return ['err', '🎮 Ce navigateur ne gère pas les manettes. Ouvre le lien directement dans Safari (pas depuis l\'aperçu d\'une appli).'];
+    let n = 0, id = '';
+    try { const g = navigator.getGamepads(); for (let i = 0; i < g.length; i++) if (g[i]) { n++; id = id || g[i].id; } } catch (e) { }
+    if (n || PAD.gp) { D.seen = true; return ['ok', '🎮 Manette détectée : ' + ((id || PAD.id || 'manette').split('(')[0].trim() || 'manette') + ' ✓']; }
+    if (D.seen) return ['wait', '🎮 Manette vue puis perdue : appuie sur ✕ pour la réveiller.'];
+    return ['wait', '🎮 Manette non détectée : connecte-la en Bluetooth, puis appuie sur ✕ (le bouton PS seul ne suffit pas).'];
+  }
+  function info() {
+    let n = 0, ids = [];
+    try { const g = navigator.getGamepads ? navigator.getGamepads() : []; for (let i = 0; i < g.length; i++) if (g[i]) { n++; ids.push(g[i].id + ' [' + g[i].mapping + ']'); } } catch (e) { ids.push('erreur ' + e.message); }
+    return '\nAPI : ' + (navigator.getGamepads ? 'oui' : 'non') + ' · https : ' + (window.isSecureContext ? 'oui' : 'non') + ' · événements : ' + D.ev + ' · manettes : ' + n + (ids.length ? '\n' + ids.join('\n') : '') + '\n' + navigator.userAgent;
+  }
+  function upd() {
+    const onTitle = typeof G !== 'undefined' && G.mode === 'title';
+    if (!onTitle) { if (box) box.style.display = 'none'; return; }
+    if (!box) {
+      box = document.createElement('div'); box.id = 'padstat';
+      box.style.cssText = 'position:fixed;left:50%;bottom:10px;transform:translateX(-50%);z-index:9998;max-width:92vw;background:rgba(20,14,30,.9);border:1px solid #c9a45a;color:#f3e3bf;font:12px/1.35 Georgia,serif;padding:6px 12px;border-radius:6px;white-space:pre-wrap;text-align:center;cursor:pointer';
+      box.onclick = () => { detail = !detail; upd(); };
+      document.body.appendChild(box);
+    }
+    const [k, t] = state();
+    box.style.display = 'block';
+    box.style.borderColor = k === 'ok' ? '#7fd88a' : k === 'err' ? '#ff7a7a' : '#c9a45a';
+    box.textContent = t + (detail ? info() : '');
+  }
+  setInterval(upd, 500);
+})();
