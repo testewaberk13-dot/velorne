@@ -56,7 +56,10 @@ const NM_MP = [14, 18, 18, 22, 26, 22, 26, 26, 30, 0, 34], NM_CD = [3, 6, 5, 9, 
 function NMFAM(fam, list, ult) {
   if (list.length !== 10) console.error('NMFAM ' + fam + ' : 10 compétences attendues, ' + list.length);
   const arr = [...list.slice(0, 9), ult, list[9]];
-  GRIMOIRE[fam] = arr.map((s, i) => {
+  GRIMOIRE[fam] = arr.map((s, i) => nmPrep(fam, s, i));
+}
+// prépare une compétence (identifiant stable, coûts par défaut, compteur, bonus, fiche) ; i = rang dans le grimoire (9 = ultime)
+function nmPrep(fam, s, i) {
     const no = i === 9 ? 'U' : String(i < 9 ? i + 1 : 10).padStart(2, '0');
     s.id = 'NM-' + fam + '-' + no; s.fam = fam; s.ult = i === 9; s.no = i === 9 ? 11 : (i < 9 ? i + 1 : 10);
     if (s.mp === undefined) s.mp = NM_MP[i]; if (s.cd === undefined) s.cd = NM_CD[i]; s.bg = s.bg || PALS[fam][1];
@@ -68,8 +71,9 @@ function NMFAM(fam, list, ult) {
       if (s.gain) nmGain(P, fam, s.gain); if (NM.after[fam]) try { NM.after[fam](P, E, s); } catch (er) { console.error(er); } };
     NM.DATA[s.id] = { id: s.id, famille: NM.META[fam].n, rarete: NM.META[fam].tier === 5 ? 'Légendaire' : 'Épique', no: s.no, n: s.n, type: s.type || '—', role: s.role, d: s.d, mana: s.mp, recharge: s.cd, ressource: s.cost ? '−' + s.cost : (s.gain ? '+' + s.gain : '—'), boss: s.boss || 'dégâts normaux, aucun contrôle garanti', valeurs: 'à prototyper' };
     return s;
-  });
 }
+// remplace une compétence existante (refonte du 25/11 : plus d'attaques à distance) ; no = 1…10, ou 'U'
+function nmReplace(fam, no, s) { const i = no === 'U' ? 9 : (no === 10 ? 10 : no - 1); s.v2 = true; GRIMOIRE[fam][i] = nmPrep(fam, s, i); return GRIMOIRE[fam][i]; }
 NM.casts = {}; NM.bonus = {}; NM.after = {};
 // niveau de maîtrise requis : compétences 1–3 d'emblée, puis 4…10, ultime au niveau 10
 SKILL_LVL[11] = 9;

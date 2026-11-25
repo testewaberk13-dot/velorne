@@ -32,14 +32,21 @@ DAY.speed = 24 / 480; // un jour complet en 8 minutes de jeu (comme le village p
 // vers le terrain (34° par défaut au lieu de 49°), plus proche (10,5 m), regard porté devant le héros pour voir le chemin et
 // l'horizon, et qui se replace doucement derrière lui quand il avance. Les anciens réglages sont migrés une fois (v: 3).
 const PMIN = -32 * Math.PI / 180, PMAX = 82 * Math.PI / 180, // liberté complète (25/11) : du regard vers le ciel à la vue de dessus
-     PCAM = 5 * Math.PI / 180, DMIN = 8, DMAX = 30, PDEF = 0.64, DDEF = 15;
-const C3 = () => { if (!SET.c3d) SET.c3d = {}; const c = SET.c3d; if (c.v !== 4) { c.v = 4; c.pitch = PDEF; c.dist = DDEF; c.follow = false; } if (c.follow == null) c.follow = false; if (c.pitch == null) c.pitch = PDEF; if (c.yaw == null) c.yaw = 0; if (c.dist == null) c.dist = DDEF; if (c.slow == null) c.slow = true; if (c.day == null) c.day = true; if (c.btns == null) c.btns = true; if (c.wx == null) c.wx = true; if (c.stick == null) c.stick = true; return c; };
+     PCAM = 5 * Math.PI / 180, DMIN0 = 8, DMAX0 = 30, PDEF0 = 0.64, DDEF0 = 15;
+// Caméra « épaule » (25/11, demande : une caméra stable, comme Fortnite) : derrière le héros, proche, légèrement décalée
+// sur le côté, focale plus ouverte ; le stick droit la fait tourner avec une courbe douce et une montée progressive.
+// L'ancienne vue haute (HD-2D) reste disponible dans Paramètres > Caméra 3D.
+const TP = { dist: 5.4, pitch: 0.32, dmin: 2.6, dmax: 12, fov: 55, fovAim: 40, sh: 0.55, lookH: 1.35 };
+const TPS = () => (SET.c3d && SET.c3d.cam) !== 'haut';
+const DMINf = () => TPS() ? TP.dmin : DMIN0, DMAXf = () => TPS() ? TP.dmax : DMAX0, PDEFf = () => TPS() ? TP.pitch : PDEF0, DDEFf = () => TPS() ? TP.dist : DDEF0;
+const C3 = () => { if (!SET.c3d) SET.c3d = {}; const c = SET.c3d; if (c.v !== 5) { c.v = 5; c.cam = 'tps'; c.pitch = TP.pitch; c.dist = TP.dist; c.follow = false; } if (c.follow == null) c.follow = false; if (c.pitch == null) c.pitch = PDEFf(); if (c.yaw == null) c.yaw = 0; if (c.dist == null) c.dist = DDEFf(); if (c.slow == null) c.slow = true; if (c.day == null) c.day = true; if (c.btns == null) c.btns = true; if (c.wx == null) c.wx = true; if (c.stick == null) c.stick = true; return c; };
 camera.fov = 30; camera.updateProjectionMatrix();
 let setDirty = 0; const markSet = () => { setDirty = performance.now(); };
 B.cam3d = {
   rot(d) { CAM.yawT += d; C3().yaw = CAM.yawT; CAM.manualT = performance.now(); markSet(); },
   tilt(d) { CAM.pitchT = clamp(CAM.pitchT + d, PMIN, PMAX); C3().pitch = CAM.pitchT; markSet(); },
-  reset() { const c = C3(); c.pitch = PDEF; c.yaw = 0; c.dist = DDEF; CAM.pitchT = PDEF; CAM.yawT = Math.round(CAM.yaw / (Math.PI * 2)) * Math.PI * 2; CAM.distT = DDEF; markSet(); },
+  reset() { const c = C3(); c.pitch = PDEFf(); c.yaw = 0; c.dist = DDEFf(); CAM.pitchT = PDEFf(); CAM.yawT = Math.round(CAM.yaw / (Math.PI * 2)) * Math.PI * 2; CAM.distT = DDEFf(); markSet(); },
+  setMode(m) { const c = C3(); c.cam = m; c.pitch = PDEFf(); c.dist = DDEFf(); CAM.pitchT = c.pitch; CAM.distT = c.dist; markSet(); },
   angleDeg() { return Math.round(CAM.pitchT * 180 / Math.PI); },
 };
 
@@ -248,7 +255,7 @@ const c0 = C3();
 const CAM = { dist: c0.dist, distT: c0.dist, pitch: c0.pitch, pitchT: c0.pitch, yaw: c0.yaw, yawT: c0.yaw, look: new THREE.Vector3(), aimK: 0, aimA: 0, slowB: 2.5, slowIdle: 0 };
 B.yaw = CAM.yaw;
 const openUI = () => !!document.querySelector('.ov.show,.panel.show,#dlg.show');
-addEventListener('wheel', e => { if (G.mode === 'play' && !openUI()) { CAM.distT = clamp(CAM.distT + Math.sign(e.deltaY) * 1.2, DMIN, DMAX); C3().dist = CAM.distT; markSet(); } }, { passive: true });
+addEventListener('wheel', e => { if (G.mode === 'play' && !openUI()) { CAM.distT = clamp(CAM.distT + Math.sign(e.deltaY) * 1.2, DMINf(), DMAXf()); C3().dist = CAM.distT; markSet(); } }, { passive: true });
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hit = new THREE.Vector3(), _p = new THREE.Vector3(), _v = new THREE.Vector3();
 const gameCv = document.getElementById('game');
 const MS = { x: 0, y: 0, ok: false, drag: false, lx: 0, ly: 0 };
@@ -273,9 +280,9 @@ if (cbar) cbar.addEventListener('pointerdown', e => { const b = e.target.closest
 // village pilote mais en joystick. Deux doigts écartés ou rapprochés dans la moitié droite : zoom. Boutons + − ◎ (recentrer).
 const CS = { on: false, id: null, ox: 0, oy: 0, x: 0, y: 0, pinch: null };
 const csBase = document.createElement('div'); csBase.id = 'camstick'; const csKnob = document.createElement('div'); csBase.appendChild(csKnob); document.body.appendChild(csBase);
-B.cam3d.zoom = d => { CAM.distT = clamp(CAM.distT + d, DMIN, DMAX); C3().dist = CAM.distT; markSet(); };
+B.cam3d.zoom = d => { CAM.distT = clamp(CAM.distT + d, DMINf(), DMAXf()); C3().dist = CAM.distT; markSet(); };
 B.cam3d.recenter = () => { const P = G.player; if (!P) return; const v = DIRV[P.dir] || [0, 1], a = Math.atan2(v[1], v[0]), want = Math.atan2(-Math.cos(a), -Math.sin(a));
-  let d = (want - CAM.yawT) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; CAM.yawT += d; CAM.pitchT = PDEF; CAM.distT = DDEF; const c = C3(); c.yaw = CAM.yawT; c.pitch = PDEF; c.dist = DDEF; CAM.manualT = 0; markSet(); };
+  let d = (want - CAM.yawT) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; CAM.yawT += d; CAM.pitchT = PDEFf(); CAM.distT = DDEFf(); const c = C3(); c.yaw = CAM.yawT; c.pitch = PDEFf(); c.dist = DDEFf(); CAM.manualT = 0; markSet(); };
 B.CAMSTICK = CS;
 { const tb = document.getElementById('touch'), isBtn = t => { const el = document.elementFromPoint(t.clientX, t.clientY); return !!(el && el.closest && el.closest('.tbtn,#cam3d')); };
   const freeRight = e => [...e.touches].filter(t => t.clientX >= innerWidth * 0.5 && !isBtn(t) && !(TOUCH.stick.on && t.identifier === TOUCH.stick.id));
@@ -286,7 +293,7 @@ B.CAMSTICK = CS;
       for (const t of e.changedTouches) if (!CS.on && t.clientX >= innerWidth * 0.5 && !isBtn(t)) Object.assign(CS, { on: true, id: t.identifier, ox: t.clientX, oy: t.clientY, x: 0, y: 0 }); }, { passive: true });
     tb.addEventListener('touchmove', e => {
       if (CS.pinch) { const A = [...e.touches].find(t => t.identifier === CS.pinch.a), Bt = [...e.touches].find(t => t.identifier === CS.pinch.b);
-        if (A && Bt) { const d = Math.hypot(A.clientX - Bt.clientX, A.clientY - Bt.clientY); CAM.distT = clamp(CS.pinch.d0 * CS.pinch.d / Math.max(20, d), DMIN, DMAX); C3().dist = CAM.distT; markSet(); } return; }
+        if (A && Bt) { const d = Math.hypot(A.clientX - Bt.clientX, A.clientY - Bt.clientY); CAM.distT = clamp(CS.pinch.d0 * CS.pinch.d / Math.max(20, d), DMINf(), DMAXf()); C3().dist = CAM.distT; markSet(); } return; }
       // glisser direct (25/11) : la vue suit le doigt, sans inertie ni vitesse imposée ; glisser vers le haut = regarder vers le haut
       for (const t of e.changedTouches) if (CS.on && t.identifier === CS.id) { const dx = t.clientX - CS.ox, dy = t.clientY - CS.oy; CS.ox = t.clientX; CS.oy = t.clientY; const k = (C3().sens || 1);
         if (dx) B.cam3d.rot(dx * 0.0085 * k); if (dy) B.cam3d.tilt(dy * 0.0065 * k); CS.drag = performance.now(); } }, { passive: true });
@@ -298,8 +305,21 @@ B.CAMSTICK = CS;
 // manette : stick droit = caméra (par défaut, 25/11), sauf pendant qu'on maintient une attaque ou un sort (il sert alors à viser)
 function updateCamStick(dt) {
   if (CS.on && G.mode !== 'play') CS.on = false;
-  const aiming = IN.held.attack || IN.held.skill1 || IN.held.skill2 || IN.held.skill3 || IN.held.skill4 || IN.held.skill5 || IN.held.ult || IN.held.tech;
-  if (C3().padCam !== false && PAD.connected && !aiming && !openUI() && G.mode === 'play' && (PAD.rx || PAD.ry)) { const k = v => Math.sign(v) * Math.pow(Math.abs(v), 1.6); B.cam3d.rot(k(PAD.rx) * dt * 2.6); B.cam3d.tilt(k(PAD.ry) * dt * 1.5); }
+  const CTL = window.CT || {};
+  if (!TPS()) { // ancienne vue haute : comportement inchangé (le stick droit vise pendant une attaque ou un sort)
+    const aiming = IN.held.attack || IN.held.skill1 || IN.held.skill2 || IN.held.skill3 || IN.held.skill4 || IN.held.skill5 || IN.held.ult || IN.held.tech;
+    if (C3().padCam !== false && PAD.connected && !aiming && !openUI() && G.mode === 'play' && (PAD.rx || PAD.ry)) { const k = v => Math.sign(v) * Math.pow(Math.abs(v), 1.6); B.cam3d.rot(k(PAD.rx) * dt * 2.6); B.cam3d.tilt(k(PAD.ry) * dt * 1.5); }
+    return;
+  }
+  // caméra épaule : courbe de réponse douce (petit geste = petit mouvement), vitesse plafonnée, montée progressive quand
+  // le stick reste poussé à fond (comme sur console), plus lente pendant la visée ; verrouillée sur la cible avec R3
+  if (!PAD.connected || openUI() || G.mode !== 'play' || CTL.lock) { CS.ramp = 0; return; }
+  const rx = PAD.rx, ry = PAD.ry, mag = Math.hypot(rx, ry); if (mag < 0.02) { CS.ramp = 0; return; }
+  CS.ramp = mag > 0.9 ? Math.min(1, (CS.ramp || 0) + dt / 0.45) : Math.max(0, (CS.ramp || 0) - dt * 4);
+  const sens = (C3().sens || 1) * (CTL.aim ? 0.5 : 1), boost = 1 + 0.55 * CS.ramp * CS.ramp;
+  const curve = v => Math.sign(v) * Math.pow(Math.abs(v), 1.6);
+  CAM.yawT += curve(rx) * 2.7 * boost * sens * dt; C3().yaw = CAM.yawT; CAM.manualT = performance.now();
+  CAM.pitchT = clamp(CAM.pitchT + curve(ry) * 1.5 * sens * dt, PMIN, Math.min(PMAX, 1.25)); C3().pitch = CAM.pitchT; CS.drag = performance.now();
 }
 // projection d'un point du monde vers la toile d'interface du jeu (h en mètres au-dessus du sol)
 B.project = (x, y, h) => { const X = m(x), Z = m(y); _p.set(X, (h || 0) + groundH(X, Z), Z).project(camera); if (_p.z > 1) return null; const r = gameCv.getBoundingClientRect(), [w, hh] = B.view(); const sx = (_p.x + 1) / 2 * innerWidth, sy = (1 - _p.y) / 2 * innerHeight; return { x: (sx - r.left) / r.width * w, y: (sy - r.top) / r.height * hh }; };
@@ -338,7 +358,7 @@ function updateAim(dt, rdt) {
   const strong = !!(A && (A.held || (A.bow && A.f.src !== 'mouse')));
   CAM.aimK = lerp(CAM.aimK, strong ? 1 : 0, Math.min(1, dt * (strong ? 2.2 : 4)));
   if (A) CAM.aimA = A.a;
-  if (strong && A.held && C3().slow && CAM.slowB > 0 && !G.paused && !openUI()) {
+  if (strong && A.held && A.f.src !== 'l2' && C3().slow && CAM.slowB > 0 && !G.paused && !openUI()) {
     if (G.slowT <= 0.02 || G.slowF >= 0.55) { G.slowT = Math.max(G.slowT, 0.06); G.slowF = 0.55; }
     CAM.slowB -= rdt; CAM.slowIdle = 0; // temps réel : la limite de 2,5 s ne dépend pas de la fluidité
   } else if (!strong) { CAM.slowIdle += rdt; if (CAM.slowIdle > 0.8) CAM.slowB = 2.5; }
@@ -405,27 +425,33 @@ B.frame3d = function () {
   if (c.follow === true && sp > 1.2 && sp < 40 && CAM.aimK < 0.1 && !openUI() && !BRU.insideNow() && now - (CAM.manualT || 0) > 2500) {
     const a = Math.atan2(vz, vx), want = Math.atan2(-Math.cos(a), -Math.sin(a)); let d = (want - CAM.yawT) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2;
     const rate = 0.9 * Math.max(0, 1 - Math.abs(d) / 1.9) * Math.min(1, sp / 4); CAM.yawT += Math.sign(d) * Math.min(Math.abs(d), rate * dt); }
-  { let d = (CAM.yawT - CAM.yaw) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; const r = damp(0, d, SD.yv, CS.on || now - (CS.drag || 0) < 200 ? 0.045 : 0.16, dt); CAM.yaw += d - r[0]; SD.yv = r[1]; } B.yaw = CAM.yaw;
+  const tps = TPS(), CTL = window.CT || {};
+  // verrouillage (R3) : la caméra se place derrière le héros, face à la cible
+  if (tps && CTL.lock && !CTL.lock.dead && !openUI()) { const L = CTL.lock, a = Math.atan2(L.y - G.player.y, L.x - G.player.x), want = Math.atan2(-Math.cos(a), -Math.sin(a)); let d = (want - CAM.yawT) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; CAM.yawT += d * Math.min(1, dt * 5); CAM.pitchT += (TP.pitch + 0.05 - CAM.pitchT) * Math.min(1, dt * 3); }
+  { let d = (CAM.yawT - CAM.yaw) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; const r = damp(0, d, SD.yv, tps ? 0.035 : (CS.on || now - (CS.drag || 0) < 200 ? 0.045 : 0.16), dt); CAM.yaw += d - r[0]; SD.yv = r[1]; } B.yaw = CAM.yaw;
   const inB = !!BRU.insideNow();
-  { const r = damp(CAM.pitch, inB ? Math.max(CAM.pitchT, 0.95) : CAM.pitchT, SD.pv, CS.on ? 0.05 : 0.2, dt); CAM.pitch = r[0]; SD.pv = r[1]; }
+  { const r = damp(CAM.pitch, inB ? Math.max(CAM.pitchT, tps ? 0.7 : 0.95) : CAM.pitchT, SD.pv, tps ? 0.04 : (CS.on ? 0.05 : 0.2), dt); CAM.pitch = r[0]; SD.pv = r[1]; }
   const portrait = innerHeight > innerWidth ? 1.45 : 1;
-  { const r = damp(CAM.dist, (inB ? Math.min(CAM.distT, 11) : CAM.distT) * portrait * (1 - 0.18 * CAM.aimK) + nmCamExtra(), SD.dv, 0.28, dt); CAM.dist = r[0]; SD.dv = r[1]; }
+  { const r = damp(CAM.dist, (inB ? Math.min(CAM.distT, tps ? 4.5 : 11) : CAM.distT) * portrait * (1 - (tps ? 0.42 : 0.18) * CAM.aimK) + nmCamExtra() * (tps ? 0.8 : 1), SD.dv, 0.28, dt); CAM.dist = r[0]; SD.dv = r[1]; }
   const sh = G.shake && SET.shake !== false ? G.shake * 0.02 : 0, py = groundH(px, pz);
   // regard porté dans le sens de la marche (vitesse lissée), plafonné, nul en intérieur et pendant la visée
-  const tAx = inB || sp > 40 ? 0 : clamp(vx * 0.32, -2.2, 2.2) * (1 - CAM.aimK), tAz = inB || sp > 40 ? 0 : clamp(vz * 0.32, -2.2, 2.2) * (1 - CAM.aimK);
+  const tAx = tps || inB || sp > 40 ? 0 : clamp(vx * 0.32, -2.2, 2.2) * (1 - CAM.aimK), tAz = tps || inB || sp > 40 ? 0 : clamp(vz * 0.32, -2.2, 2.2) * (1 - CAM.aimK);
   { let r = damp(SD.ax, tAx, SD.avx, 0.55, dt); SD.ax = r[0]; SD.avx = r[1]; r = damp(SD.az, tAz, SD.avz, 0.55, dt); SD.az = r[0]; SD.avz = r[1]; }
-  const off = 2.2 * CAM.aimK, tx = px + Math.cos(CAM.aimA) * off + SD.ax, tz = pz + Math.sin(CAM.aimA) * off + SD.az;
+  const off = tps ? 0 : 2.2 * CAM.aimK, tx = px + Math.cos(CAM.aimA) * off + SD.ax, tz = pz + Math.sin(CAM.aimA) * off + SD.az;
   if (!SD.init || Math.hypot(tx - SD.lx, tz - SD.lz) > 25) { SD.lx = tx; SD.lz = tz; SD.vx = SD.vz = 0; SD.py = py; SD.init = true; } // téléportation : pas de long travelling
-  { let r = damp(SD.lx, tx, SD.vx, 0.12, dt); SD.lx = r[0]; SD.vx = r[1]; r = damp(SD.lz, tz, SD.vz, 0.12, dt); SD.lz = r[0]; SD.vz = r[1]; r = damp(SD.py, py, SD.pyv, 0.3, dt); SD.py = r[0]; SD.pyv = r[1]; }
-  CAM.look.set(SD.lx, SD.py + 0.9, SD.lz);
+  { const kL = tps ? 0.06 : 0.12; let r = damp(SD.lx, tx, SD.vx, kL, dt); SD.lx = r[0]; SD.vx = r[1]; r = damp(SD.lz, tz, SD.vz, kL, dt); SD.lz = r[0]; SD.vz = r[1]; r = damp(SD.py, py, SD.pyv, 0.3, dt); SD.py = r[0]; SD.pyv = r[1]; }
+  // épaule : regard à hauteur de poitrine, décalé sur la droite de l'écran (davantage en visée)
+  const shK = tps ? TP.sh * (1 + 0.5 * CAM.aimK) : 0, rX = Math.cos(CAM.yaw) * shK, rZ = -Math.sin(CAM.yaw) * shK;
+  CAM.look.set(SD.lx + rX, SD.py + (tps ? TP.lookH : 0.9), SD.lz + rZ);
   const lim = camLimit(CAM.look.x, CAM.look.y, CAM.look.z, CAM.yaw, CAM.pitch, CAM.dist); CAM.lim = lerp(CAM.lim || lim, lim, Math.min(1, dt * (lim < (CAM.lim || lim) ? 10 : 2)));
   const up = Math.max(0, PCAM - CAM.pitch), pp = Math.max(CAM.pitch, PCAM); // sous 5° : la caméra ne descend plus, elle lève le regard
   const cd = Math.min(CAM.dist, CAM.lim) * (1 - 0.45 * Math.min(1, up / 0.5)), hd = Math.cos(pp) * cd;
   let cx = CAM.look.x + Math.sin(CAM.yaw) * hd, cz = CAM.look.z + Math.cos(CAM.yaw) * hd, cy = CAM.look.y + Math.sin(pp) * cd;
   if (up > 0) CAM.look.y += Math.tan(up) * cd * 0.55; // le héros reste dans le bas de l'image
-  cy = Math.max(cy, groundH(cx, cz) + 1.6); // jamais sous une colline
+  cy = Math.max(cy, groundH(cx, cz) + (tps ? 0.9 : 1.6)); // jamais sous une colline
   const shx = sh ? (Math.sin(now * 0.09) + Math.sin(now * 0.053)) * 0.5 * sh : 0, shy = sh ? Math.sin(now * 0.071) * 0.5 * sh : 0;
   camera.position.set(cx + shx, cy + shy, cz); camera.lookAt(CAM.look);
+  { const fv = tps ? TP.fov + (TP.fovAim - TP.fov) * CAM.aimK : 30; if (Math.abs(camera.fov - fv) > 0.05) { camera.fov += (fv - camera.fov) * Math.min(1, dt * 8); camera.updateProjectionMatrix(); } }
   camera.updateMatrixWorld();
   mouseToWorld(py);
   const t2 = performance.now(); updateEffects(); updateMagic3D(G.paused ? 0 : dt * (G.slowT > 0 ? G.slowF : 1)); try { updateNM3D(G.paused ? 0 : dt); } catch (e) { console.error('NM3D', e); } pm('fx', t2);
