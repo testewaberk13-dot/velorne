@@ -22,6 +22,7 @@ body.v3d #view{display:block}
 body.v3d #wrap{pointer-events:auto}
 #v3dinfo{position:fixed;left:50%;bottom:4px;transform:translateX(-50%);font-size:10px;opacity:.6;z-index:30;pointer-events:none;display:none}
 body.v3d #v3dinfo{display:block}
+@media (max-height:460px){body.v3d #v3dinfo{display:none}} /* le bandeau du bas passait au milieu des boutons */
 #cam3d{position:fixed;right:max(8px,env(safe-area-inset-right));top:46%;transform:translateY(-50%);z-index:25;display:none;flex-direction:column;gap:4px}
 body.v3d #cam3d.on{display:flex}
 #cam3d button{width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,233,160,.35);background:rgba(18,12,28,.55);color:#ffe9a0;font-size:15px;line-height:1;padding:0;touch-action:none;cursor:pointer}

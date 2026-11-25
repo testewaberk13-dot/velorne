@@ -433,3 +433,27 @@ function spawnActFoes(D, n) {
 //     Le dessin levait une erreur et s'interrompait ; il est désormais simplement ignoré pour cette image.
 // ---------------------------------------------------------------------
 if (typeof glow === 'function') { const gl0 = glow; glow = function (ctx, x, y, r, rgb, a, ...rest) { if (!isFinite(a) || !isFinite(r) || !isFinite(x) || !isFinite(y) || r <= 0) return; return gl0(ctx, x, y, r, rgb, a, ...rest); }; }
+
+// ===== Bloc 9 (25/11) : initiation chez un maître de style =====
+// Pendant l'initiation, le style prêté n'est pas encore « appris » : l'attaque, la charge et la technique étaient refusées
+// (« Tu n'as appris aucun style »), chez tous les maîtres. Le style de l'initiation compte désormais comme utilisable.
+{ const hs0 = hasStyle; hasStyle = function (P) { return hs0(P) || !!(P && P.trial && P.trial.style === P.style); }; }
+
+// ===== Bloc 10 (25/11) : petits écrans de téléphone =====
+// a) « Résonance … x3 » s'écrivait par-dessus l'objectif (écran tactile) : il passe sur la ligne suivante.
+{ const dh = drawHUD; drawHUD = function (ctx) {
+    const P = G.player, R = P && P.reso; if (R) P.reso = null;
+    try { dh(ctx); } finally { if (R) P.reso = R; }
+    try { if (R && G.t < R.until && R.hits > 0) txt(ctx, 'Résonance ' + RESO[R.cat][0] + ' x' + R.hits, 6, IS_TOUCH ? 38 + 40 / SCALE + 23 : 84, RESO[R.cat][1], 8); } catch (e) { }
+  }; }
+// b) boutons tactiles : sur un écran peu haut (Safari avec ses barres : environ 290 px), la disposition par défaut couvrait toute
+// la moitié droite et la mini-carte. Positions et tailles sont réduites en proportion (pas si l'on a déplacé les boutons soi-même).
+function fitTouchButtons() {
+  if (typeof TOUCH_BTNS === 'undefined') return;
+  const k = Math.max(0.62, Math.min(1, (innerHeight - 108) / 282)), sc = SET.btnScale || 1, custom = SET.touch && Object.keys(SET.touch).length;
+  for (const b of TOUCH_BTNS) { const el = document.getElementById('tb_' + b.id); if (!el) continue;
+    if (!custom) { el.style.right = Math.round(b.r * k + (k < 1 ? 30 : 0)) + 'px'; el.style.bottom = Math.round(b.b * k) + 'px'; }
+    el.style.width = el.style.height = Math.round(b.s * sc * (custom ? 1 : k)) + 'px'; }
+}
+{ const st = setupTouch; setupTouch = function () { const r = st.apply(this, arguments); try { fitTouchButtons(); } catch (e) { } return r; }; }
+addEventListener('resize', () => { try { fitTouchButtons(); } catch (e) { } });

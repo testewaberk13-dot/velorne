@@ -242,6 +242,13 @@ Ce qui est déjà testé ici, en simulation : tactile en 844 × 390 (stick, bout
 
 **Corrigé le 24/11 (22 h) — manette non détectée sur iPhone :** Safari peut renvoyer une liste de manettes vide alors que la manette est connectée ; le jeu savait qu'elle était là mais ne lisait aucun bouton. Il garde désormais la manette reçue à la connexion et s'en sert en secours, préfère le schéma standard, et un bandeau « 🎮 Manette détectée » s'affiche dès l'écran titre. Reproduit ici (liste vide + connexion) : l'ancienne version ne réagissait pas, la nouvelle navigue dans le menu. Non-régression : `t7_pad`, `gst`, `gq`, `tcombo`, `camp`, `narr2` 44/44, `tm3d`, `t3d_trail`, `t_camstick`.
 
+**Corrigé le 25/11 (matin) — retours sur iPhone :**
+- **Initiation chez les maîtres de style :** l'arme était prêtée mais le style n'était pas encore « appris », donc l'attaque était refusée (« Tu n'as appris aucun style ») chez tous les maîtres. Le style de l'initiation compte désormais comme utilisable (`complements.js`, bloc 9). Test : 2 mannequins détruits en 6 coups.
+- **Caméra, liberté complète :** la vue suit directement le doigt (glisser sur la moitié droite, sans inertie ni vitesse imposée ; glisser vers le haut = regarder vers le haut), inclinaison de −32° (regard vers le ciel, la caméra reste derrière le héros et lève les yeux) à 82° (vue de dessus), sensibilité réglable (60 à 170 %), pincement pour zoomer conservé. Manette : stick droit = caméra par défaut, sauf pendant qu'on maintient une attaque ou un sort (il sert alors à viser).
+- **Personnages en volume :** chaque héros, PNJ et ennemi est maintenant un objet épais (tranches empilées dans la profondeur, épaisseur tirée de la silhouette : corps bombé, bords minces), visible de biais et d'en haut ; légèrement incliné vers la caméra en vue de dessus pour ne jamais paraître écrasé. Le dessin pixel art est conservé. Désactivable (Paramètres > Caméra 3D). **Limite :** ce ne sont pas des modèles 3D sculptés ; les dessins sont ceux des planches existantes.
+- **Petits écrans (Safari avec ses barres, environ 740 × 290) :** boutons tactiles réduits en proportion, ils ne couvrent plus la mini-carte et laissent la moitié droite libre pour la caméra ; « Résonance … » ne s'écrit plus par-dessus l'objectif ; bandeau du bas masqué.
+Non-régression : `t7_pad`, `gs5`, `camp`, `narr2` 44/44, `tm3d`, `t3d_bru2`, `t3d_trail`.
+
 **Prochaines tâches :**
 1. Accueil du site passé sur `jeu3d` (fait le 24/11). Reste ta vérification sur téléphone et manette (section I).
 

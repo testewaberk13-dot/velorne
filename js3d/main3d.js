@@ -30,7 +30,8 @@ DAY.speed = 24 / 480; // un jour complet en 8 minutes de jeu (comme le village p
 // CAMÉRA OBLIQUE (24/11, direction visuelle « personnages 2D + monde 3D ») : derrière le héros et au-dessus de lui, inclinée
 // vers le terrain (34° par défaut au lieu de 49°), plus proche (10,5 m), regard porté devant le héros pour voir le chemin et
 // l'horizon, et qui se replace doucement derrière lui quand il avance. Les anciens réglages sont migrés une fois (v: 3).
-const PMIN = 22 * Math.PI / 180, PMAX = 70 * Math.PI / 180, DMIN = 8, DMAX = 30, PDEF = 0.64, DDEF = 15;
+const PMIN = -32 * Math.PI / 180, PMAX = 82 * Math.PI / 180, // liberté complète (25/11) : du regard vers le ciel à la vue de dessus
+     PCAM = 5 * Math.PI / 180, DMIN = 8, DMAX = 30, PDEF = 0.64, DDEF = 15;
 const C3 = () => { if (!SET.c3d) SET.c3d = {}; const c = SET.c3d; if (c.v !== 4) { c.v = 4; c.pitch = PDEF; c.dist = DDEF; c.follow = false; } if (c.follow == null) c.follow = false; if (c.pitch == null) c.pitch = PDEF; if (c.yaw == null) c.yaw = 0; if (c.dist == null) c.dist = DDEF; if (c.slow == null) c.slow = true; if (c.day == null) c.day = true; if (c.btns == null) c.btns = true; if (c.wx == null) c.wx = true; if (c.stick == null) c.stick = true; return c; };
 camera.fov = 30; camera.updateProjectionMatrix();
 let setDirty = 0; const markSet = () => { setDirty = performance.now(); };
@@ -57,10 +58,46 @@ const ACT = new Map();
 // ombre de contact douce sous chaque personnage (ancrage au sol, en plus de l'ombre portée du soleil)
 const BLOB_G = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), BLOB_M = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'); const g = x.createRadialGradient(32, 32, 2, 32, 32, 32); g.addColorStop(0, 'rgba(0,0,0,0.55)'); g.addColorStop(0.55, 'rgba(0,0,0,0.25)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); return new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }); })();
 const _lq = new THREE.Quaternion(), _fw = new THREE.Vector3();
+
+// PERSONNAGES EN VOLUME (25/11) : chaque personnage devient un objet épais, fait de tranches empilées dans la profondeur.
+// L'épaisseur de chaque point est calculée à partir de la silhouette (distance au bord : le corps est bombé, les bords minces)
+// et rangée dans la transparence du dessin. Les tranches avant et arrière ne gardent que les points assez épais : le personnage
+// a donc un vrai relief, visible de biais et d'en haut, et projette une ombre pleine. Le dessin pixel art est conservé.
+const VOL = { K: 7, A0: 115 }, VBUF = { d: null, n: 0 };
+function volumize(cv) {
+  const w = cv.width, h = cv.height, x = cv.getContext('2d', { willReadFrequently: true }); let id;
+  try { id = x.getImageData(0, 0, w, h); } catch (e) { return; }
+  const D = id.data, n = w * h; if (VBUF.n !== n) { VBUF.d = new Float32Array(n); VBUF.n = n; } const d = VBUF.d, BIG = 99;
+  for (let i = 0; i < n; i++) d[i] = D[i * 4 + 3] < 100 ? 0 : BIG;
+  for (let y = 0; y < h; y++) for (let X = 0; X < w; X++) { const i = y * w + X; if (!d[i]) continue; let v = d[i];
+    if (X > 0) v = Math.min(v, d[i - 1] + 1); if (y > 0) { v = Math.min(v, d[i - w] + 1); if (X > 0) v = Math.min(v, d[i - w - 1] + 1.414); if (X < w - 1) v = Math.min(v, d[i - w + 1] + 1.414); } d[i] = v; }
+  for (let y = h - 1; y >= 0; y--) for (let X = w - 1; X >= 0; X--) { const i = y * w + X; if (!d[i]) continue; let v = d[i];
+    if (X < w - 1) v = Math.min(v, d[i + 1] + 1); if (y < h - 1) { v = Math.min(v, d[i + w] + 1); if (X < w - 1) v = Math.min(v, d[i + w + 1] + 1.414); if (X > 0) v = Math.min(v, d[i + w - 1] + 1.414); } d[i] = v; }
+  for (let i = 0; i < n; i++) { if (!d[i]) { D[i * 4 + 3] = 0; continue; } const t = Math.sqrt(Math.min(d[i], VOL.K) / VOL.K); D[i * 4 + 3] = VOL.A0 + Math.round(t * (255 - VOL.A0)); }
+  x.putImageData(id, 0, 0);
+}
+const SHELL_N = 4, SHELL_DZ = 0.032; // 4 tranches de chaque côté : ±0,13 m au plus épais
+function makeShell(a, mat, g) {
+  const sm = new THREE.MeshLambertMaterial({ map: a.tex, alphaTest: 0.4, side: THREE.DoubleSide, emissive: mat.emissive.clone(), emissiveMap: a.tex });
+  sm.userData.tx = mat.userData.tx;
+  sm.onBeforeCompile = sh => {
+    if (mat.onBeforeCompile) mat.onBeforeCompile(sh);
+    sh.uniforms.uThk = { value: SHELL_N * SHELL_DZ + 0.004 };
+    sh.vertexShader = 'varying float vLz;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n#ifdef USE_INSTANCING\n vLz = instanceMatrix[3].z;\n#else\n vLz = 0.0;\n#endif');
+    sh.fragmentShader = 'varying float vLz; uniform float uThk;\n' + sh.fragmentShader.replace('#include <alphatest_fragment>', `#include <alphatest_fragment>
+      { float th = clamp((diffuseColor.a - ${(VOL.A0 / 255).toFixed(3)}) / ${((255 - VOL.A0) / 255).toFixed(3)}, 0.0, 1.0) * uThk; if (abs(vLz) > th + 0.001) discard;
+        diffuseColor.rgb *= 1.0 - 0.22 * (1.0 - abs(vLz) / uThk); diffuseColor.a = 1.0; }`);
+  };
+  sm.customProgramCacheKey = () => 'actorShell1';
+  const im = new THREE.InstancedMesh(g, sm, SHELL_N * 2), M4 = new THREE.Matrix4(); let k = 0;
+  for (let i = 1; i <= SHELL_N; i++) for (const sgn of [1, -1]) im.setMatrixAt(k++, M4.makeTranslation(0, 0, sgn * i * SHELL_DZ));
+  im.instanceMatrix.needsUpdate = true; im.frustumCulled = false; im.castShadow = false;
+  return im;
+}
 function actor(o, kind) {
   let a = ACT.get(o); if (a) return a;
   const S = kind === 'enemy' && o.def && o.def.boss ? 288 : kind === 'drop' || kind === 'proj' ? 96 : 192;
-  const c = document.createElement('canvas'); c.width = c.height = S; const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false;
+  const c = document.createElement('canvas'); c.width = c.height = S; if (kind === 'player' || kind === 'npc' || kind === 'enemy') c.getContext('2d', { willReadFrequently: true }); const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false;
   const mat = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.4, side: THREE.DoubleSide, emissive: new THREE.Color(0.2, 0.2, 0.22), emissiveMap: tex });
   // VOLUME DES PERSONNAGES (refonte du 24/11) : le dessin reste du pixel art 2D, mais chaque pixel reçoit une orientation
   // calculée sur la carte graphique à partir de la silhouette (distance au bord dans 8 directions : le corps est bombé,
@@ -95,8 +132,10 @@ function actor(o, kind) {
   }
   const foot = Math.round(S * 0.8); const g = new THREE.PlaneGeometry(m(S), m(S)); g.translate(0, m(S) / 2 - m(S - foot), 0);
   const mesh = new THREE.Mesh(g, mat); mesh.castShadow = kind !== 'proj' && kind !== 'drop'; mesh.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: tex, alphaTest: 0.4 }); scene.add(mesh);
-  let blob = null; if (kind === 'player' || kind === 'npc' || kind === 'enemy') { blob = new THREE.Mesh(BLOB_G, BLOB_M); blob.renderOrder = 1; scene.add(blob); }
-  a = { o, kind, c, tex, mesh, blob, seen: 0, sig: '', n: 0, ph: Math.random() * 6.28, lx: o.x, ly: o.y, lean: 0, spd: 0 }; ACT.set(o, a); return a;
+  let blob = null, shell = null; if (kind === 'player' || kind === 'npc' || kind === 'enemy') { blob = new THREE.Mesh(BLOB_G, BLOB_M); blob.renderOrder = 1; scene.add(blob); }
+  a = { o, kind, c, tex, mesh, blob, seen: 0, sig: '', n: 0, ph: Math.random() * 6.28, lx: o.x, ly: o.y, lean: 0, spd: 0 };
+  if (blob && SET.c3d && SET.c3d.vol !== false) { a.shell = makeShell(a, mat, g); mesh.add(a.shell); }
+  ACT.set(o, a); return a;
 }
 // signature d'image : on ne redessine un panneau que si ce qu'il montre a changé (PNJ, butin) ou à cadence réduite au loin
 function sigOf(o, kind, d2) {
@@ -105,7 +144,7 @@ function sigOf(o, kind, d2) {
   if (kind === 'enemy' && d2 > 110) return Math.floor(G.t * 15) + ''; // au-delà d'environ 10 m : 15 images par seconde suffisent
   return null; // toujours redessiné
 }
-let frameId = 0, LDT = 1 / 60;
+let frameId = 0, LDT = 1 / 60, TILTK = 0;
 const yawQ = new THREE.Quaternion(), _up = new THREE.Vector3(0, 1, 0);
 function updateActors(px, pz) {
   frameId++; const near = o => Math.abs(m(o.x) - px) < 26 && Math.abs(m(o.y) - pz) < 22;
@@ -114,7 +153,7 @@ function updateActors(px, pz) {
   for (const [o, kind] of list) {
     const a = actor(o, kind); a.seen = frameId; const ox = m(o.x), oz = m(o.y), d2 = (ox - px) ** 2 + (oz - pz) ** 2;
     const s = sigOf(o, kind, d2);
-    if (s === null || s !== a.sig) { B.drawActor(a.c, kind, o); a.tex.needsUpdate = true; a.sig = s === null ? '' : s; n++; }
+    if (s === null || s !== a.sig) { B.drawActor(a.c, kind, o); if (a.shell) volumize(a.c); a.tex.needsUpdate = true; a.sig = s === null ? '' : s; n++; }
     const gy = groundH(ox, oz);
     if (a.blob) {
       // mouvement : vitesse lissée, rebond de pas, respiration au repos, légère inclinaison dans le sens de la marche (vu de la caméra)
@@ -123,7 +162,7 @@ function updateActors(px, pz) {
       const scrX = (ddx / T) * Math.cos(CAM.yaw) - (ddy / T) * Math.sin(CAM.yaw); a.lean += ((Math.abs(scrX) > 1e-4 ? -Math.sign(scrX) * 0.05 * mv : 0) - a.lean) * Math.min(1, LDT * 8);
       const bob = Math.abs(Math.sin(a.ph * 1.0)) * 0.05 * mv, breath = (1 - mv) * Math.sin(t * 2.3 + a.ph * 0.0) * 0.012;
       a.mesh.position.set(ox, gy + bob, oz); a.mesh.scale.set(1 - breath * 0.5, 1 + breath, 1);
-      _lq.setFromAxisAngle(_fw.set(0, 0, 1), a.lean); a.mesh.quaternion.copy(yawQ).multiply(_lq);
+      _lq.setFromAxisAngle(_fw.set(0, 0, 1), a.lean); a.mesh.quaternion.copy(yawQ).multiply(_lq); a.mesh.quaternion.multiply(_lq.setFromAxisAngle(_fw.set(1, 0, 0), -TILTK)); // vue de haut : légèrement incliné vers la caméra, jamais écrasé
       const big = kind === 'enemy' && o.def && o.def.boss ? 2.2 : 1; a.blob.position.set(ox, gy + 0.03, oz); a.blob.scale.set(1.15 * big * (1 - bob * 2), 1, 0.7 * big * (1 - bob * 2)); a.blob.visible = o.state !== 'dead' && !o.dead;
     } else { a.mesh.position.set(ox, gy + (kind === 'proj' ? 0.6 : 0), oz); a.mesh.quaternion.copy(yawQ); }
     a.mesh.visible = true;
@@ -242,23 +281,23 @@ B.CAMSTICK = CS;
     tb.addEventListener('touchstart', e => { if (G.mode !== 'play' || TOUCH.edit || C3().stick === false) return;
       const fr = freeRight(e);
       if (fr.length >= 2) { CS.on = false; csBase.style.display = 'none'; CS.pinch = { a: fr[0].identifier, b: fr[1].identifier, d: Math.hypot(fr[0].clientX - fr[1].clientX, fr[0].clientY - fr[1].clientY), d0: CAM.distT }; return; }
-      for (const t of e.changedTouches) if (!CS.on && t.clientX >= innerWidth * 0.5 && !isBtn(t)) {
-        Object.assign(CS, { on: true, id: t.identifier, ox: t.clientX, oy: t.clientY, x: 0, y: 0 }); csBase.style.display = 'block'; csBase.style.left = (t.clientX - 50) + 'px'; csBase.style.top = (t.clientY - 50) + 'px'; csKnob.style.transform = 'translate(0px,0px)'; } }, { passive: true });
+      for (const t of e.changedTouches) if (!CS.on && t.clientX >= innerWidth * 0.5 && !isBtn(t)) Object.assign(CS, { on: true, id: t.identifier, ox: t.clientX, oy: t.clientY, x: 0, y: 0 }); }, { passive: true });
     tb.addEventListener('touchmove', e => {
       if (CS.pinch) { const A = [...e.touches].find(t => t.identifier === CS.pinch.a), Bt = [...e.touches].find(t => t.identifier === CS.pinch.b);
         if (A && Bt) { const d = Math.hypot(A.clientX - Bt.clientX, A.clientY - Bt.clientY); CAM.distT = clamp(CS.pinch.d0 * CS.pinch.d / Math.max(20, d), DMIN, DMAX); C3().dist = CAM.distT; markSet(); } return; }
-      for (const t of e.changedTouches) if (CS.on && t.identifier === CS.id) { let dx = t.clientX - CS.ox, dy = t.clientY - CS.oy; const mm = Math.hypot(dx, dy), R = 44;
-        if (mm > R) { dx *= R / mm; dy *= R / mm; } CS.x = mm < 5 ? 0 : dx / R; CS.y = mm < 5 ? 0 : dy / R; csKnob.style.transform = `translate(${dx}px,${dy}px)`; } }, { passive: true });
+      // glisser direct (25/11) : la vue suit le doigt, sans inertie ni vitesse imposée ; glisser vers le haut = regarder vers le haut
+      for (const t of e.changedTouches) if (CS.on && t.identifier === CS.id) { const dx = t.clientX - CS.ox, dy = t.clientY - CS.oy; CS.ox = t.clientX; CS.oy = t.clientY; const k = (C3().sens || 1);
+        if (dx) B.cam3d.rot(dx * 0.0085 * k); if (dy) B.cam3d.tilt(dy * 0.0065 * k); CS.drag = performance.now(); } }, { passive: true });
     const end = e => { for (const t of e.changedTouches) { if (CS.on && t.identifier === CS.id) { CS.on = false; CS.x = CS.y = 0; csBase.style.display = 'none'; }
       if (CS.pinch && (t.identifier === CS.pinch.a || t.identifier === CS.pinch.b)) CS.pinch = null; } };
     tb.addEventListener('touchend', end, { passive: true }); tb.addEventListener('touchcancel', end, { passive: true });
   }
 }
-// mouvement continu, adouci (courbe quadratique : précis au centre, rapide en bout de course)
+// manette : stick droit = caméra (par défaut, 25/11), sauf pendant qu'on maintient une attaque ou un sort (il sert alors à viser)
 function updateCamStick(dt) {
-  if (C3().padCam && PAD.active && !openUI() && G.mode === 'play') { const k = v => Math.sign(v) * v * v; if (PAD.rx) B.cam3d.rot(k(PAD.rx) * dt * 2.8); if (PAD.ry) B.cam3d.tilt(-k(PAD.ry) * dt * 1.2); }
-  if (!CS.on || openUI() || G.mode !== 'play') { if (CS.on && G.mode !== 'play') { CS.on = false; csBase.style.display = 'none'; } return; }
-  const k = v => Math.sign(v) * v * v; if (CS.x) B.cam3d.rot(k(CS.x) * dt * 3.0); if (CS.y) B.cam3d.tilt(k(CS.y) * dt * 1.3);
+  if (CS.on && G.mode !== 'play') CS.on = false;
+  const aiming = IN.held.attack || IN.held.skill1 || IN.held.skill2 || IN.held.skill3 || IN.held.skill4 || IN.held.skill5 || IN.held.ult || IN.held.tech;
+  if (C3().padCam !== false && PAD.connected && !aiming && !openUI() && G.mode === 'play' && (PAD.rx || PAD.ry)) { const k = v => Math.sign(v) * Math.pow(Math.abs(v), 1.6); B.cam3d.rot(k(PAD.rx) * dt * 2.6); B.cam3d.tilt(k(PAD.ry) * dt * 1.5); }
 }
 // projection d'un point du monde vers la toile d'interface du jeu (h en mètres au-dessus du sol)
 B.project = (x, y, h) => { const X = m(x), Z = m(y); _p.set(X, (h || 0) + groundH(X, Z), Z).project(camera); if (_p.z > 1) return null; const r = gameCv.getBoundingClientRect(), [w, hh] = B.view(); const sx = (_p.x + 1) / 2 * innerWidth, sy = (1 - _p.y) / 2 * innerHeight; return { x: (sx - r.left) / r.width * w, y: (sy - r.top) / r.height * hh }; };
@@ -350,7 +389,7 @@ B.frame3d = function () {
   if (setDirty && now - setDirty > 800) { setDirty = 0; saveSet(); }
   const t0 = performance.now();
   updateWorld(px - Math.sin(CAM.yaw) * 12, pz - Math.cos(CAM.yaw) * 12, time.value); updateBrumeval(dt, P, CAM.look); updateBrumevalLife(dt, CAM.yaw); if ((frameId & 31) === 0) settleNpcs(); pm('world', t0);
-  const t1 = performance.now(); LDT = Math.max(1e-3, Math.min(0.1, dt)); updateActors(px, pz); pm('actors', t1);
+  const t1 = performance.now(); LDT = Math.max(1e-3, Math.min(0.1, dt)); TILTK = clamp((CAM.pitch - 0.3) * 0.6, 0, 0.42); updateActors(px, pz); pm('actors', t1);
   updateAim(dt, rdt);
   // ---------------- caméra (24/11, refonte) ----------------
   // Style « HD-2D » : focale longue (30°), caméra haute et éloignée, donc pas de déformation des premiers plans, et le décor
@@ -364,9 +403,9 @@ B.frame3d = function () {
   if (c.follow === true && sp > 1.2 && sp < 40 && CAM.aimK < 0.1 && !openUI() && !BRU.insideNow() && now - (CAM.manualT || 0) > 2500) {
     const a = Math.atan2(vz, vx), want = Math.atan2(-Math.cos(a), -Math.sin(a)); let d = (want - CAM.yawT) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2;
     const rate = 0.9 * Math.max(0, 1 - Math.abs(d) / 1.9) * Math.min(1, sp / 4); CAM.yawT += Math.sign(d) * Math.min(Math.abs(d), rate * dt); }
-  { let d = (CAM.yawT - CAM.yaw) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; const r = damp(0, d, SD.yv, 0.16, dt); CAM.yaw += d - r[0]; SD.yv = r[1]; } B.yaw = CAM.yaw;
+  { let d = (CAM.yawT - CAM.yaw) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; const r = damp(0, d, SD.yv, CS.on || now - (CS.drag || 0) < 200 ? 0.045 : 0.16, dt); CAM.yaw += d - r[0]; SD.yv = r[1]; } B.yaw = CAM.yaw;
   const inB = !!BRU.insideNow();
-  { const r = damp(CAM.pitch, inB ? Math.max(CAM.pitchT, 0.95) : CAM.pitchT, SD.pv, 0.2, dt); CAM.pitch = r[0]; SD.pv = r[1]; }
+  { const r = damp(CAM.pitch, inB ? Math.max(CAM.pitchT, 0.95) : CAM.pitchT, SD.pv, CS.on ? 0.05 : 0.2, dt); CAM.pitch = r[0]; SD.pv = r[1]; }
   const portrait = innerHeight > innerWidth ? 1.45 : 1;
   { const r = damp(CAM.dist, (inB ? Math.min(CAM.distT, 11) : CAM.distT) * portrait * (1 - 0.18 * CAM.aimK), SD.dv, 0.28, dt); CAM.dist = r[0]; SD.dv = r[1]; }
   const sh = G.shake && SET.shake !== false ? G.shake * 0.02 : 0, py = groundH(px, pz);
@@ -378,8 +417,10 @@ B.frame3d = function () {
   { let r = damp(SD.lx, tx, SD.vx, 0.12, dt); SD.lx = r[0]; SD.vx = r[1]; r = damp(SD.lz, tz, SD.vz, 0.12, dt); SD.lz = r[0]; SD.vz = r[1]; r = damp(SD.py, py, SD.pyv, 0.3, dt); SD.py = r[0]; SD.pyv = r[1]; }
   CAM.look.set(SD.lx, SD.py + 0.9, SD.lz);
   const lim = camLimit(CAM.look.x, CAM.look.y, CAM.look.z, CAM.yaw, CAM.pitch, CAM.dist); CAM.lim = lerp(CAM.lim || lim, lim, Math.min(1, dt * (lim < (CAM.lim || lim) ? 10 : 2)));
-  const cd = Math.min(CAM.dist, CAM.lim), hd = Math.cos(CAM.pitch) * cd;
-  let cx = CAM.look.x + Math.sin(CAM.yaw) * hd, cz = CAM.look.z + Math.cos(CAM.yaw) * hd, cy = CAM.look.y + Math.sin(CAM.pitch) * cd;
+  const up = Math.max(0, PCAM - CAM.pitch), pp = Math.max(CAM.pitch, PCAM); // sous 5° : la caméra ne descend plus, elle lève le regard
+  const cd = Math.min(CAM.dist, CAM.lim) * (1 - 0.45 * Math.min(1, up / 0.5)), hd = Math.cos(pp) * cd;
+  let cx = CAM.look.x + Math.sin(CAM.yaw) * hd, cz = CAM.look.z + Math.cos(CAM.yaw) * hd, cy = CAM.look.y + Math.sin(pp) * cd;
+  if (up > 0) CAM.look.y += Math.tan(up) * cd * 0.55; // le héros reste dans le bas de l'image
   cy = Math.max(cy, groundH(cx, cz) + 1.6); // jamais sous une colline
   const shx = sh ? (Math.sin(now * 0.09) + Math.sin(now * 0.053)) * 0.5 * sh : 0, shy = sh ? Math.sin(now * 0.071) * 0.5 * sh : 0;
   camera.position.set(cx + shx, cy + shy, cz); camera.lookAt(CAM.look);
