@@ -117,6 +117,8 @@ const CT = window.CT = { aim: false, lock: null, sprint: false, runT: 0 };
     try { const g = navigator.getGamepads(); for (let i = 0; i < g.length; i++) if (g[i]) { n++; id = id || g[i].id; } } catch (e) { }
     if (n || PAD.gp) { D.seen = true; return ['ok', '🎮 Manette détectée : ' + ((id || PAD.id || 'manette').split('(')[0].trim() || 'manette') + ' ✓']; }
     if (D.seen) return ['wait', '🎮 Manette vue puis perdue : appuie sur ✕ pour la réveiller.'];
+    const homeApp = navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+    if (homeApp) return ['err', '🎮 Cette icône est l\'ancienne (mode app web, où l\'iPhone bloque la manette). Supprime-la de l\'écran d\'accueil, puis rajoute-la depuis Safari : elle ouvrira le jeu dans Safari, avec la manette.'];
     return ['wait', '🎮 Manette non détectée : connecte-la en Bluetooth, puis appuie sur ✕ (le bouton PS seul ne suffit pas).'];
   }
   function info() {
